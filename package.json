@@ -1,6 +1,6 @@
 {
   "name": "qragy",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": false,
   "description": "Qragy - AI-powered customer support bot with RAG, topic routing, and live agent handoff. Built on Gemini + LanceDB.",
   "main": "server.js",
