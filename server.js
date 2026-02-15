@@ -51,6 +51,9 @@ const TELEGRAM_ENABLED = /^(1|true|yes)$/i.test(process.env.TELEGRAM_ENABLED || 
 const TELEGRAM_BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || "").trim();
 const TELEGRAM_POLLING_INTERVAL_MS = Number(process.env.TELEGRAM_POLLING_INTERVAL_MS || 2000);
 
+// Auto-deploy webhook
+const DEPLOY_WEBHOOK_SECRET = (process.env.DEPLOY_WEBHOOK_SECRET || "").trim();
+
 const AGENT_DIR = path.join(__dirname, "agent");
 const TOPICS_DIR = path.join(AGENT_DIR, "topics");
 const MEMORY_DIR = path.join(__dirname, "memory");
@@ -3018,6 +3021,34 @@ app.get("/admin", (_req, res) => {
 app.get("*", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
+
+// --- Auto-deploy webhook (GitHub push → git pull + pm2 restart) ---
+if (DEPLOY_WEBHOOK_SECRET) {
+  app.post("/deploy", express.raw({ type: "application/json" }), (req, res) => {
+    const sig = req.headers["x-hub-signature-256"] || "";
+    const expected = "sha256=" + crypto.createHmac("sha256", DEPLOY_WEBHOOK_SECRET).update(req.body).digest("hex");
+    if (sig !== expected) return res.status(403).json({ error: "Invalid signature" });
+
+    const payload = JSON.parse(req.body.toString());
+    if (payload.ref !== "refs/heads/main") return res.json({ status: "ignored", reason: "not main branch" });
+
+    console.log("[deploy] Main branch push detected, deploying...");
+    res.json({ status: "deploying" });
+
+    const { execSync } = require("child_process");
+    const deployScript = path.join(__dirname, "deploy.sh");
+    if (fs.existsSync(deployScript)) {
+      try {
+        execSync(`bash "${deployScript}"`, { cwd: __dirname, stdio: "inherit", timeout: 120000 });
+      } catch (err) {
+        console.error("[deploy] Deploy failed:", err.message);
+      }
+    } else {
+      console.error("[deploy] deploy.sh not found");
+    }
+  });
+  console.log("[deploy] Webhook endpoint aktif: POST /deploy");
+}
 
 (async () => {
   loadAnalyticsData();

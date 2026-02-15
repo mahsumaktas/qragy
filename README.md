@@ -3,6 +3,11 @@
   <h1 align="center">Qragy</h1>
   <p align="center"><strong>Self-Hosted RAG Chatbot &mdash; No Vector DB Required</strong></p>
   <p align="center">
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+    <img src="https://img.shields.io/badge/node-18%2B-brightgreen.svg" alt="Node 18+">
+    <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
+  </p>
+  <p align="center">
     <a href="#quick-start">Quick Start</a> &bull;
     <a href="#features">Features</a> &bull;
     <a href="#admin-panel">Admin Panel</a> &bull;
@@ -29,11 +34,6 @@ One process. One CSV file. Zero infrastructure. `npm start` and you have a produ
 > **Too heavy for Raspberry Pi? Use Qragy.**
 > Built for self-hosters who want a production-ready AI support bot without the cloud bill.
 
-<p align="center">
-  <!-- Replace with your actual demo GIF -->
-  <img src="https://via.placeholder.com/800x450.png?text=Demo+GIF+Coming+Soon" alt="Qragy Demo" width="800">
-</p>
-
 ## What is Qragy?
 
 Qragy is a **fully self-hosted AI customer support chatbot** that runs on a single Node.js process. No Docker. No Kubernetes. No managed vector database. Just `npm start` and you have:
@@ -58,6 +58,7 @@ Manage your entire bot from `/admin`:
 | **Tickets** | View all support requests, chat histories, handoff status |
 | **Knowledge Base** | Add/edit/delete Q&A entries, re-embed with one click |
 | **Bot Config** | Edit persona, topics, escalation rules, memory templates, env vars |
+| **Analytics** | Daily metrics, top topics, resolution rates, SVG charts |
 | **System** | Health monitoring, agent config hot-reload |
 
 ### LanceDB (Serverless Vector DB)
@@ -85,6 +86,15 @@ Default: Gemini (free, high quality, 3072 dimensions)
 - **File-based storage**: CSV + JSON + LanceDB files. No PostgreSQL, no Redis
 - **Low resources**: Runs on Raspberry Pi 4 (2GB RAM is enough)
 - **No build step**: Vanilla JS frontend, zero bundling
+
+### v2 Features
+- **Rate Limiting**: Configurable per-IP thresholds with in-memory tracking
+- **Analytics**: Daily metrics, top topics, SVG charts in the admin panel
+- **Webhooks**: HMAC-SHA256 signed notifications to Slack, n8n, Zapier
+- **File Upload**: PDF/DOCX/TXT upload for knowledge base with auto-chunking
+- **Telegram**: Bot channel integration via long polling
+- **Team Features**: Ticket assignment, priority levels, internal notes
+- **Prompt Versioning**: Auto-snapshot and rollback for bot configuration
 
 ## Quick Start
 
@@ -171,7 +181,7 @@ User <-> Chat Widget <-> Express Server <-> Gemini AI
 ```
 qragy/
 ├── server.js              # Everything: API, AI, RAG, tickets
-├── knowledge_base.csv     # Your Q&A data (source of truth)
+├── knowledge_base.example.csv  # Example Q&A data template
 ├── agent/                 # Bot personality & rules
 │   ├── soul.md            # Who is the bot
 │   ├── persona.md         # How it talks
@@ -193,13 +203,20 @@ qragy/
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GOOGLE_API_KEY` | Gemini API key **(required)** | - |
-| `BOT_NAME` | Bot display name | `QRAGY Bot` |
+| `BOT_NAME` | Bot display name | `Qragy Bot` |
 | `COMPANY_NAME` | Your company name | - |
 | `REMOTE_TOOL_NAME` | Remote desktop tool (for escalation detection) | - |
 | `ADMIN_TOKEN` | Admin panel password | - |
 | `ZENDESK_ENABLED` | Enable Zendesk handoff | `false` |
 | `SUPPORT_HOURS_ENABLED` | Enforce business hours | `false` |
 | `DETERMINISTIC_COLLECTION_MODE` | Structured info gathering | `true` |
+| `RATE_LIMIT_ENABLED` | Enable per-IP rate limiting | `true` |
+| `GOOGLE_FALLBACK_MODEL` | Fallback model on primary error | `gemini-2.0-flash` |
+| `TELEGRAM_ENABLED` | Enable Telegram bot integration | `false` |
+| `TELEGRAM_BOT_TOKEN` | Telegram Bot API token | - |
+| `WEBHOOK_ENABLED` | Enable webhook notifications | `false` |
+| `WEBHOOK_URL` | Webhook endpoint URL | - |
+| `WEBHOOK_SECRET` | HMAC-SHA256 signing secret | - |
 
 Full list in [`.env.example`](.env.example).
 
@@ -216,6 +233,9 @@ CRUD interface for Q&A pairs. Each save re-embeds the entry. "Re-ingest" button 
 - **Topics**: Create/edit/delete structured support flows with keywords, escalation rules, and required info
 - **Memory Templates**: JSON editors for ticket and conversation schemas
 - **Environment**: Edit all env vars (sensitive values masked)
+
+### Analytics
+Daily conversation metrics, top topics, resolution rates, and SVG charts for visual reporting.
 
 ### System
 Health dashboard with uptime, memory usage, agent file status, and hot-reload button.
@@ -247,6 +267,26 @@ All admin endpoints require `x-admin-token` header when `ADMIN_TOKEN` is set.
 - `GET/POST/PUT/DELETE /api/admin/agent/topics/:id` - Topic CRUD
 - `GET/PUT /api/admin/agent/memory/:name` - Memory templates
 - `GET/PUT /api/admin/env` - Environment variables
+
+### Analytics
+- `GET /api/admin/analytics` - Dashboard metrics and charts
+
+### Webhooks
+- `GET /api/admin/webhooks/config` - Get webhook configuration
+- `PUT /api/admin/webhooks/config` - Update webhook configuration
+- `POST /api/admin/webhooks/test` - Send test webhook
+
+### File Upload
+- `POST /api/admin/knowledge/upload` - Upload PDF/DOCX/TXT file
+
+### Team
+- `PUT /api/admin/tickets/:id/assign` - Assign ticket to team member
+- `PUT /api/admin/tickets/:id/priority` - Set ticket priority
+- `POST /api/admin/tickets/:id/notes` - Add internal note
+
+### Prompt Versions
+- `GET /api/admin/agent/versions` - List prompt versions
+- `POST /api/admin/agent/versions/rollback` - Rollback to a previous version
 
 ### System
 - `GET /api/admin/system` - Health info

@@ -1,6 +1,6 @@
-# Contributing to QRAGY
+# Contributing to Qragy
 
-Thank you for your interest in contributing to QRAGY! This guide will help you get started.
+Thank you for your interest in contributing to Qragy! This guide will help you get started.
 
 ## Getting Started
 

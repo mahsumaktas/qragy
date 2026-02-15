@@ -6,3 +6,16 @@ npm-debug.log*
 *.err.log
 *.out.log
 nul
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log

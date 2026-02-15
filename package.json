@@ -2,11 +2,30 @@
   "name": "qragy",
   "version": "1.0.0",
   "private": false,
-  "description": "QRAGY - AI-powered customer support bot with RAG, topic routing, and live agent handoff. Built on Gemini + LanceDB.",
+  "description": "Qragy - AI-powered customer support bot with RAG, topic routing, and live agent handoff. Built on Gemini + LanceDB.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "ingest": "node scripts/ingest.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mahsumaktas/qragy.git"
+  },
+  "author": "Mahsum Aktas",
+  "license": "MIT",
+  "keywords": [
+    "chatbot",
+    "rag",
+    "ai",
+    "self-hosted",
+    "customer-support",
+    "gemini",
+    "lancedb",
+    "raspberry-pi"
+  ],
+  "homepage": "https://github.com/mahsumaktas/qragy",
   "engines": {
     "node": ">=18"
   },
