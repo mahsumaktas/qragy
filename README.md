@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="qragy_logo.jpg" alt="Qragy Logo" width="200">
+  <img src="public/qragy_logo.jpg" alt="Qragy Logo" width="200">
   <h1 align="center">Qragy</h1>
   <p align="center"><strong>Self-Hosted RAG Chatbot &mdash; No Vector DB Required</strong></p>
   <p align="center">
