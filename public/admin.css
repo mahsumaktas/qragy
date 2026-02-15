@@ -1225,3 +1225,115 @@ tbody tr:hover {
     border-radius: 0;
   }
 }
+
+/* ==========================================================================
+   Analytics
+   ========================================================================== */
+.analytics-chart-section,
+.analytics-topics-section {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  margin-top: 14px;
+}
+
+.analytics-chart {
+  overflow-x: auto;
+  min-height: 200px;
+}
+
+.analytics-chart svg {
+  display: block;
+}
+
+/* ==========================================================================
+   Priority Badges
+   ========================================================================== */
+.priority-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: #e0e0e0;
+  color: #555;
+}
+
+.priority-badge.priority-high {
+  background: #f8d7da;
+  color: #842029;
+}
+
+.priority-badge.priority-low {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+/* ==========================================================================
+   Ticket Actions (Team Features)
+   ========================================================================== */
+.ticket-actions {
+  margin-top: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.action-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.action-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.action-row input,
+.action-row select {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.action-row textarea {
+  flex: 1;
+  min-width: 200px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.notes-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.note-item {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* ==========================================================================
+   File Upload Label
+   ========================================================================== */
+.file-upload-label {
+  cursor: pointer;
+  display: inline-block;
+}
+
+.file-upload-label:hover {
+  opacity: 0.85;
+}

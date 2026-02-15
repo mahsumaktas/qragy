@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Qragy Admin</title>
     <link rel="icon" type="image/jpeg" href="qragy_logo.jpg" />
-    <link rel="stylesheet" href="admin.css?v=20260215" />
+    <link rel="stylesheet" href="admin.css?v=20260216" />
   </head>
   <body>
     <main class="admin-shell">
@@ -30,12 +30,18 @@
         <button id="tabBtnTickets" class="tab-btn active" data-tab="tabTickets">Talepler</button>
         <button id="tabBtnKnowledge" class="tab-btn" data-tab="tabKnowledge">Bilgi Tabani</button>
         <button id="tabBtnBotConfig" class="tab-btn" data-tab="tabBotConfig">Bot Yapilandirma</button>
+        <button id="tabBtnAnalytics" class="tab-btn" data-tab="tabAnalytics">Analitik</button>
         <button id="tabBtnSystem" class="tab-btn" data-tab="tabSystem">Sistem</button>
       </nav>
 
-      <!-- TAB 1: Talepler (existing ticket UI) -->
+      <!-- TAB 1: Talepler -->
       <section id="tabTickets" class="tab-content active">
         <section class="admin-controls">
+          <label class="control">
+            <span>Arama</span>
+            <input id="searchFilter" type="text" placeholder="Ticket, sube, sorun ara..." />
+          </label>
+
           <label class="control">
             <span>Durum</span>
             <select id="statusFilter">
@@ -46,6 +52,15 @@
               <option value="handoff_failed">handoff_failed</option>
               <option value="handoff_parent_posted">handoff_parent_posted</option>
               <option value="handoff_opened_no_summary">handoff_opened_no_summary</option>
+            </select>
+          </label>
+
+          <label class="control">
+            <span>Kaynak</span>
+            <select id="sourceFilter">
+              <option value="">Tumu</option>
+              <option value="web">Web</option>
+              <option value="telegram">Telegram</option>
             </select>
           </label>
 
@@ -72,17 +87,18 @@
               <tr>
                 <th>Ticket</th>
                 <th>Durum</th>
+                <th>Oncelik</th>
                 <th>Sube</th>
                 <th>Sorun</th>
+                <th>Atanan</th>
+                <th>Kaynak</th>
                 <th>Olusturma</th>
-                <th>Guncelleme</th>
-                <th>Aktarim</th>
                 <th>Detay</th>
               </tr>
             </thead>
             <tbody id="ticketsTableBody">
               <tr>
-                <td colspan="8" class="empty">Yukleniyor...</td>
+                <td colspan="9" class="empty">Yukleniyor...</td>
               </tr>
             </tbody>
           </table>
@@ -91,6 +107,28 @@
         <section class="detail-section">
           <h2>Ticket Detayi</h2>
           <div id="ticketDetail" class="detail-box">Bir ticket seciniz.</div>
+
+          <!-- Team features: assign, priority, notes -->
+          <div id="ticketActions" class="ticket-actions" style="display:none">
+            <div class="action-row">
+              <label>Atama: <input id="ticketAssignInput" type="text" placeholder="Kullanici adi" /></label>
+              <button id="ticketAssignBtn" class="btn btn-sm btn-primary">Ata</button>
+              <label>Oncelik:
+                <select id="ticketPrioritySelect">
+                  <option value="low">Dusuk</option>
+                  <option value="normal" selected>Normal</option>
+                  <option value="high">Yuksek</option>
+                </select>
+              </label>
+              <button id="ticketPriorityBtn" class="btn btn-sm btn-primary">Degistir</button>
+            </div>
+            <div class="action-row">
+              <textarea id="ticketNoteInput" rows="2" placeholder="Dahili not ekle..."></textarea>
+              <button id="ticketNoteBtn" class="btn btn-sm btn-primary">Not Ekle</button>
+            </div>
+            <div id="ticketNotesList" class="notes-list"></div>
+          </div>
+
           <h3 style="margin-top:14px">Sohbet Gecmisi</h3>
           <div id="chatHistory" class="chat-history-container">Ticket seciniz.</div>
         </section>
@@ -102,8 +140,13 @@
           <h2>Bilgi Tabani <span id="kbRecordCount" class="badge">0</span></h2>
           <div class="section-actions">
             <button id="kbAddBtn" class="btn btn-primary">+ Yeni Kayit</button>
+            <label class="btn btn-secondary file-upload-label">
+              Dosya Yukle (PDF/DOCX/TXT)
+              <input id="kbFileUpload" type="file" accept=".pdf,.docx,.txt" style="display:none" />
+            </label>
             <button id="kbReingestBtn" class="btn btn-secondary">Yeniden Yukle</button>
             <span id="kbReingestStatus" class="status-text"></span>
+            <span id="kbUploadStatus" class="status-text"></span>
           </div>
         </div>
         <div class="table-section">
@@ -125,13 +168,15 @@
         </div>
       </section>
 
-      <!-- TAB 3: Bot Yapilandirma (4 sub-tabs) -->
+      <!-- TAB 3: Bot Yapilandirma -->
       <section id="tabBotConfig" class="tab-content">
         <nav class="sub-tab-nav">
           <button id="subTabAgentFiles" class="sub-tab-btn active" data-subtab="subContentAgentFiles">Agent Dosyalari</button>
           <button id="subTabTopics" class="sub-tab-btn" data-subtab="subContentTopics">Konular</button>
           <button id="subTabMemory" class="sub-tab-btn" data-subtab="subContentMemory">Bellek Sablonlari</button>
           <button id="subTabEnv" class="sub-tab-btn" data-subtab="subContentEnv">Ortam Degiskenleri</button>
+          <button id="subTabWebhooks" class="sub-tab-btn" data-subtab="subContentWebhooks">Webhooks</button>
+          <button id="subTabPromptVersions" class="sub-tab-btn" data-subtab="subContentPromptVersions">Prompt Gecmisi</button>
         </nav>
 
         <!-- Sub-tab: Agent Files - Split layout -->
@@ -217,9 +262,93 @@
             <span id="envSaveStatus" class="status-text"></span>
           </div>
         </div>
+
+        <!-- Sub-tab: Webhooks -->
+        <div id="subContentWebhooks" class="sub-tab-content">
+          <div class="section-header">
+            <h3>Webhook Bildirimleri</h3>
+            <button id="webhookAddBtn" class="btn btn-primary">+ Yeni Webhook</button>
+          </div>
+          <div class="table-section">
+            <table>
+              <thead>
+                <tr>
+                  <th>URL</th>
+                  <th>Olaylar</th>
+                  <th>Durum</th>
+                  <th>Islemler</th>
+                </tr>
+              </thead>
+              <tbody id="webhooksTableBody">
+                <tr><td colspan="4" class="empty">Yukleniyor...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sub-tab: Prompt Versions -->
+        <div id="subContentPromptVersions" class="sub-tab-content">
+          <div class="section-header">
+            <h3>Prompt Versiyon Gecmisi</h3>
+          </div>
+          <div class="table-section">
+            <table>
+              <thead>
+                <tr>
+                  <th>Dosya</th>
+                  <th>Tarih</th>
+                  <th>Boyut</th>
+                  <th>Islemler</th>
+                </tr>
+              </thead>
+              <tbody id="promptVersionsTableBody">
+                <tr><td colspan="4" class="empty">Yukleniyor...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
-      <!-- TAB 4: Sistem -->
+      <!-- TAB 4: Analitik -->
+      <section id="tabAnalytics" class="tab-content">
+        <div class="section-header">
+          <h2>Analitik</h2>
+          <div class="section-actions">
+            <select id="analyticsRange">
+              <option value="7d" selected>Son 7 Gun</option>
+              <option value="30d">Son 30 Gun</option>
+              <option value="90d">Son 90 Gun</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="analyticsSummary" class="summary-grid"></div>
+
+        <div class="analytics-chart-section">
+          <h3>Gunluk Sohbet Sayisi</h3>
+          <div id="analyticsChart" class="analytics-chart"></div>
+        </div>
+
+        <div class="analytics-topics-section">
+          <h3>En Cok Konusulan Konular</h3>
+          <div class="table-section">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Konu</th>
+                  <th>Sayi</th>
+                </tr>
+              </thead>
+              <tbody id="topTopicsTableBody">
+                <tr><td colspan="3" class="empty">Yukleniyor...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: Sistem -->
       <section id="tabSystem" class="tab-content">
         <div class="section-header">
           <h2>Sistem Durumu</h2>
@@ -294,6 +423,24 @@
         </div>
       </div>
 
+      <!-- Webhook Modal -->
+      <div id="webhookModal" class="modal-overlay" style="display:none">
+        <div class="modal">
+          <div class="modal-header">
+            <h3 id="webhookModalTitle">Yeni Webhook</h3>
+            <button id="webhookModalCancelBtn" class="modal-close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <label>URL<input id="webhookModalUrl" type="url" placeholder="https://example.com/webhook" /></label>
+            <label>Olaylar (virgul ile)<span class="field-hint">ticket_created, escalation, csat_rating, handoff_result veya * (tumu)</span><input id="webhookModalEvents" type="text" placeholder="*" value="*" /></label>
+            <label>Secret (opsiyonel)<input id="webhookModalSecret" type="text" placeholder="HMAC secret" /></label>
+          </div>
+          <div class="modal-footer">
+            <button id="webhookModalSaveBtn" class="btn btn-primary">Kaydet</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Confirm Modal -->
       <div id="confirmModal" class="modal-overlay" style="display:none">
         <div class="modal modal-sm">
@@ -311,6 +458,6 @@
       <div id="toastContainer" class="toast-container"></div>
     </main>
 
-    <script src="admin.js?v=20260215"></script>
+    <script src="admin.js?v=20260216"></script>
   </body>
 </html>

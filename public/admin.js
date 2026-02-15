@@ -11,7 +11,10 @@ const state = {
   originalAgentContent: "",
   editingKBId: null,
   editingTopicId: null,
-  confirmResolve: null
+  editingWebhookId: null,
+  confirmResolve: null,
+  searchDebounceTimer: null,
+  currentTicketId: null
 };
 
 // ── DOM References ─────────────────────────────────────────────────────────
@@ -25,7 +28,9 @@ const tabBtns = document.querySelectorAll(".tab-btn");
 const tabContents = document.querySelectorAll(".tab-content");
 
 // Tab 1: Tickets
+const searchFilter = $("searchFilter");
 const statusFilter = $("statusFilter");
+const sourceFilter = $("sourceFilter");
 const limitFilter = $("limitFilter");
 const refreshButton = $("refreshButton");
 const autoButton = $("autoButton");
@@ -196,6 +201,7 @@ function switchTab(tabId) {
   if (tabId === "tabTickets") refreshDashboard();
   else if (tabId === "tabKnowledge") loadKnowledgeBase();
   else if (tabId === "tabBotConfig") loadBotConfigTab();
+  else if (tabId === "tabAnalytics") loadAnalytics();
   else if (tabId === "tabSystem") loadSystemInfo();
 }
 
@@ -207,6 +213,8 @@ function switchSubTab(subTabId) {
   else if (subTabId === "subContentTopics") loadTopics();
   else if (subTabId === "subContentMemory") loadMemoryFiles();
   else if (subTabId === "subContentEnv") loadEnvConfig();
+  else if (subTabId === "subContentWebhooks") loadWebhooks();
+  else if (subTabId === "subContentPromptVersions") loadPromptVersions();
 }
 
 tabBtns.forEach((btn) => {
@@ -255,35 +263,46 @@ function renderSummary(summary) {
 
 function renderTicketRows(tickets) {
   if (!Array.isArray(tickets) || !tickets.length) {
-    ticketsTableBody.innerHTML = '<tr><td colspan="8" class="empty">Kayit yok.</td></tr>';
+    ticketsTableBody.innerHTML = '<tr><td colspan="9" class="empty">Kayit yok.</td></tr>';
     return;
   }
   ticketsTableBody.innerHTML = "";
   for (const ticket of tickets) {
+    const priorityClass = ticket.priority === "high" ? "priority-high" : ticket.priority === "low" ? "priority-low" : "";
     const tr = document.createElement("tr");
     tr.innerHTML =
       "<td>" + escapeHtml(ticket.id || "-") + "</td>" +
       '<td><span class="status-pill ' + escapeHtml(ticket.status || "") + '">' + escapeHtml(ticket.status || "-") + "</span></td>" +
+      '<td><span class="priority-badge ' + priorityClass + '">' + escapeHtml(ticket.priority || "normal") + "</span></td>" +
       "<td>" + escapeHtml(ticket.branchCode || "-") + "</td>" +
       '<td class="issue-cell">' + escapeHtml(ticket.issueSummary || "-") + "</td>" +
+      "<td>" + escapeHtml(ticket.assignedTo || "-") + "</td>" +
+      "<td>" + escapeHtml(ticket.source || "web") + "</td>" +
       "<td>" + fmtDate(ticket.createdAt) + "</td>" +
-      "<td>" + fmtDate(ticket.updatedAt) + "</td>" +
-      "<td>" + (ticket.handoffAttempts || 0) + "</td>" +
       '<td><button class="open-button" type="button" data-ticket-id="' + escapeHtml(ticket.id) + '">Ac</button></td>';
     ticketsTableBody.appendChild(tr);
   }
 }
 
 function renderTicketDetail(ticket) {
+  const ticketActions = $("ticketActions");
   if (!ticket) {
     ticketDetail.textContent = "Detay yok.";
     if (chatHistoryEl) chatHistoryEl.textContent = "";
+    if (ticketActions) ticketActions.style.display = "none";
+    state.currentTicketId = null;
     return;
   }
+
+  state.currentTicketId = ticket.id;
 
   const lines = [
     "ID: " + ticket.id,
     "Durum: " + ticket.status,
+    "Oncelik: " + (ticket.priority || "normal"),
+    "Atanan: " + (ticket.assignedTo || "-"),
+    "Kaynak: " + (ticket.source || "web"),
+    "CSAT: " + (ticket.csatRating ? ticket.csatRating + "/5" : "-"),
     "Sube: " + (ticket.branchCode || "-"),
     "Sorun: " + (ticket.issueSummary || "-"),
     "Firma: " + (ticket.companyName || "-"),
@@ -309,6 +328,24 @@ function renderTicketDetail(ticket) {
   }
 
   ticketDetail.textContent = lines.join("\n");
+
+  // Show team actions
+  if (ticketActions) {
+    ticketActions.style.display = "";
+    $("ticketAssignInput").value = ticket.assignedTo || "";
+    $("ticketPrioritySelect").value = ticket.priority || "normal";
+    // Render internal notes
+    const notesList = $("ticketNotesList");
+    notesList.innerHTML = "";
+    if (Array.isArray(ticket.internalNotes) && ticket.internalNotes.length) {
+      for (const n of ticket.internalNotes) {
+        const noteDiv = document.createElement("div");
+        noteDiv.className = "note-item";
+        noteDiv.textContent = fmtDate(n.at) + " [" + (n.author || "admin") + "]: " + n.note;
+        notesList.appendChild(noteDiv);
+      }
+    }
+  }
 
   if (!chatHistoryEl) return;
   chatHistoryEl.innerHTML = "";
@@ -344,15 +381,23 @@ async function loadTicketDetail(ticketId) {
 
 async function refreshDashboard() {
   try {
+    let ticketUrl = "admin/tickets?status=" + encodeURIComponent(statusFilter.value) +
+      "&limit=" + encodeURIComponent(limitFilter.value);
+    if (searchFilter.value.trim()) {
+      ticketUrl += "&q=" + encodeURIComponent(searchFilter.value.trim());
+    }
+    if (sourceFilter.value) {
+      ticketUrl += "&source=" + encodeURIComponent(sourceFilter.value);
+    }
     const [summaryPayload, ticketsPayload] = await Promise.all([
       apiGet("admin/summary"),
-      apiGet("admin/tickets?status=" + encodeURIComponent(statusFilter.value) + "&limit=" + encodeURIComponent(limitFilter.value))
+      apiGet(ticketUrl)
     ]);
     renderSummary(summaryPayload.summary || {});
     renderTicketRows(ticketsPayload.tickets || []);
   } catch (error) {
     summaryGrid.innerHTML = "";
-    ticketsTableBody.innerHTML = '<tr><td colspan="8" class="empty">Hata: ' + escapeHtml(error.message) + "</td></tr>";
+    ticketsTableBody.innerHTML = '<tr><td colspan="9" class="empty">Hata: ' + escapeHtml(error.message) + "</td></tr>";
   }
 }
 
@@ -379,7 +424,12 @@ ticketsTableBody.addEventListener("click", (event) => {
 refreshButton.addEventListener("click", () => { void refreshDashboard(); });
 autoButton.addEventListener("click", () => { setAutoRefresh(!state.autoRefresh); });
 statusFilter.addEventListener("change", () => { void refreshDashboard(); });
+sourceFilter.addEventListener("change", () => { void refreshDashboard(); });
 limitFilter.addEventListener("change", () => { void refreshDashboard(); });
+searchFilter.addEventListener("input", () => {
+  if (state.searchDebounceTimer) clearTimeout(state.searchDebounceTimer);
+  state.searchDebounceTimer = setTimeout(() => { void refreshDashboard(); }, 400);
+});
 
 // ══════════════════════════════════════════════════════════════════════════
 // TAB 2: KNOWLEDGE BASE
@@ -755,10 +805,12 @@ memorySchemaSaveBtn.addEventListener("click", () => { void saveMemoryFile("conve
 
 // ── Environment Variables ──────────────────────────────────────────────────
 const ENV_GROUPS = {
-  "Model Ayarlari": ["GOOGLE_API_KEY", "GOOGLE_MODEL", "GOOGLE_MAX_OUTPUT_TOKENS", "GOOGLE_THINKING_BUDGET", "GOOGLE_REQUEST_TIMEOUT_MS"],
+  "Model Ayarlari": ["GOOGLE_API_KEY", "GOOGLE_MODEL", "GOOGLE_MAX_OUTPUT_TOKENS", "GOOGLE_THINKING_BUDGET", "GOOGLE_REQUEST_TIMEOUT_MS", "GOOGLE_FALLBACK_MODEL"],
   "Destek Saatleri": ["SUPPORT_HOURS_ENABLED", "SUPPORT_TIMEZONE", "SUPPORT_OPEN_HOUR", "SUPPORT_CLOSE_HOUR", "SUPPORT_OPEN_DAYS"],
   "Zendesk": ["ZENDESK_ENABLED", "ZENDESK_SNIPPET_KEY", "ZENDESK_DEFAULT_TAGS"],
-  "Diger": ["PORT", "ADMIN_TOKEN", "DETERMINISTIC_COLLECTION_MODE"]
+  "Rate Limiting": ["RATE_LIMIT_ENABLED", "RATE_LIMIT_MAX", "RATE_LIMIT_WINDOW_MS"],
+  "Telegram": ["TELEGRAM_ENABLED", "TELEGRAM_BOT_TOKEN", "TELEGRAM_POLLING_INTERVAL_MS"],
+  "Diger": ["PORT", "ADMIN_TOKEN", "DETERMINISTIC_COLLECTION_MODE", "BOT_NAME", "COMPANY_NAME"]
 };
 
 let envSensitiveKeys = [];
@@ -944,7 +996,8 @@ confirmModalNo.addEventListener("click", () => {
 });
 
 // Close modals on overlay click
-[kbModal, topicModal, confirmModal].forEach((modal) => {
+const webhookModal = $("webhookModal");
+[kbModal, topicModal, confirmModal, webhookModal].forEach((modal) => {
   modal.addEventListener("click", (event) => {
     if (event.target === modal) {
       modal.style.display = "none";
@@ -963,6 +1016,295 @@ adminTokenInput.addEventListener("change", () => {
   localStorage.setItem("qragy_admin_token", state.token);
   void refreshDashboard();
 });
+
+// ══════════════════════════════════════════════════════════════════════════
+// TEAM FEATURES: Assign, Priority, Notes
+// ══════════════════════════════════════════════════════════════════════════
+
+$("ticketAssignBtn").addEventListener("click", async () => {
+  if (!state.currentTicketId) return;
+  try {
+    await apiPut("admin/tickets/" + encodeURIComponent(state.currentTicketId) + "/assign", {
+      assignedTo: $("ticketAssignInput").value.trim()
+    });
+    showToast("Ticket atandi.", "success");
+    void loadTicketDetail(state.currentTicketId);
+  } catch (err) { showToast("Hata: " + err.message, "error"); }
+});
+
+$("ticketPriorityBtn").addEventListener("click", async () => {
+  if (!state.currentTicketId) return;
+  try {
+    await apiPut("admin/tickets/" + encodeURIComponent(state.currentTicketId) + "/priority", {
+      priority: $("ticketPrioritySelect").value
+    });
+    showToast("Oncelik degistirildi.", "success");
+    void loadTicketDetail(state.currentTicketId);
+  } catch (err) { showToast("Hata: " + err.message, "error"); }
+});
+
+$("ticketNoteBtn").addEventListener("click", async () => {
+  if (!state.currentTicketId) return;
+  const noteInput = $("ticketNoteInput");
+  const note = noteInput.value.trim();
+  if (!note) return;
+  try {
+    await apiPost("admin/tickets/" + encodeURIComponent(state.currentTicketId) + "/notes", { note });
+    noteInput.value = "";
+    showToast("Not eklendi.", "success");
+    void loadTicketDetail(state.currentTicketId);
+  } catch (err) { showToast("Hata: " + err.message, "error"); }
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// KB: FILE UPLOAD
+// ══════════════════════════════════════════════════════════════════════════
+
+$("kbFileUpload").addEventListener("change", async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  const uploadStatus = $("kbUploadStatus");
+  uploadStatus.textContent = "Yukleniyor...";
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const headers = { "Bypass-Tunnel-Reminder": "true" };
+    if (state.token) headers["x-admin-token"] = state.token;
+    const resp = await fetch("api/admin/knowledge/upload", { method: "POST", headers, body: formData });
+    const payload = await resp.json();
+    if (!resp.ok) throw new Error(payload.error || "Upload hatasi");
+    uploadStatus.textContent = "Tamamlandi: " + (payload.chunksAdded || 0) + " parca eklendi";
+    showToast("Dosya yuklendi ve islendi.", "success");
+    setTimeout(() => { uploadStatus.textContent = ""; }, 5000);
+    await loadKnowledgeBase();
+  } catch (err) {
+    uploadStatus.textContent = "Hata!";
+    showToast("Upload hatasi: " + err.message, "error");
+  }
+  event.target.value = "";
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// WEBHOOKS
+// ══════════════════════════════════════════════════════════════════════════
+
+async function loadWebhooks() {
+  try {
+    const payload = await apiGet("admin/webhooks");
+    renderWebhooksTable(payload.webhooks || []);
+  } catch (err) {
+    $("webhooksTableBody").innerHTML = '<tr><td colspan="4" class="empty">Hata: ' + escapeHtml(err.message) + "</td></tr>";
+  }
+}
+
+function renderWebhooksTable(hooks) {
+  const tbody = $("webhooksTableBody");
+  if (!hooks.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">Webhook yok.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = "";
+  for (const h of hooks) {
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td class="issue-cell">' + escapeHtml(h.url || "-") + "</td>" +
+      "<td>" + escapeHtml((h.events || []).join(", ")) + "</td>" +
+      '<td><span class="status-dot ' + (h.active ? "active" : "inactive") + '"></span>' + (h.active ? "Aktif" : "Pasif") + "</td>" +
+      '<td>' +
+        '<button class="btn btn-sm btn-secondary wh-toggle-btn" data-id="' + escapeHtml(h.id) + '" data-active="' + (h.active ? "1" : "0") + '">' + (h.active ? "Durdur" : "Etkinlestir") + '</button> ' +
+        '<button class="btn btn-sm btn-primary wh-test-btn" data-id="' + escapeHtml(h.id) + '">Test</button> ' +
+        '<button class="btn btn-sm btn-danger wh-delete-btn" data-id="' + escapeHtml(h.id) + '">Sil</button>' +
+      '</td>';
+    tbody.appendChild(tr);
+  }
+}
+
+$("webhookAddBtn").addEventListener("click", () => {
+  $("webhookModalUrl").value = "";
+  $("webhookModalEvents").value = "*";
+  $("webhookModalSecret").value = "";
+  $("webhookModalTitle").textContent = "Yeni Webhook";
+  state.editingWebhookId = null;
+  webhookModal.style.display = "";
+});
+
+$("webhookModalCancelBtn").addEventListener("click", () => { webhookModal.style.display = "none"; });
+
+$("webhookModalSaveBtn").addEventListener("click", async () => {
+  const url = $("webhookModalUrl").value.trim();
+  if (!url) { showToast("URL zorunludur.", "error"); return; }
+  const events = $("webhookModalEvents").value.split(",").map(e => e.trim()).filter(Boolean);
+  const secret = $("webhookModalSecret").value.trim();
+  try {
+    if (state.editingWebhookId) {
+      await apiPut("admin/webhooks/" + state.editingWebhookId, { url, events, secret });
+    } else {
+      await apiPost("admin/webhooks", { url, events, secret });
+    }
+    webhookModal.style.display = "none";
+    showToast("Webhook kaydedildi.", "success");
+    await loadWebhooks();
+  } catch (err) { showToast("Hata: " + err.message, "error"); }
+});
+
+$("webhooksTableBody").addEventListener("click", async (event) => {
+  const toggleBtn = event.target.closest(".wh-toggle-btn");
+  if (toggleBtn) {
+    const isActive = toggleBtn.dataset.active === "1";
+    try {
+      await apiPut("admin/webhooks/" + toggleBtn.dataset.id, { active: !isActive });
+      await loadWebhooks();
+    } catch (err) { showToast("Hata: " + err.message, "error"); }
+    return;
+  }
+  const testBtn = event.target.closest(".wh-test-btn");
+  if (testBtn) {
+    try {
+      const payload = await apiPost("admin/webhooks/" + testBtn.dataset.id + "/test", {});
+      showToast(payload.ok ? "Test basarili (HTTP " + payload.status + ")" : "Test basarisiz: " + payload.error, payload.ok ? "success" : "error");
+    } catch (err) { showToast("Test hatasi: " + err.message, "error"); }
+    return;
+  }
+  const deleteBtn = event.target.closest(".wh-delete-btn");
+  if (deleteBtn) {
+    const ok = await confirmAction("Bu webhook'u silmek istediginize emin misiniz?");
+    if (!ok) return;
+    try {
+      await apiDelete("admin/webhooks/" + deleteBtn.dataset.id);
+      showToast("Webhook silindi.", "success");
+      await loadWebhooks();
+    } catch (err) { showToast("Hata: " + err.message, "error"); }
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// PROMPT VERSIONS
+// ══════════════════════════════════════════════════════════════════════════
+
+async function loadPromptVersions() {
+  try {
+    const payload = await apiGet("admin/prompt-versions");
+    renderPromptVersions(payload.versions || []);
+  } catch (err) {
+    $("promptVersionsTableBody").innerHTML = '<tr><td colspan="4" class="empty">Hata: ' + escapeHtml(err.message) + "</td></tr>";
+  }
+}
+
+function renderPromptVersions(versions) {
+  const tbody = $("promptVersionsTableBody");
+  if (!versions.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">Henuz versiyon yok.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = "";
+  // Show newest first
+  const sorted = [...versions].reverse();
+  for (const v of sorted) {
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>" + escapeHtml(v.filename || "-") + "</td>" +
+      "<td>" + fmtDate(v.savedAt) + "</td>" +
+      "<td>" + (v.content ? v.content.length : 0) + " karakter</td>" +
+      '<td><button class="btn btn-sm btn-secondary pv-rollback-btn" data-id="' + escapeHtml(v.id) + '">Geri Al</button></td>';
+    tbody.appendChild(tr);
+  }
+}
+
+$("promptVersionsTableBody").addEventListener("click", async (event) => {
+  const btn = event.target.closest(".pv-rollback-btn");
+  if (!btn) return;
+  const ok = await confirmAction("Bu versiyona geri donmek istediginize emin misiniz?");
+  if (!ok) return;
+  try {
+    const payload = await apiPost("admin/prompt-versions/" + btn.dataset.id + "/rollback", {});
+    showToast(payload.message || "Geri alindi.", "success");
+    await loadPromptVersions();
+  } catch (err) { showToast("Hata: " + err.message, "error"); }
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// ANALYTICS
+// ══════════════════════════════════════════════════════════════════════════
+
+async function loadAnalytics() {
+  const range = $("analyticsRange").value;
+  try {
+    const payload = await apiGet("admin/analytics?range=" + range);
+    renderAnalyticsSummary(payload.summary || {});
+    renderAnalyticsChart(payload.daily || []);
+    renderTopTopics(payload.topTopics || []);
+  } catch (err) {
+    $("analyticsSummary").innerHTML = '<article class="summary-card"><div class="label">Hata</div><div class="value">' + escapeHtml(err.message) + "</div></article>";
+  }
+}
+
+function renderAnalyticsSummary(summary) {
+  const grid = $("analyticsSummary");
+  grid.innerHTML = "";
+  const cards = [
+    ["Toplam Sohbet", summary.totalChats || 0],
+    ["AI Cagri", summary.aiCalls || 0],
+    ["Ort. Yanit Suresi", (summary.avgResponseMs || 0) + "ms"],
+    ["Eskalasyon Orani", "%" + (summary.escalationRate || 0)],
+    ["CSAT Ortalamasi", summary.csatAverage ? summary.csatAverage + "/5" : "-"],
+    ["Deterministic", summary.deterministicReplies || 0]
+  ];
+  for (const [label, value] of cards) {
+    grid.appendChild(createSummaryCard(label, value));
+  }
+}
+
+function renderAnalyticsChart(daily) {
+  const container = $("analyticsChart");
+  container.innerHTML = "";
+  if (!daily.length) {
+    container.innerHTML = "<p class='empty'>Veri yok.</p>";
+    return;
+  }
+
+  const maxChats = Math.max(...daily.map(d => d.totalChats || 0), 1);
+  const chartHeight = 200;
+  const barWidth = Math.max(20, Math.min(60, Math.floor(800 / daily.length) - 4));
+  const svgWidth = daily.length * (barWidth + 4) + 40;
+
+  let svg = '<svg width="' + svgWidth + '" height="' + (chartHeight + 40) + '" style="overflow-x:auto">';
+  // Grid lines
+  for (let i = 0; i <= 4; i++) {
+    const y = chartHeight - (i / 4) * chartHeight;
+    svg += '<line x1="30" y1="' + y + '" x2="' + svgWidth + '" y2="' + y + '" stroke="#ced9e2" stroke-dasharray="4"/>';
+    svg += '<text x="0" y="' + (y + 4) + '" font-size="11" fill="#5c6f7f">' + Math.round((i / 4) * maxChats) + '</text>';
+  }
+
+  daily.forEach((d, i) => {
+    const x = 35 + i * (barWidth + 4);
+    const height = ((d.totalChats || 0) / maxChats) * chartHeight;
+    const y = chartHeight - height;
+    svg += '<rect x="' + x + '" y="' + y + '" width="' + barWidth + '" height="' + height + '" fill="var(--primary)" rx="3"/>';
+    svg += '<text x="' + (x + barWidth / 2) + '" y="' + (chartHeight + 16) + '" font-size="10" fill="#5c6f7f" text-anchor="middle">' + d.date.slice(5) + '</text>';
+    svg += '<text x="' + (x + barWidth / 2) + '" y="' + (y - 4) + '" font-size="10" fill="var(--text)" text-anchor="middle">' + (d.totalChats || 0) + '</text>';
+  });
+
+  svg += '</svg>';
+  container.innerHTML = svg;
+}
+
+function renderTopTopics(topics) {
+  const tbody = $("topTopicsTableBody");
+  if (!topics.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="empty">Konu verisi yok.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = "";
+  topics.forEach((t, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + (i + 1) + "</td><td>" + escapeHtml(t.topicId || "-") + "</td><td>" + (t.count || 0) + "</td>";
+    tbody.appendChild(tr);
+  });
+}
+
+$("analyticsRange").addEventListener("change", () => { void loadAnalytics(); });
 
 // ── Initialization ─────────────────────────────────────────────────────────
 setAutoRefresh(true);

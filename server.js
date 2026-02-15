@@ -37,14 +37,205 @@ const BOT_NAME = (process.env.BOT_NAME || "QRAGY Bot").trim();
 const COMPANY_NAME = (process.env.COMPANY_NAME || "").trim();
 const REMOTE_TOOL_NAME = (process.env.REMOTE_TOOL_NAME || "").trim();
 
+// Rate Limiting
+const RATE_LIMIT_ENABLED = /^(1|true|yes)$/i.test(process.env.RATE_LIMIT_ENABLED || "true");
+const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 20);
+const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60000);
+
+// Model Fallback
+const GOOGLE_FALLBACK_MODEL = (process.env.GOOGLE_FALLBACK_MODEL || "").trim();
+
+// Telegram
+const TELEGRAM_ENABLED = /^(1|true|yes)$/i.test(process.env.TELEGRAM_ENABLED || "false");
+const TELEGRAM_BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || "").trim();
+const TELEGRAM_POLLING_INTERVAL_MS = Number(process.env.TELEGRAM_POLLING_INTERVAL_MS || 2000);
+
 const AGENT_DIR = path.join(__dirname, "agent");
 const TOPICS_DIR = path.join(AGENT_DIR, "topics");
 const MEMORY_DIR = path.join(__dirname, "memory");
 const DATA_DIR = path.join(__dirname, "data");
 const LANCE_DB_PATH = path.join(DATA_DIR, "lancedb");
 const TICKETS_DB_FILE = path.join(DATA_DIR, "tickets.json");
+const ANALYTICS_FILE = path.join(DATA_DIR, "analytics.json");
+const WEBHOOKS_FILE = path.join(DATA_DIR, "webhooks.json");
+const TELEGRAM_SESSIONS_FILE = path.join(DATA_DIR, "telegram-sessions.json");
+const PROMPT_VERSIONS_FILE = path.join(DATA_DIR, "prompt-versions.json");
+const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 
 let knowledgeTable = null;
+
+// ── Rate Limiter (in-memory) ────────────────────────────────────────────
+const rateLimitStore = new Map();
+
+function checkRateLimit(ip) {
+  if (!RATE_LIMIT_ENABLED) return true;
+  const now = Date.now();
+  let entry = rateLimitStore.get(ip);
+  if (!entry || now > entry.resetAt) {
+    entry = { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
+    rateLimitStore.set(ip, entry);
+  }
+  entry.count++;
+  return entry.count <= RATE_LIMIT_MAX;
+}
+
+// Cleanup stale entries every 60s
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateLimitStore) {
+    if (now > entry.resetAt) rateLimitStore.delete(ip);
+  }
+}, 60000);
+
+// ── Analytics (in-memory buffer → periodic flush) ────────────────────────
+const analyticsBuffer = [];
+let analyticsData = { daily: {} };
+
+function loadAnalyticsData() {
+  try {
+    if (fs.existsSync(ANALYTICS_FILE)) {
+      analyticsData = JSON.parse(fs.readFileSync(ANALYTICS_FILE, "utf8"));
+      if (!analyticsData.daily) analyticsData.daily = {};
+    }
+  } catch (_e) {
+    analyticsData = { daily: {} };
+  }
+}
+
+function saveAnalyticsData() {
+  try {
+    fs.writeFileSync(ANALYTICS_FILE, JSON.stringify(analyticsData, null, 2), "utf8");
+  } catch (_e) { /* silent */ }
+}
+
+function recordAnalyticsEvent(event) {
+  analyticsBuffer.push({ ...event, timestamp: Date.now() });
+}
+
+function flushAnalyticsBuffer() {
+  if (!analyticsBuffer.length) return;
+
+  const events = analyticsBuffer.splice(0, analyticsBuffer.length);
+  for (const evt of events) {
+    const dayKey = new Date(evt.timestamp).toISOString().slice(0, 10);
+    if (!analyticsData.daily[dayKey]) {
+      analyticsData.daily[dayKey] = {
+        totalChats: 0, aiCalls: 0, deterministicReplies: 0,
+        totalResponseMs: 0, responseCount: 0,
+        escalationCount: 0, csatSum: 0, csatCount: 0,
+        topicCounts: {}, sourceCounts: {}
+      };
+    }
+    const day = analyticsData.daily[dayKey];
+    day.totalChats++;
+    if (evt.source === "gemini" || evt.source === "topic-guided") day.aiCalls++;
+    if (evt.source === "rule-engine" || evt.source === "fallback-no-key") day.deterministicReplies++;
+    if (evt.source === "escalation-trigger" || evt.source === "topic-escalation") day.escalationCount++;
+    if (evt.responseTimeMs) {
+      day.totalResponseMs += evt.responseTimeMs;
+      day.responseCount++;
+    }
+    if (evt.topicId) {
+      day.topicCounts[evt.topicId] = (day.topicCounts[evt.topicId] || 0) + 1;
+    }
+    if (evt.source) {
+      day.sourceCounts[evt.source] = (day.sourceCounts[evt.source] || 0) + 1;
+    }
+  }
+
+  // Prune data older than 90 days
+  const cutoff = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+  for (const key of Object.keys(analyticsData.daily)) {
+    if (key < cutoff) delete analyticsData.daily[key];
+  }
+
+  saveAnalyticsData();
+}
+
+function recordCsatAnalytics(rating) {
+  const dayKey = new Date().toISOString().slice(0, 10);
+  if (!analyticsData.daily[dayKey]) {
+    analyticsData.daily[dayKey] = {
+      totalChats: 0, aiCalls: 0, deterministicReplies: 0,
+      totalResponseMs: 0, responseCount: 0,
+      escalationCount: 0, csatSum: 0, csatCount: 0,
+      topicCounts: {}, sourceCounts: {}
+    };
+  }
+  analyticsData.daily[dayKey].csatSum += rating;
+  analyticsData.daily[dayKey].csatCount++;
+  saveAnalyticsData();
+}
+
+// Flush every 5 minutes
+setInterval(flushAnalyticsBuffer, 5 * 60 * 1000);
+
+// ── Webhook helpers ──────────────────────────────────────────────────────
+const crypto = require("crypto");
+
+function loadWebhooks() {
+  try {
+    if (fs.existsSync(WEBHOOKS_FILE)) {
+      return JSON.parse(fs.readFileSync(WEBHOOKS_FILE, "utf8"));
+    }
+  } catch (_e) { /* silent */ }
+  return [];
+}
+
+function saveWebhooks(hooks) {
+  fs.writeFileSync(WEBHOOKS_FILE, JSON.stringify(hooks, null, 2), "utf8");
+}
+
+function fireWebhook(eventType, payload) {
+  const hooks = loadWebhooks();
+  for (const hook of hooks) {
+    if (!hook.active) continue;
+    if (!hook.events.includes(eventType) && !hook.events.includes("*")) continue;
+    const body = JSON.stringify({ event: eventType, data: payload, timestamp: new Date().toISOString() });
+    const headers = { "Content-Type": "application/json" };
+    if (hook.secret) {
+      headers["X-Qragy-Signature"] = crypto.createHmac("sha256", hook.secret).update(body).digest("hex");
+    }
+    fetch(hook.url, { method: "POST", headers, body }).catch(_e => { /* fire-and-forget */ });
+  }
+}
+
+// ── Telegram sessions ────────────────────────────────────────────────────
+function loadTelegramSessions() {
+  try {
+    if (fs.existsSync(TELEGRAM_SESSIONS_FILE)) {
+      return JSON.parse(fs.readFileSync(TELEGRAM_SESSIONS_FILE, "utf8"));
+    }
+  } catch (_e) { /* silent */ }
+  return {};
+}
+
+function saveTelegramSessions(sessions) {
+  fs.writeFileSync(TELEGRAM_SESSIONS_FILE, JSON.stringify(sessions, null, 2), "utf8");
+}
+
+// ── Prompt Versioning ────────────────────────────────────────────────────
+function loadPromptVersions() {
+  try {
+    if (fs.existsSync(PROMPT_VERSIONS_FILE)) {
+      return JSON.parse(fs.readFileSync(PROMPT_VERSIONS_FILE, "utf8"));
+    }
+  } catch (_e) { /* silent */ }
+  return { versions: [] };
+}
+
+function savePromptVersion(filename, content) {
+  const data = loadPromptVersions();
+  data.versions.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    filename,
+    content,
+    savedAt: new Date().toISOString()
+  });
+  // Keep only last 50 versions
+  if (data.versions.length > 50) data.versions = data.versions.slice(-50);
+  fs.writeFileSync(PROMPT_VERSIONS_FILE, JSON.stringify(data, null, 2), "utf8");
+}
 
 const DEFAULT_PERSONA_TEXT = [
   `# ${BOT_NAME} Teknik Destek Persona`,
@@ -425,7 +616,11 @@ function sanitizeTicketForList(ticket) {
     fullName: ticket.fullName || "",
     phone: ticket.phone || "",
     handoffAttempts: Number(ticket.handoffAttempts || 0),
-    lastHandoffAt: ticket.lastHandoffAt || ""
+    lastHandoffAt: ticket.lastHandoffAt || "",
+    source: ticket.source || "web",
+    priority: ticket.priority || "normal",
+    assignedTo: ticket.assignedTo || "",
+    csatRating: ticket.csatRating || null
   };
 }
 
@@ -1308,6 +1503,62 @@ async function callGemini(contents, systemPrompt, maxOutputTokens) {
   };
 }
 
+async function callGeminiWithFallback(contents, systemPrompt, maxOutputTokens) {
+  try {
+    return await callGemini(contents, systemPrompt, maxOutputTokens);
+  } catch (error) {
+    const status = Number(error?.status) || 0;
+    if (GOOGLE_FALLBACK_MODEL && (status === 429 || status === 500 || status === 503)) {
+      console.warn(`Primary model hatasi (${status}), fallback model deneniyor: ${GOOGLE_FALLBACK_MODEL}`);
+      const endpoint =
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+        encodeURIComponent(GOOGLE_FALLBACK_MODEL) +
+        ":generateContent?key=" +
+        encodeURIComponent(GOOGLE_API_KEY);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), GOOGLE_REQUEST_TIMEOUT_MS);
+      let geminiResponse;
+      try {
+        geminiResponse = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents,
+            generationConfig: buildGenerationConfig(maxOutputTokens)
+          })
+        });
+      } catch (fbError) {
+        if (fbError?.name === "AbortError") {
+          const timeoutError = new Error("Fallback model zaman asimina ugradi.");
+          timeoutError.status = 504;
+          throw timeoutError;
+        }
+        throw fbError;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      const payload = await geminiResponse.json().catch(() => ({}));
+      if (!geminiResponse.ok) {
+        const fbErr = new Error(payload?.error?.message || "Fallback model hatasi.");
+        fbErr.status = geminiResponse.status;
+        throw fbErr;
+      }
+
+      const reply = (payload?.candidates?.[0]?.content?.parts || [])
+        .map((part) => (typeof part?.text === "string" ? part.text : ""))
+        .join("\n")
+        .trim();
+
+      return { reply, finishReason: payload?.candidates?.[0]?.finishReason || "", payload, fallbackUsed: true };
+    }
+    throw error;
+  }
+}
+
 async function initKnowledgeBase() {
   try {
     const db = await lancedb.connect(LANCE_DB_PATH);
@@ -1394,7 +1645,7 @@ async function generateEscalationSummary(contents, memory, conversationContext) 
   ].join("\n");
 
   try {
-    const result = await callGemini(contents, summaryPrompt, 512);
+    const result = await callGeminiWithFallback(contents, summaryPrompt, 512);
     const summary = (result.reply || "").trim();
     return summary || fallback;
   } catch (_err) {
@@ -1472,6 +1723,8 @@ app.post("/api/tickets/:ticketId/handoff", (req, res) => {
     return res.status(isNotFound ? 404 : 400).json({ error: result.error });
   }
 
+  fireWebhook("handoff_result", { ticketId, status, detail });
+
   return res.json({
     ok: true,
     ticket: sanitizeTicketForList(result.ticket)
@@ -1508,6 +1761,8 @@ app.post("/api/tickets/:ticketId/rating", (req, res) => {
   });
 
   saveTicketsDb(db);
+  recordCsatAnalytics(rating);
+  fireWebhook("csat_rating", { ticketId, rating });
   return res.json({ ok: true, rating });
 });
 
@@ -1524,6 +1779,8 @@ app.get("/api/admin/tickets", requireAdminAccess, (req, res) => {
   const limit = Math.max(1, Math.min(500, Number(req.query.limit) || 100));
   const offset = Math.max(0, Number(req.query.offset) || 0);
   const statusFilter = String(req.query.status || "").trim();
+  const searchQuery = String(req.query.q || "").trim().toLowerCase();
+  const sourceFilter = String(req.query.source || "").trim();
   const includeEvents = /^(1|true|yes)$/i.test(String(req.query.includeEvents || ""));
 
   const db = loadTicketsDb();
@@ -1532,6 +1789,27 @@ app.get("/api/admin/tickets", requireAdminAccess, (req, res) => {
 
   if (statusFilter) {
     tickets = tickets.filter((ticket) => ticket.status === statusFilter);
+  }
+
+  if (sourceFilter) {
+    tickets = tickets.filter((ticket) => (ticket.source || "web") === sourceFilter);
+  }
+
+  if (searchQuery) {
+    tickets = tickets.filter((ticket) => {
+      const fields = [
+        ticket.id, ticket.branchCode, ticket.issueSummary,
+        ticket.companyName, ticket.fullName, ticket.phone, ticket.status
+      ].filter(Boolean).join(" ").toLowerCase();
+      if (fields.includes(searchQuery)) return true;
+      // Also search chat history
+      if (Array.isArray(ticket.chatHistory)) {
+        return ticket.chatHistory.some((msg) =>
+          String(msg.content || "").toLowerCase().includes(searchQuery)
+        );
+      }
+      return false;
+    });
   }
 
   const total = tickets.length;
@@ -1567,13 +1845,21 @@ app.get("/api/admin/tickets/:ticketId", requireAdminAccess, (req, res) => {
       ...sanitizeTicketForList(ticket),
       supportSnapshot: ticket.supportSnapshot || {},
       events: Array.isArray(ticket.events) ? ticket.events : [],
-      chatHistory: Array.isArray(ticket.chatHistory) ? ticket.chatHistory : []
+      chatHistory: Array.isArray(ticket.chatHistory) ? ticket.chatHistory : [],
+      internalNotes: Array.isArray(ticket.internalNotes) ? ticket.internalNotes : []
     }
   });
 });
 
 app.post("/api/chat", async (req, res) => {
+  const chatStartTime = Date.now();
   try {
+    // Rate limiting
+    const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
+    if (!checkRateLimit(clientIp)) {
+      return res.status(429).json({ error: "Cok fazla istek gonderdiniz. Lutfen biraz bekleyin.", retryAfterMs: RATE_LIMIT_WINDOW_MS });
+    }
+
     const rawMessages = Array.isArray(req.body?.messages) ? req.body.messages : [];
 
     if (!rawMessages.length) {
@@ -1625,6 +1911,7 @@ app.post("/api/chat", async (req, res) => {
       maintainClosedTicketContext &&
       !NEW_TICKET_INTENT_REGEX.test(normalizeForMatching(latestUserMessage))
     ) {
+      recordAnalyticsEvent({ source: "ticket-status", responseTimeMs: Date.now() - chatStartTime });
       return res.json({
         reply: getStatusFollowupMessage(),
         model: GOOGLE_MODEL,
@@ -1644,6 +1931,7 @@ app.post("/api/chat", async (req, res) => {
       const isNewIssue = ISSUE_HINT_REGEX.test(normalizeForMatching(latestUserMessage)) &&
         !isStatusFollowupMessage(latestUserMessage);
       if (!isNewIssue) {
+        recordAnalyticsEvent({ source: "post-escalation", responseTimeMs: Date.now() - chatStartTime });
         return res.json({
           reply: POST_ESCALATION_FOLLOWUP_MESSAGE,
           model: GOOGLE_MODEL,
@@ -1687,6 +1975,11 @@ app.post("/api/chat", async (req, res) => {
         (t) => ACTIVE_TICKET_STATUSES.has(t.status) && t.id !== ticket.id
       ).length;
 
+      recordAnalyticsEvent({ source: "memory-template", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null });
+      if (ticketResult.created) {
+        fireWebhook("ticket_created", { ticketId: ticket.id, memory, source: "memory-template" });
+      }
+
       return res.json({
         reply: buildConfirmationMessage(memory),
         model: GOOGLE_MODEL,
@@ -1718,6 +2011,11 @@ app.post("/api/chat", async (req, res) => {
         chatHistory: chatHistorySnapshot
       });
       const handoffReady = Boolean(supportAvailability.isOpen);
+      recordAnalyticsEvent({ source: "escalation-trigger", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null });
+      if (ticketResult.created) {
+        fireWebhook("ticket_created", { ticketId: ticketResult.ticket.id, memory: escalationMemory, source: "escalation-trigger" });
+        fireWebhook("escalation", { ticketId: ticketResult.ticket.id, memory: escalationMemory, reason: conversationContext.escalationReason });
+      }
       return res.json({
         reply: escalationReply,
         model: GOOGLE_MODEL,
@@ -1761,6 +2059,7 @@ app.post("/api/chat", async (req, res) => {
           // Sorun ozeti eksik
         }
 
+        recordAnalyticsEvent({ source: "rule-engine", responseTimeMs: Date.now() - chatStartTime });
         return res.json({
           reply: deterministicReply,
           model: GOOGLE_MODEL,
@@ -1818,10 +2117,10 @@ app.post("/api/chat", async (req, res) => {
     // RAG: Bilgi tabanindan ilgili Q&A ciftlerini bul
     const knowledgeResults = await searchKnowledge(latestUserMessage);
     const systemPrompt = buildSystemPrompt(memory, conversationContext, knowledgeResults);
-    let geminiResult = await callGemini(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
+    let geminiResult = await callGeminiWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
 
     if (geminiResult.finishReason === "MAX_TOKENS" && geminiResult.reply.length < 160) {
-      geminiResult = await callGemini(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2);
+      geminiResult = await callGeminiWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2);
     }
 
     reply = sanitizeAssistantReply(geminiResult.reply);
@@ -1861,10 +2160,24 @@ app.post("/api/chat", async (req, res) => {
 
     const handoffReady = isEscalationReply && Boolean(supportAvailability.isOpen);
 
+    const chatSource = conversationContext.currentTopic ? "topic-guided" : "gemini";
+    recordAnalyticsEvent({
+      source: chatSource,
+      responseTimeMs: Date.now() - chatStartTime,
+      topicId: conversationContext.currentTopic || null
+    });
+
+    if (isEscalationReply && ticketCreated) {
+      fireWebhook("escalation", { ticketId, memory, source: chatSource });
+    }
+    if (ticketCreated) {
+      fireWebhook("ticket_created", { ticketId, memory, source: chatSource });
+    }
+
     return res.json({
       reply,
       model: GOOGLE_MODEL,
-      source: conversationContext.currentTopic ? "topic-guided" : "gemini",
+      source: chatSource,
       memory,
       conversationContext,
       hasClosedTicketHistory,
@@ -2019,6 +2332,11 @@ app.put("/api/admin/agent/files/:filename", requireAdminAccess, (req, res) => {
 
   const filePath = path.join(AGENT_DIR, filename);
   try {
+    // Save current version before overwriting (prompt versioning)
+    if (fs.existsSync(filePath)) {
+      const oldContent = fs.readFileSync(filePath, "utf8");
+      savePromptVersion(filename, oldContent);
+    }
     fs.writeFileSync(filePath, content, "utf8");
     loadAllAgentConfig();
     return res.json({ ok: true });
@@ -2255,6 +2573,435 @@ app.post("/api/admin/agent/reload", requireAdminAccess, (_req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════════════════
+// ANALYTICS
+// ══════════════════════════════════════════════════════════════════════════
+
+app.get("/api/admin/analytics", requireAdminAccess, (_req, res) => {
+  try {
+    flushAnalyticsBuffer();
+    const range = String(_req.query.range || "7d").trim();
+    const days = range === "90d" ? 90 : range === "30d" ? 30 : 7;
+    const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+
+    const dailyEntries = [];
+    let totalChats = 0, totalAiCalls = 0, totalDeterministic = 0;
+    let totalResponseMs = 0, totalResponseCount = 0;
+    let totalEscalations = 0, totalCsatSum = 0, totalCsatCount = 0;
+    const topicTotals = {};
+
+    for (const [dayKey, day] of Object.entries(analyticsData.daily || {})) {
+      if (dayKey < cutoff) continue;
+      dailyEntries.push({ date: dayKey, ...day, avgResponseMs: day.responseCount > 0 ? Math.round(day.totalResponseMs / day.responseCount) : 0 });
+      totalChats += day.totalChats || 0;
+      totalAiCalls += day.aiCalls || 0;
+      totalDeterministic += day.deterministicReplies || 0;
+      totalResponseMs += day.totalResponseMs || 0;
+      totalResponseCount += day.responseCount || 0;
+      totalEscalations += day.escalationCount || 0;
+      totalCsatSum += day.csatSum || 0;
+      totalCsatCount += day.csatCount || 0;
+      for (const [tid, cnt] of Object.entries(day.topicCounts || {})) {
+        topicTotals[tid] = (topicTotals[tid] || 0) + cnt;
+      }
+    }
+
+    dailyEntries.sort((a, b) => a.date.localeCompare(b.date));
+
+    const topTopics = Object.entries(topicTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([topicId, count]) => ({ topicId, count }));
+
+    return res.json({
+      ok: true,
+      range,
+      summary: {
+        totalChats,
+        aiCalls: totalAiCalls,
+        deterministicReplies: totalDeterministic,
+        avgResponseMs: totalResponseCount > 0 ? Math.round(totalResponseMs / totalResponseCount) : 0,
+        escalationCount: totalEscalations,
+        escalationRate: totalChats > 0 ? Math.round((totalEscalations / totalChats) * 100) : 0,
+        csatAverage: totalCsatCount > 0 ? Math.round((totalCsatSum / totalCsatCount) * 10) / 10 : 0,
+        csatCount: totalCsatCount
+      },
+      daily: dailyEntries,
+      topTopics
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// WEBHOOKS CRUD
+// ══════════════════════════════════════════════════════════════════════════
+
+app.get("/api/admin/webhooks", requireAdminAccess, (_req, res) => {
+  return res.json({ ok: true, webhooks: loadWebhooks() });
+});
+
+app.post("/api/admin/webhooks", requireAdminAccess, (req, res) => {
+  const { url, events, secret } = req.body || {};
+  if (!url) return res.status(400).json({ error: "url zorunludur." });
+  const hooks = loadWebhooks();
+  const hook = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    url,
+    events: Array.isArray(events) ? events : ["*"],
+    active: true,
+    secret: secret || ""
+  };
+  hooks.push(hook);
+  saveWebhooks(hooks);
+  return res.json({ ok: true, webhook: hook });
+});
+
+app.put("/api/admin/webhooks/:id", requireAdminAccess, (req, res) => {
+  const hooks = loadWebhooks();
+  const hook = hooks.find(h => h.id === req.params.id);
+  if (!hook) return res.status(404).json({ error: "Webhook bulunamadi." });
+  const { url, events, active, secret } = req.body || {};
+  if (url !== undefined) hook.url = url;
+  if (Array.isArray(events)) hook.events = events;
+  if (typeof active === "boolean") hook.active = active;
+  if (secret !== undefined) hook.secret = secret;
+  saveWebhooks(hooks);
+  return res.json({ ok: true, webhook: hook });
+});
+
+app.delete("/api/admin/webhooks/:id", requireAdminAccess, (req, res) => {
+  let hooks = loadWebhooks();
+  const idx = hooks.findIndex(h => h.id === req.params.id);
+  if (idx < 0) return res.status(404).json({ error: "Webhook bulunamadi." });
+  hooks.splice(idx, 1);
+  saveWebhooks(hooks);
+  return res.json({ ok: true });
+});
+
+app.post("/api/admin/webhooks/:id/test", requireAdminAccess, async (req, res) => {
+  const hooks = loadWebhooks();
+  const hook = hooks.find(h => h.id === req.params.id);
+  if (!hook) return res.status(404).json({ error: "Webhook bulunamadi." });
+  try {
+    const body = JSON.stringify({ event: "test", data: { message: "Qragy webhook test" }, timestamp: new Date().toISOString() });
+    const headers = { "Content-Type": "application/json" };
+    if (hook.secret) {
+      headers["X-Qragy-Signature"] = crypto.createHmac("sha256", hook.secret).update(body).digest("hex");
+    }
+    const resp = await fetch(hook.url, { method: "POST", headers, body });
+    return res.json({ ok: true, status: resp.status });
+  } catch (err) {
+    return res.json({ ok: false, error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// KB: FILE UPLOAD (PDF/DOCX/TXT)
+// ══════════════════════════════════════════════════════════════════════════
+
+const multer = require("multer");
+const upload = multer({ dest: UPLOADS_DIR, limits: { fileSize: 10 * 1024 * 1024 } });
+
+function chunkText(text, chunkSize = 500, overlap = 50) {
+  const chunks = [];
+  let start = 0;
+  while (start < text.length) {
+    const end = Math.min(start + chunkSize, text.length);
+    chunks.push(text.slice(start, end).trim());
+    start += chunkSize - overlap;
+  }
+  return chunks.filter(c => c.length > 20);
+}
+
+async function extractTextFromFile(filePath, mimetype, originalname) {
+  const ext = path.extname(originalname).toLowerCase();
+  if (ext === ".txt" || mimetype === "text/plain") {
+    return fs.readFileSync(filePath, "utf8");
+  }
+  if (ext === ".pdf" || mimetype === "application/pdf") {
+    const pdfParse = require("pdf-parse");
+    const buffer = fs.readFileSync(filePath);
+    const data = await pdfParse(buffer);
+    return data.text || "";
+  }
+  if (ext === ".docx" || mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+    const mammoth = require("mammoth");
+    const result = await mammoth.extractRawText({ path: filePath });
+    return result.value || "";
+  }
+  throw new Error("Desteklenmeyen dosya formati: " + ext);
+}
+
+app.post("/api/admin/knowledge/upload", requireAdminAccess, upload.single("file"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "Dosya gerekli." });
+  try {
+    const text = await extractTextFromFile(req.file.path, req.file.mimetype, req.file.originalname);
+    if (!text.trim()) return res.status(400).json({ error: "Dosyadan metin cikarilamadi." });
+
+    const chunks = chunkText(text);
+    if (!chunks.length) return res.status(400).json({ error: "Yeterli icerik bulunamadi." });
+
+    const rows = loadCSVData();
+    let added = 0;
+
+    for (const chunk of chunks) {
+      // Generate a question from the chunk using Gemini
+      let question;
+      try {
+        const qResult = await callGemini(
+          [{ role: "user", parts: [{ text: chunk }] }],
+          "Bu metin parcasini ozetleyen tek bir soru yaz. Turkce yaz. Sadece soruyu yaz, baska bir sey yazma.",
+          64
+        );
+        question = (qResult.reply || "").trim();
+      } catch (_e) {
+        question = chunk.slice(0, 100) + "...";
+      }
+      if (!question) question = chunk.slice(0, 100) + "...";
+
+      rows.push({ question, answer: chunk, source: req.file.originalname });
+      added++;
+    }
+
+    saveCSVData(rows);
+    await reingestKnowledgeBase();
+
+    // Cleanup uploaded file
+    try { fs.unlinkSync(req.file.path); } catch (_e) { /* ignore */ }
+
+    return res.json({ ok: true, chunksAdded: added, totalRecords: rows.length });
+  } catch (err) {
+    try { fs.unlinkSync(req.file.path); } catch (_e) { /* ignore */ }
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// TICKET: TEAM FEATURES (assign, notes, priority)
+// ══════════════════════════════════════════════════════════════════════════
+
+app.put("/api/admin/tickets/:ticketId/assign", requireAdminAccess, (req, res) => {
+  const ticketId = String(req.params.ticketId || "").trim();
+  const { assignedTo } = req.body || {};
+  const db = loadTicketsDb();
+  const ticket = db.tickets.find(t => t.id === ticketId);
+  if (!ticket) return res.status(404).json({ error: "Ticket bulunamadi." });
+  ticket.assignedTo = String(assignedTo || "").trim();
+  ticket.updatedAt = nowIso();
+  ticket.events = Array.isArray(ticket.events) ? ticket.events : [];
+  ticket.events.push({ at: ticket.updatedAt, type: "assigned", message: `Ticket ${ticket.assignedTo || "kimseye"} atandi.` });
+  saveTicketsDb(db);
+  return res.json({ ok: true, ticket: sanitizeTicketForList(ticket) });
+});
+
+app.post("/api/admin/tickets/:ticketId/notes", requireAdminAccess, (req, res) => {
+  const ticketId = String(req.params.ticketId || "").trim();
+  const { note, author } = req.body || {};
+  if (!note) return res.status(400).json({ error: "note zorunludur." });
+  const db = loadTicketsDb();
+  const ticket = db.tickets.find(t => t.id === ticketId);
+  if (!ticket) return res.status(404).json({ error: "Ticket bulunamadi." });
+  if (!Array.isArray(ticket.internalNotes)) ticket.internalNotes = [];
+  const entry = { at: nowIso(), note: String(note).slice(0, 2000), author: String(author || "admin").slice(0, 100) };
+  ticket.internalNotes.push(entry);
+  ticket.updatedAt = entry.at;
+  saveTicketsDb(db);
+  return res.json({ ok: true, note: entry });
+});
+
+app.put("/api/admin/tickets/:ticketId/priority", requireAdminAccess, (req, res) => {
+  const ticketId = String(req.params.ticketId || "").trim();
+  const { priority } = req.body || {};
+  const valid = ["low", "normal", "high"];
+  if (!valid.includes(priority)) return res.status(400).json({ error: "priority: low/normal/high olmalidir." });
+  const db = loadTicketsDb();
+  const ticket = db.tickets.find(t => t.id === ticketId);
+  if (!ticket) return res.status(404).json({ error: "Ticket bulunamadi." });
+  ticket.priority = priority;
+  ticket.updatedAt = nowIso();
+  ticket.events = Array.isArray(ticket.events) ? ticket.events : [];
+  ticket.events.push({ at: ticket.updatedAt, type: "priority_changed", message: `Oncelik ${priority} olarak degistirildi.` });
+  saveTicketsDb(db);
+  return res.json({ ok: true, ticket: sanitizeTicketForList(ticket) });
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// PROMPT VERSIONING
+// ══════════════════════════════════════════════════════════════════════════
+
+app.get("/api/admin/prompt-versions", requireAdminAccess, (_req, res) => {
+  const data = loadPromptVersions();
+  return res.json({ ok: true, versions: data.versions || [] });
+});
+
+app.post("/api/admin/prompt-versions/:id/rollback", requireAdminAccess, (req, res) => {
+  const data = loadPromptVersions();
+  const version = data.versions.find(v => v.id === req.params.id);
+  if (!version) return res.status(404).json({ error: "Versiyon bulunamadi." });
+  const filePath = path.join(AGENT_DIR, version.filename);
+  try {
+    // Save current as new version before rollback
+    if (fs.existsSync(filePath)) {
+      savePromptVersion(version.filename, fs.readFileSync(filePath, "utf8"));
+    }
+    fs.writeFileSync(filePath, version.content, "utf8");
+    loadAllAgentConfig();
+    return res.json({ ok: true, message: `${version.filename} geri alindi.` });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// TELEGRAM BOT (long polling)
+// ══════════════════════════════════════════════════════════════════════════
+
+let telegramOffset = 0;
+
+async function processChatMessage(messagesArray, source = "web") {
+  // Core chat logic extracted for multi-channel support
+  const chatStartTime = Date.now();
+  const rawMessages = Array.isArray(messagesArray) ? messagesArray : [];
+  if (!rawMessages.length) return { reply: "Mesaj bulunamadi.", source: "error" };
+
+  const supportAvailability = getSupportAvailability();
+  const { activeMessages, hasClosedTicketHistory, lastClosedTicketMemory } = splitActiveTicketMessages(rawMessages);
+  const activeUserMessages = getUserMessages(activeMessages);
+  const memory = extractTicketMemory(activeMessages);
+  const latestUserMessage = activeUserMessages[activeUserMessages.length - 1] || "";
+
+  const chatHistorySnapshot = activeMessages
+    .filter(m => m && m.content)
+    .slice(-50)
+    .map(m => ({ role: m.role, content: String(m.content).slice(0, 500) }));
+
+  const conversationContext = buildConversationContext(memory, activeUserMessages);
+
+  // Deterministic reply
+  if (conversationContext.conversationState === "welcome_or_greet" ||
+      (conversationContext.conversationState !== "topic_detection" &&
+       conversationContext.conversationState !== "topic_guided_support" &&
+       !conversationContext.currentTopic)) {
+    const deterministicReply = buildDeterministicCollectionReply(memory, activeUserMessages, hasClosedTicketHistory);
+    if (deterministicReply) {
+      recordAnalyticsEvent({ source: "rule-engine", responseTimeMs: Date.now() - chatStartTime });
+      return { reply: deterministicReply, source: "rule-engine", memory };
+    }
+  }
+
+  if (!GOOGLE_API_KEY) {
+    return { reply: buildMissingFieldsReply(memory, latestUserMessage), source: "fallback-no-key", memory };
+  }
+
+  const contents = activeMessages
+    .filter(item => item && typeof item.content === "string" && item.content.trim())
+    .map(item => ({ role: item.role === "assistant" ? "model" : "user", parts: [{ text: item.content.trim() }] }));
+
+  if (!contents.length) return { reply: "Gecerli mesaj bulunamadi.", source: "error" };
+
+  // Required fields → ticket
+  if (hasRequiredFields(memory) && !conversationContext.currentTopic) {
+    const aiSummary = await generateEscalationSummary(contents, memory, conversationContext);
+    memory.issueSummary = aiSummary;
+    const ticketResult = createOrReuseTicket(memory, supportAvailability, {
+      source: source === "telegram" ? "telegram" : "chat-api",
+      model: GOOGLE_MODEL,
+      chatHistory: chatHistorySnapshot
+    });
+    recordAnalyticsEvent({ source: "memory-template", responseTimeMs: Date.now() - chatStartTime });
+    if (ticketResult.created) fireWebhook("ticket_created", { ticketId: ticketResult.ticket.id, memory, source });
+    return { reply: buildConfirmationMessage(memory), source: "memory-template", memory, ticketId: ticketResult.ticket.id };
+  }
+
+  // Escalation
+  if (conversationContext.escalationTriggered) {
+    const aiSummary = await generateEscalationSummary(contents, memory, conversationContext);
+    const escalationMemory = { ...memory, issueSummary: aiSummary };
+    const ticketResult = createOrReuseTicket(escalationMemory, supportAvailability, {
+      source: source === "telegram" ? "telegram" : "escalation-trigger",
+      model: GOOGLE_MODEL,
+      chatHistory: chatHistorySnapshot
+    });
+    recordAnalyticsEvent({ source: "escalation-trigger", responseTimeMs: Date.now() - chatStartTime });
+    if (ticketResult.created) {
+      fireWebhook("ticket_created", { ticketId: ticketResult.ticket.id, memory: escalationMemory, source });
+      fireWebhook("escalation", { ticketId: ticketResult.ticket.id, memory: escalationMemory, reason: conversationContext.escalationReason });
+    }
+    return { reply: "Sizi canli destek temsilcimize aktariyorum. Kisa surede yardimci olacaktir.", source: "escalation-trigger", memory: escalationMemory };
+  }
+
+  // AI reply
+  const knowledgeResults = await searchKnowledge(latestUserMessage);
+  const systemPrompt = buildSystemPrompt(memory, conversationContext, knowledgeResults);
+  let geminiResult = await callGeminiWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
+  if (geminiResult.finishReason === "MAX_TOKENS" && geminiResult.reply.length < 160) {
+    geminiResult = await callGeminiWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2);
+  }
+  let reply = sanitizeAssistantReply(geminiResult.reply);
+  if (!reply) reply = buildMissingFieldsReply(memory, latestUserMessage);
+
+  recordAnalyticsEvent({ source: conversationContext.currentTopic ? "topic-guided" : "gemini", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null });
+  return { reply, source: conversationContext.currentTopic ? "topic-guided" : "gemini", memory };
+}
+
+async function handleTelegramUpdate(update) {
+  const msg = update.message;
+  if (!msg || !msg.text) return;
+
+  const chatId = String(msg.chat.id);
+  const sessions = loadTelegramSessions();
+  if (!sessions[chatId]) sessions[chatId] = { messages: [] };
+
+  sessions[chatId].messages.push({ role: "user", content: msg.text });
+  // Keep last 30 messages
+  if (sessions[chatId].messages.length > 30) {
+    sessions[chatId].messages = sessions[chatId].messages.slice(-30);
+  }
+
+  try {
+    const result = await processChatMessage(sessions[chatId].messages, "telegram");
+    sessions[chatId].messages.push({ role: "assistant", content: result.reply });
+    saveTelegramSessions(sessions);
+
+    // Send reply via Telegram API
+    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: result.reply })
+    });
+  } catch (err) {
+    console.warn("Telegram mesaj isleme hatasi:", err.message);
+    saveTelegramSessions(sessions);
+  }
+}
+
+async function pollTelegram() {
+  if (!TELEGRAM_ENABLED || !TELEGRAM_BOT_TOKEN) return;
+  try {
+    const resp = await fetch(
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${telegramOffset}&timeout=10&allowed_updates=["message"]`
+    );
+    const data = await resp.json();
+    if (data.ok && Array.isArray(data.result)) {
+      for (const update of data.result) {
+        telegramOffset = update.update_id + 1;
+        await handleTelegramUpdate(update);
+      }
+    }
+  } catch (err) {
+    console.warn("Telegram polling hatasi:", err.message);
+  }
+}
+
+function startTelegramPolling() {
+  if (!TELEGRAM_ENABLED || !TELEGRAM_BOT_TOKEN) return;
+  console.log("Telegram polling baslatildi.");
+  setInterval(pollTelegram, TELEGRAM_POLLING_INTERVAL_MS);
+  pollTelegram();
+}
+
 app.get("/admin", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
@@ -2264,9 +3011,13 @@ app.get("*", (_req, res) => {
 });
 
 (async () => {
+  loadAnalyticsData();
+  // Ensure uploads directory
+  if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   await initKnowledgeBase();
   app.listen(PORT, () => {
     console.log(`${BOT_NAME} ${PORT} portunda hazir.`);
+    startTelegramPolling();
   });
 })();
 

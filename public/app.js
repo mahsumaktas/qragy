@@ -1278,6 +1278,9 @@ async function sendToBackend() {
 
   const payload = await response.json();
   if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error(payload?.error || "Cok fazla istek gonderdiniz. Lutfen biraz bekleyin.");
+    }
     throw new Error(payload?.error || "Sunucu hatası.");
   }
   return payload;
