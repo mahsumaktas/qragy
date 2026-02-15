@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: qragy
+    runtime: node
+    plan: free
+    buildCommand: npm install && node scripts/ingest.js
+    startCommand: node server.js
+    envVars:
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GOOGLE_MODEL
+        value: gemini-2.5-flash-preview-05-20
+      - key: GOOGLE_MAX_OUTPUT_TOKENS
+        value: "1024"
+      - key: GOOGLE_THINKING_BUDGET
+        value: "64"
+      - key: GOOGLE_REQUEST_TIMEOUT_MS
+        value: "15000"
+      - key: BOT_NAME
+        value: QRAGY Bot
+      - key: COMPANY_NAME
+        sync: false
+      - key: REMOTE_TOOL_NAME
+        sync: false
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: DETERMINISTIC_COLLECTION_MODE
+        value: "true"
+      - key: SUPPORT_HOURS_ENABLED
+        value: "false"
+      - key: ZENDESK_ENABLED
+        value: "false"
+      - key: NODE_ENV
+        value: production

@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Qragy Admin</title>
+    <link rel="icon" type="image/jpeg" href="qragy_logo.jpg" />
+    <link rel="stylesheet" href="admin.css?v=20260215" />
+  </head>
+  <body>
+    <main class="admin-shell">
+      <!-- Header -->
+      <header class="admin-header">
+        <div style="display:flex;align-items:center;gap:12px">
+          <img src="qragy_logo.jpg" alt="Qragy" style="width:36px;height:36px;object-fit:contain;border-radius:8px" />
+          <h1>Qragy Admin</h1>
+        </div>
+        <p>Bot yapilandirmasi, bilgi tabani, talepler ve sistem durumu</p>
+        <!-- Admin token input -->
+        <div class="header-controls">
+          <label>
+            <span>Admin Token</span>
+            <input id="adminToken" type="password" placeholder="x-admin-token" />
+          </label>
+        </div>
+      </header>
+
+      <!-- Tab Navigation -->
+      <nav class="tab-nav">
+        <button id="tabBtnTickets" class="tab-btn active" data-tab="tabTickets">Talepler</button>
+        <button id="tabBtnKnowledge" class="tab-btn" data-tab="tabKnowledge">Bilgi Tabani</button>
+        <button id="tabBtnBotConfig" class="tab-btn" data-tab="tabBotConfig">Bot Yapilandirma</button>
+        <button id="tabBtnSystem" class="tab-btn" data-tab="tabSystem">Sistem</button>
+      </nav>
+
+      <!-- TAB 1: Talepler (existing ticket UI) -->
+      <section id="tabTickets" class="tab-content active">
+        <section class="admin-controls">
+          <label class="control">
+            <span>Durum</span>
+            <select id="statusFilter">
+              <option value="">Tum durumlar</option>
+              <option value="handoff_pending">handoff_pending</option>
+              <option value="queued_after_hours">queued_after_hours</option>
+              <option value="handoff_success">handoff_success</option>
+              <option value="handoff_failed">handoff_failed</option>
+              <option value="handoff_parent_posted">handoff_parent_posted</option>
+              <option value="handoff_opened_no_summary">handoff_opened_no_summary</option>
+            </select>
+          </label>
+
+          <label class="control">
+            <span>Kayit limiti</span>
+            <select id="limitFilter">
+              <option value="50">50</option>
+              <option value="100" selected>100</option>
+              <option value="250">250</option>
+            </select>
+          </label>
+
+          <div class="control-buttons">
+            <button id="refreshButton" type="button">Yenile</button>
+            <button id="autoButton" type="button" data-active="1">Oto Yenile: Acik</button>
+          </div>
+        </section>
+
+        <section class="summary-grid" id="summaryGrid"></section>
+
+        <section class="table-section">
+          <table>
+            <thead>
+              <tr>
+                <th>Ticket</th>
+                <th>Durum</th>
+                <th>Sube</th>
+                <th>Sorun</th>
+                <th>Olusturma</th>
+                <th>Guncelleme</th>
+                <th>Aktarim</th>
+                <th>Detay</th>
+              </tr>
+            </thead>
+            <tbody id="ticketsTableBody">
+              <tr>
+                <td colspan="8" class="empty">Yukleniyor...</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="detail-section">
+          <h2>Ticket Detayi</h2>
+          <div id="ticketDetail" class="detail-box">Bir ticket seciniz.</div>
+          <h3 style="margin-top:14px">Sohbet Gecmisi</h3>
+          <div id="chatHistory" class="chat-history-container">Ticket seciniz.</div>
+        </section>
+      </section>
+
+      <!-- TAB 2: Bilgi Tabani -->
+      <section id="tabKnowledge" class="tab-content">
+        <div class="section-header">
+          <h2>Bilgi Tabani <span id="kbRecordCount" class="badge">0</span></h2>
+          <div class="section-actions">
+            <button id="kbAddBtn" class="btn btn-primary">+ Yeni Kayit</button>
+            <button id="kbReingestBtn" class="btn btn-secondary">Yeniden Yukle</button>
+            <span id="kbReingestStatus" class="status-text"></span>
+          </div>
+        </div>
+        <div class="table-section">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Soru</th>
+                <th>Cevap</th>
+                <th>Islemler</th>
+              </tr>
+            </thead>
+            <tbody id="kbTableBody">
+              <tr>
+                <td colspan="4" class="empty">Yukleniyor...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 3: Bot Yapilandirma (4 sub-tabs) -->
+      <section id="tabBotConfig" class="tab-content">
+        <nav class="sub-tab-nav">
+          <button id="subTabAgentFiles" class="sub-tab-btn active" data-subtab="subContentAgentFiles">Agent Dosyalari</button>
+          <button id="subTabTopics" class="sub-tab-btn" data-subtab="subContentTopics">Konular</button>
+          <button id="subTabMemory" class="sub-tab-btn" data-subtab="subContentMemory">Bellek Sablonlari</button>
+          <button id="subTabEnv" class="sub-tab-btn" data-subtab="subContentEnv">Ortam Degiskenleri</button>
+        </nav>
+
+        <!-- Sub-tab: Agent Files - Split layout -->
+        <div id="subContentAgentFiles" class="sub-tab-content active">
+          <div class="editor-layout">
+            <div class="file-list-panel">
+              <h3>Dosyalar</h3>
+              <ul id="agentFileList"></ul>
+            </div>
+            <div class="editor-panel">
+              <div class="editor-header">
+                <span id="agentEditorFilename" class="editor-filename">Dosya seciniz</span>
+                <div class="editor-actions">
+                  <button id="agentEditorRevertBtn" class="btn btn-secondary" disabled>Geri Al</button>
+                  <button id="agentEditorSaveBtn" class="btn btn-primary" disabled>Kaydet</button>
+                </div>
+              </div>
+              <textarea id="agentEditorTextarea" class="code-editor" placeholder="Dosya seciniz..." disabled></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-tab: Topics -->
+        <div id="subContentTopics" class="sub-tab-content">
+          <div class="section-header">
+            <h3>Konular</h3>
+            <button id="topicAddBtn" class="btn btn-primary">+ Yeni Konu</button>
+          </div>
+          <div class="table-section">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Baslik</th>
+                  <th>Anahtar Kelimeler</th>
+                  <th>Eskalasyon</th>
+                  <th>Dogrudan Cozum</th>
+                  <th>Islemler</th>
+                </tr>
+              </thead>
+              <tbody id="topicsTableBody">
+                <tr>
+                  <td colspan="6" class="empty">Yukleniyor...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sub-tab: Memory Templates -->
+        <div id="subContentMemory" class="sub-tab-content">
+          <div class="memory-grid">
+            <div class="memory-card">
+              <div class="memory-card-header">
+                <h3>ticket-template.json</h3>
+                <div>
+                  <span id="memoryTicketValidation" class="validation-badge"></span>
+                  <button id="memoryTicketSaveBtn" class="btn btn-primary btn-sm">Kaydet</button>
+                </div>
+              </div>
+              <textarea id="memoryTicketTemplate" class="code-editor json-editor"></textarea>
+            </div>
+            <div class="memory-card">
+              <div class="memory-card-header">
+                <h3>conversation-schema.json</h3>
+                <div>
+                  <span id="memorySchemaValidation" class="validation-badge"></span>
+                  <button id="memorySchemaSaveBtn" class="btn btn-primary btn-sm">Kaydet</button>
+                </div>
+              </div>
+              <textarea id="memoryConversationSchema" class="code-editor json-editor"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-tab: Environment Variables -->
+        <div id="subContentEnv" class="sub-tab-content">
+          <form id="envForm">
+            <!-- Groups will be built by JS -->
+          </form>
+          <div class="env-actions">
+            <button id="envSaveBtn" class="btn btn-primary">Kaydet</button>
+            <span id="envSaveStatus" class="status-text"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: Sistem -->
+      <section id="tabSystem" class="tab-content">
+        <div class="section-header">
+          <h2>Sistem Durumu</h2>
+          <div class="section-actions">
+            <button id="sysRefreshBtn" class="btn btn-secondary">Yenile</button>
+            <button id="sysReloadBtn" class="btn btn-primary">Agent Config Yeniden Yukle</button>
+          </div>
+        </div>
+
+        <div id="sysHealthGrid" class="health-grid">
+          <!-- Health cards populated by JS -->
+        </div>
+
+        <div class="status-sections">
+          <div class="status-section">
+            <h3>Agent Dosyalari</h3>
+            <div id="sysAgentStatus"></div>
+          </div>
+          <div class="status-section">
+            <h3>Bilgi Tabani</h3>
+            <div id="sysKBStatus"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- KB Modal -->
+      <div id="kbModal" class="modal-overlay" style="display:none">
+        <div class="modal">
+          <div class="modal-header">
+            <h3 id="kbModalTitle">Yeni Kayit</h3>
+            <button id="kbModalCancelBtn" class="modal-close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <label>Soru<textarea id="kbModalQuestion" rows="3"></textarea></label>
+            <label>Cevap<textarea id="kbModalAnswer" rows="5"></textarea></label>
+          </div>
+          <div class="modal-footer">
+            <button id="kbModalSaveBtn" class="btn btn-primary">Kaydet</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Topic Modal -->
+      <div id="topicModal" class="modal-overlay" style="display:none">
+        <div class="modal modal-lg">
+          <div class="modal-header">
+            <h3>Konu Duzenle</h3>
+            <button id="topicModalCancelBtn" class="modal-close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <label>ID<span class="field-hint">Benzersiz slug. Kucuk harf, tire ile ayrilmis. Ornek: bilet-yazdiramiyorum</span><input id="topicModalId" type="text" placeholder="konu-slug" /></label>
+              <label>Baslik<span class="field-hint">Kullaniciya gorunmeyen, admin icin konu adi. Ornek: Bilet Yazdiramiyorum</span><input id="topicModalTitle" type="text" /></label>
+            </div>
+            <label>Anahtar Kelimeler (virgul ile)<span class="field-hint">Kullanici mesajinda bu kelimeler gecerse bu konu eslesir. Ne kadar cok varyasyon eklerseniz tespit o kadar iyi olur.</span><input id="topicModalKeywords" type="text" placeholder="bilet yazdiramiyorum, bilet cikmiyor, yazici basmiyor" /></label>
+            <div class="form-row">
+              <div class="checkbox-group">
+                <label class="checkbox-label"><input id="topicModalRequiresEscalation" type="checkbox" /> Eskalasyon Gerektirir</label>
+                <span class="field-hint">Isaretlenirse bu konu sonunda canli temsilciye aktarim yapilir.</span>
+              </div>
+              <div class="checkbox-group">
+                <label class="checkbox-label"><input id="topicModalCanResolveDirectly" type="checkbox" /> Dogrudan Cozulebilir</label>
+                <span class="field-hint">Isaretlenirse AI bilgilendirme yapip konuyu kapatabilir, temsilciye gerek kalmaz.</span>
+              </div>
+            </div>
+            <label>Gerekli Bilgiler (virgul ile)<span class="field-hint">Eskalasyon oncesi kullanicidan toplanmasi gereken alanlar. Ornek: firma_adi, sube_kodu, hata_mesaji</span><input id="topicModalRequiredInfo" type="text" placeholder="firma_adi, sefer_guzergah, sefer_tarih_saat" /></label>
+            <label>Icerik (Markdown)<span class="field-hint">AI'a bu konuda nasil davranacagini anlatan talimat dosyasi. Troubleshoot adimlari, bilgilendirme metni veya eskalasyon kurallari yazabilirsiniz.</span><textarea id="topicModalContent" rows="10" class="code-editor"></textarea></label>
+          </div>
+          <div class="modal-footer">
+            <button id="topicModalSaveBtn" class="btn btn-primary">Kaydet</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Confirm Modal -->
+      <div id="confirmModal" class="modal-overlay" style="display:none">
+        <div class="modal modal-sm">
+          <div class="modal-body">
+            <p id="confirmModalText">Emin misiniz?</p>
+          </div>
+          <div class="modal-footer">
+            <button id="confirmModalNo" class="btn btn-secondary">Iptal</button>
+            <button id="confirmModalYes" class="btn btn-danger">Onayla</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toast Container -->
+      <div id="toastContainer" class="toast-container"></div>
+    </main>
+
+    <script src="admin.js?v=20260215"></script>
+  </body>
+</html>

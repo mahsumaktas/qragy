@@ -1,0 +1,32 @@
+{
+  "sessionFields": {
+    "currentTopic": null,
+    "topicConfidence": 0,
+    "conversationState": "welcome",
+    "collectedInfo": {},
+    "pendingQuestions": [],
+    "escalationTriggered": false,
+    "escalationReason": null,
+    "turnCount": 0,
+    "farewellOffered": false
+  },
+  "validStates": [
+    "welcome_or_greet",
+    "topic_detection",
+    "topic_guided_support",
+    "info_collection",
+    "escalation_handoff",
+    "farewell",
+    "fallback_ticket_collect",
+    "closed_followup"
+  ],
+  "escalationReasons": [
+    "remote_tool_credentials",
+    "user_cannot_resolve",
+    "topic_not_found",
+    "max_turns_exceeded",
+    "ip_address_provided",
+    "explicit_agent_request"
+  ],
+  "notes": "Konuşma belleği şeması. Her session başlangıcında sessionFields varsayılan değerlerle başlatılır. conversationState geçişlerini response-policy.md yönetir."
+}

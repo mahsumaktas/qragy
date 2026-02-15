@@ -1,0 +1,49 @@
+{
+  "topics": [
+    {
+      "id": "giris-yapamiyorum",
+      "title": "Sisteme Giris Yapamiyorum",
+      "keywords": ["giris yapamiyorum", "login olamiyorum", "sisteme giremiyorum", "giris hatasi", "login hatasi"],
+      "file": "giris-yapamiyorum.md",
+      "requiresEscalation": true,
+      "requiredInfo": ["kullanici_adi", "ip_adresi"],
+      "canResolveDirectly": false
+    },
+    {
+      "id": "sifremi-unuttum",
+      "title": "Sifremi Unuttum",
+      "keywords": ["sifremi unuttum", "sifre sifirlama", "sifre degistirme", "sifre hatasi"],
+      "file": "sifremi-unuttum.md",
+      "requiresEscalation": true,
+      "requiredInfo": ["kullanici_adi"],
+      "canResolveDirectly": false
+    },
+    {
+      "id": "yazici-sorunu",
+      "title": "Yazici Sorunu",
+      "keywords": ["yazici", "printer", "yazici calismiyor", "cikti alamiyorum", "yazici sorunu"],
+      "file": "yazici-sorunu.md",
+      "requiresEscalation": false,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "rapor-alma",
+      "title": "Rapor Alma",
+      "keywords": ["rapor", "rapor alma", "rapor olusturma", "rapor indirme", "rapor hatasi"],
+      "file": "rapor-alma.md",
+      "requiresEscalation": false,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "iletisim-bilgileri",
+      "title": "Iletisim Bilgileri",
+      "keywords": ["iletisim", "telefon", "destek hatti", "email", "nasil ulasabilirim"],
+      "file": "iletisim-bilgileri.md",
+      "requiresEscalation": false,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    }
+  ]
+}

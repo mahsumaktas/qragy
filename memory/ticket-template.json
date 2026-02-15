@@ -1,0 +1,15 @@
+{
+  "requiredFields": [
+    "branchCode",
+    "issueSummary"
+  ],
+  "optionalFields": [
+    "companyName",
+    "fullName",
+    "phone"
+  ],
+  "confirmationTemplate": "Talebinizi aldım. Şube kodu: {{branchCode}}. Kısa açıklama: {{issueSummary}}. Destek ekibi en kısa sürede dönüş yapacaktır.",
+  "statusFollowupTemplate": "Talebiniz daha önce alındı ve destek ekibine iletildi. Dönüş bekleniyor. Yeni bir talep açmak isterseniz yeni şube kodu ve sorun özeti yazabilirsiniz.",
+  "outsideSupportHoursTemplate": "Canlı destek şu an mesai dışındadır. Talebiniz kayda alındı; mesai saatlerinde temsilciye aktarılacaktır.",
+  "notes": "Talep belleği şeması. Runtime veri çıkarımı ve handoff kararları server.js içinde yapılır."
+}
