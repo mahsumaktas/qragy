@@ -5,7 +5,8 @@ const express = require("express");
 const path = require("path");
 const lancedb = require("@lancedb/lancedb");
 const Papa = require("papaparse");
-const CSV_FILE = path.join(__dirname, "knowledge_base.csv");
+const CSV_EXAMPLE_FILE = path.join(__dirname, "knowledge_base.example.csv");
+const CSV_FILE = path.join(__dirname, "data", "knowledge_base.csv");
 
 const app = express();
 
@@ -419,10 +420,18 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function ensureTicketsDbFile() {
+function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
+  // First run: copy example KB if no runtime KB exists
+  if (!fs.existsSync(CSV_FILE) && fs.existsSync(CSV_EXAMPLE_FILE)) {
+    fs.copyFileSync(CSV_EXAMPLE_FILE, CSV_FILE);
+  }
+}
+
+function ensureTicketsDbFile() {
+  ensureDataDir();
 
   if (!fs.existsSync(TICKETS_DB_FILE)) {
     fs.writeFileSync(TICKETS_DB_FILE, JSON.stringify({ tickets: [] }, null, 2), "utf8");

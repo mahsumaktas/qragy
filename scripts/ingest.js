@@ -17,7 +17,8 @@ const Papa = require("papaparse");
 const lancedb = require("@lancedb/lancedb");
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
-const CSV_PATH = path.join(__dirname, "..", "knowledge_base.csv");
+const CSV_EXAMPLE = path.join(__dirname, "..", "knowledge_base.example.csv");
+const CSV_PATH = path.join(__dirname, "..", "data", "knowledge_base.csv");
 const LANCE_DB_PATH = path.join(__dirname, "..", "data", "lancedb");
 const TABLE_NAME = "knowledge_qa";
 const EMBED_DELAY_MS = 250;
@@ -67,6 +68,13 @@ async function main() {
   if (!GOOGLE_API_KEY) {
     console.error("GOOGLE_API_KEY veya GEMINI_API_KEY env degiskeni gerekli.");
     process.exit(1);
+  }
+
+  // First run: copy example KB if no runtime KB exists
+  if (!fs.existsSync(CSV_PATH) && fs.existsSync(CSV_EXAMPLE)) {
+    fs.mkdirSync(path.dirname(CSV_PATH), { recursive: true });
+    fs.copyFileSync(CSV_EXAMPLE, CSV_PATH);
+    console.log("Ornek KB kopyalandi:", CSV_PATH);
   }
 
   if (!fs.existsSync(CSV_PATH)) {

@@ -1,6 +1,7 @@
 node_modules/
 .env
 data/
+knowledge_base.csv
 npm-debug.log*
 *.err.log
 *.out.log
