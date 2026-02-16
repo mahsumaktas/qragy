@@ -213,6 +213,7 @@ function switchSubTab(subTabId) {
   else if (subTabId === "subContentTopics") loadTopics();
   else if (subTabId === "subContentMemory") loadMemoryFiles();
   else if (subTabId === "subContentEnv") loadEnvConfig();
+  else if (subTabId === "subContentChatFlow") loadChatFlowConfig();
   else if (subTabId === "subContentWebhooks") loadWebhooks();
   else if (subTabId === "subContentPromptVersions") loadPromptVersions();
 }
@@ -903,6 +904,133 @@ async function saveEnvConfig() {
 }
 
 envSaveBtn.addEventListener("click", () => { void saveEnvConfig(); });
+
+// ══════════════════════════════════════════════════════════════════════════
+// CHAT FLOW CONFIG
+// ══════════════════════════════════════════════════════════════════════════
+
+let chatFlowDefaults = {};
+
+async function loadChatFlowConfig() {
+  try {
+    const payload = await apiGet("admin/chat-flow");
+    chatFlowDefaults = payload.defaults || {};
+    renderChatFlowConfig(payload.config || {});
+  } catch (error) {
+    showToast("Sohbet akis ayarlari yuklenemedi: " + error.message, "error");
+  }
+}
+
+function renderChatFlowConfig(config) {
+  // Welcome
+  const cfWelcome = $("cfWelcomeMessage");
+  if (cfWelcome) cfWelcome.value = config.welcomeMessage || "";
+
+  // Timing
+  setupRange("cfAggregationMs", "cfAggregationMsVal", config.messageAggregationWindowMs || 4000, (v) => v + " ms");
+  setupRange("cfBotDelayMs", "cfBotDelayMsVal", config.botResponseDelayMs || 2000, (v) => v + " ms");
+  setupCheckbox("cfTypingEnabled", config.typingIndicatorEnabled !== false);
+
+  // Inactivity
+  const inactivityMin = Math.round((config.inactivityTimeoutMs || 600000) / 60000);
+  setupRange("cfInactivityMs", "cfInactivityMsVal", inactivityMin, (v) => v + " dk");
+  setupCheckbox("cfNudgeEnabled", config.nudgeEnabled !== false);
+
+  const cfNudge75 = $("cfNudge75");
+  if (cfNudge75) cfNudge75.value = config.nudgeAt75Message || "";
+  const cfNudge90 = $("cfNudge90");
+  if (cfNudge90) cfNudge90.value = config.nudgeAt90Message || "";
+  const cfInactClose = $("cfInactivityClose");
+  if (cfInactClose) cfInactClose.value = config.inactivityCloseMessage || "";
+
+  // Detection
+  setupCheckbox("cfGibberishEnabled", config.gibberishDetectionEnabled !== false);
+  const cfGibMsg = $("cfGibberishMsg");
+  if (cfGibMsg) cfGibMsg.value = config.gibberishMessage || "";
+  setupRange("cfMaxRetries", "cfMaxRetriesVal", config.maxClarificationRetries || 3, (v) => v + " tekrar");
+
+  // Closing
+  setupCheckbox("cfClosingEnabled", config.closingFlowEnabled !== false);
+  const cfAnythingElse = $("cfAnythingElse");
+  if (cfAnythingElse) cfAnythingElse.value = config.anythingElseMessage || "";
+  const cfFarewell = $("cfFarewell");
+  if (cfFarewell) cfFarewell.value = config.farewellMessage || "";
+  setupCheckbox("cfCsatEnabled", config.csatEnabled !== false);
+  const cfCsatMsg = $("cfCsatMsg");
+  if (cfCsatMsg) cfCsatMsg.value = config.csatMessage || "";
+}
+
+function setupRange(inputId, valId, value, format) {
+  const input = $(inputId);
+  const val = $(valId);
+  if (!input || !val) return;
+  input.value = value;
+  val.textContent = format(value);
+  input.oninput = () => { val.textContent = format(Number(input.value)); };
+}
+
+function setupCheckbox(inputId, checked) {
+  const input = $(inputId);
+  if (input) input.checked = checked;
+}
+
+async function saveChatFlowConfig() {
+  const config = {
+    welcomeMessage: ($("cfWelcomeMessage") || {}).value || "",
+    messageAggregationWindowMs: Number($("cfAggregationMs")?.value || 4000),
+    botResponseDelayMs: Number($("cfBotDelayMs")?.value || 2000),
+    typingIndicatorEnabled: $("cfTypingEnabled")?.checked !== false,
+    inactivityTimeoutMs: Number($("cfInactivityMs")?.value || 10) * 60000,
+    nudgeEnabled: $("cfNudgeEnabled")?.checked !== false,
+    nudgeAt75Message: ($("cfNudge75") || {}).value || "",
+    nudgeAt90Message: ($("cfNudge90") || {}).value || "",
+    inactivityCloseMessage: ($("cfInactivityClose") || {}).value || "",
+    gibberishDetectionEnabled: $("cfGibberishEnabled")?.checked !== false,
+    gibberishMessage: ($("cfGibberishMsg") || {}).value || "",
+    maxClarificationRetries: Number($("cfMaxRetries")?.value || 3),
+    closingFlowEnabled: $("cfClosingEnabled")?.checked !== false,
+    anythingElseMessage: ($("cfAnythingElse") || {}).value || "",
+    farewellMessage: ($("cfFarewell") || {}).value || "",
+    csatEnabled: $("cfCsatEnabled")?.checked !== false,
+    csatMessage: ($("cfCsatMsg") || {}).value || ""
+  };
+
+  const saveBtn = $("cfSaveBtn");
+  const status = $("cfSaveStatus");
+  if (saveBtn) saveBtn.disabled = true;
+  if (status) status.textContent = "Kaydediliyor...";
+
+  try {
+    await apiPut("admin/chat-flow", { config });
+    showToast("Sohbet akis ayarlari kaydedildi.", "success");
+    if (status) status.textContent = "Kaydedildi";
+    setTimeout(() => { if (status) status.textContent = ""; }, 3000);
+  } catch (error) {
+    showToast("Kaydetme hatasi: " + error.message, "error");
+    if (status) status.textContent = "Hata!";
+  } finally {
+    if (saveBtn) saveBtn.disabled = false;
+  }
+}
+
+async function resetChatFlowConfig() {
+  const confirmed = await confirmAction("Tum sohbet akis ayarlarini varsayilana dondurmek istediginize emin misiniz?");
+  if (!confirmed) return;
+
+  try {
+    await apiPut("admin/chat-flow", { config: chatFlowDefaults });
+    showToast("Varsayilan ayarlar yuklendi.", "success");
+    loadChatFlowConfig();
+  } catch (error) {
+    showToast("Sifirlama hatasi: " + error.message, "error");
+  }
+}
+
+// Event listeners
+const cfSaveBtn = $("cfSaveBtn");
+const cfResetBtn = $("cfResetBtn");
+if (cfSaveBtn) cfSaveBtn.addEventListener("click", () => { void saveChatFlowConfig(); });
+if (cfResetBtn) cfResetBtn.addEventListener("click", () => { void resetChatFlowConfig(); });
 
 // ══════════════════════════════════════════════════════════════════════════
 // TAB 4: SYSTEM

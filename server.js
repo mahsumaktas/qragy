@@ -65,6 +65,7 @@ const WEBHOOKS_FILE = path.join(DATA_DIR, "webhooks.json");
 const TELEGRAM_SESSIONS_FILE = path.join(DATA_DIR, "telegram-sessions.json");
 const PROMPT_VERSIONS_FILE = path.join(DATA_DIR, "prompt-versions.json");
 const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
+const CHAT_FLOW_CONFIG_FILE = path.join(DATA_DIR, "chat-flow-config.json");
 
 let knowledgeTable = null;
 
@@ -240,6 +241,111 @@ function savePromptVersion(filename, content) {
   if (data.versions.length > 50) data.versions = data.versions.slice(-50);
   fs.writeFileSync(PROMPT_VERSIONS_FILE, JSON.stringify(data, null, 2), "utf8");
 }
+
+// ── Chat Flow Configuration ─────────────────────────────────────────────
+const DEFAULT_CHAT_FLOW_CONFIG = {
+  messageAggregationWindowMs: 4000,
+  botResponseDelayMs: 2000,
+  typingIndicatorEnabled: true,
+  inactivityTimeoutMs: 600000,
+  nudgeEnabled: true,
+  nudgeAt75Message: "Hala buradayım. Size nasıl yardımcı olabilirim?",
+  nudgeAt90Message: "Son birkaç dakikadır mesaj almadım. Yardımcı olabilir miyim?",
+  inactivityCloseMessage: "Uzun süredir mesaj almadığım için sohbeti sonlandırıyorum. İhtiyacınız olursa tekrar yazabilirsiniz.",
+  maxClarificationRetries: 3,
+  gibberishDetectionEnabled: true,
+  gibberishMessage: "Mesajınızı anlayamadım. Lütfen sorununuzu daha detaylı açıklar mısınız?",
+  closingFlowEnabled: true,
+  anythingElseMessage: "Başka yardımcı olabileceğim bir konu var mı?",
+  farewellMessage: "İyi günler dilerim! İhtiyacınız olursa tekrar yazabilirsiniz.",
+  csatEnabled: true,
+  csatMessage: "Deneyiminizi değerlendirir misiniz?",
+  welcomeMessage: "Merhaba, Teknik Destek hattına hoş geldiniz. Size nasıl yardımcı olabilirim?"
+};
+
+let chatFlowConfig = { ...DEFAULT_CHAT_FLOW_CONFIG };
+
+function loadChatFlowConfig() {
+  try {
+    if (fs.existsSync(CHAT_FLOW_CONFIG_FILE)) {
+      const saved = JSON.parse(fs.readFileSync(CHAT_FLOW_CONFIG_FILE, "utf8"));
+      chatFlowConfig = { ...DEFAULT_CHAT_FLOW_CONFIG, ...saved };
+    }
+  } catch (_e) {
+    chatFlowConfig = { ...DEFAULT_CHAT_FLOW_CONFIG };
+  }
+}
+
+function saveChatFlowConfig(updates) {
+  chatFlowConfig = { ...chatFlowConfig, ...updates };
+  fs.writeFileSync(CHAT_FLOW_CONFIG_FILE, JSON.stringify(chatFlowConfig, null, 2), "utf8");
+}
+
+loadChatFlowConfig();
+
+// ── Gibberish Detection ─────────────────────────────────────────────────
+function isGibberishMessage(text) {
+  if (!chatFlowConfig.gibberishDetectionEnabled) return false;
+  const trimmed = (text || "").trim();
+  if (!trimmed) return false;
+  // Single character
+  if (trimmed.length === 1) return true;
+  // Only emojis/symbols (no letters or digits)
+  const stripped = trimmed.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\s\p{P}\p{S}]/gu, "");
+  if (!stripped) return true;
+  // Repeated single char: "aaaaaaa", "xxxxxxx"
+  if (/^(.)\1{4,}$/i.test(trimmed)) return true;
+  // Random consonant strings (no vowels in 6+ chars)
+  if (trimmed.length >= 6 && !/[aeıioöuüAEIİOÖUÜ]/i.test(trimmed)) return true;
+  // Very short random text (2-3 chars, not a known word)
+  if (trimmed.length <= 2 && !/^(ok|no|da|de|bi|bu|şu|ne|ve|ya|ki|ha|he|hi)$/i.test(trimmed)) return true;
+  return false;
+}
+
+// ── Farewell/Closing Detection ──────────────────────────────────────────
+const FAREWELL_WORDS = new Set([
+  "hosca kal", "hoscakal", "gorusuruz", "gorusmek uzere",
+  "iyi gunler", "iyi aksamlar", "iyi geceler", "iyi calismalar",
+  "bye", "goodbye", "gorusuruz", "kendine iyi bak",
+  "hoscakalin", "bay bay", "bb", "hayirli gunler",
+  "sagolun", "sag olun", "eyvallah"
+]);
+
+function isFarewellMessage(text) {
+  if (!chatFlowConfig.closingFlowEnabled) return false;
+  const normalized = (text || "").trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, "").trim();
+  if (FAREWELL_WORDS.has(normalized)) return true;
+  for (const word of FAREWELL_WORDS) {
+    if (normalized.includes(word)) return true;
+  }
+  return false;
+}
+
+// ── Clarification Retry Tracking ────────────────────────────────────────
+const clarificationCounters = new Map();
+
+function getClarificationKey(messages) {
+  // Use first user message as session identifier
+  const firstUser = messages.find(m => m.role === "user");
+  return firstUser ? firstUser.content.slice(0, 50) : "default";
+}
+
+function incrementClarificationCount(sessionKey) {
+  const count = (clarificationCounters.get(sessionKey) || 0) + 1;
+  clarificationCounters.set(sessionKey, count);
+  return count;
+}
+
+function resetClarificationCount(sessionKey) {
+  clarificationCounters.delete(sessionKey);
+}
+
+// Cleanup stale clarification counters every 30 minutes
+setInterval(() => {
+  clarificationCounters.clear();
+}, 30 * 60 * 1000);
 
 const DEFAULT_PERSONA_TEXT = [
   `# ${BOT_NAME} Teknik Destek Persona`,
@@ -1743,7 +1849,8 @@ app.get("/api/config", (_req, res) => {
     support: supportAvailability,
     admin: {
       tokenRequired: Boolean(ADMIN_TOKEN)
-    }
+    },
+    chatFlow: chatFlowConfig
   });
 });
 
@@ -1912,6 +2019,52 @@ app.post("/api/chat", async (req, res) => {
     const activeUserMessages = getUserMessages(activeMessages);
     const memory = extractTicketMemory(activeMessages);
     const latestUserMessage = activeUserMessages[activeUserMessages.length - 1] || "";
+
+    // Gibberish detection
+    if (isGibberishMessage(latestUserMessage)) {
+      recordAnalyticsEvent({ source: "gibberish", responseTimeMs: Date.now() - chatStartTime });
+      return res.json({
+        reply: chatFlowConfig.gibberishMessage,
+        model: GOOGLE_MODEL,
+        source: "gibberish",
+        memory,
+        handoffReady: false,
+        support: getSupportAvailability()
+      });
+    }
+
+    // Farewell/closing flow detection
+    if (isFarewellMessage(latestUserMessage)) {
+      const hasTicket = hasRequiredFields(memory);
+      if (hasTicket) {
+        // Find existing ticket for CSAT
+        const ticketsDb = loadTicketsDb();
+        const recentTicket = findRecentDuplicateTicket(ticketsDb.tickets, memory);
+        recordAnalyticsEvent({ source: "closing-flow", responseTimeMs: Date.now() - chatStartTime });
+        return res.json({
+          reply: chatFlowConfig.farewellMessage,
+          model: GOOGLE_MODEL,
+          source: "closing-flow",
+          memory,
+          handoffReady: false,
+          closingFlow: true,
+          csatTrigger: chatFlowConfig.csatEnabled,
+          ticketId: recentTicket?.id || "",
+          support: getSupportAvailability()
+        });
+      } else {
+        recordAnalyticsEvent({ source: "closing-flow", responseTimeMs: Date.now() - chatStartTime });
+        return res.json({
+          reply: chatFlowConfig.anythingElseMessage,
+          model: GOOGLE_MODEL,
+          source: "closing-flow",
+          memory,
+          handoffReady: false,
+          closingFlow: false,
+          support: getSupportAvailability()
+        });
+      }
+    }
 
     const chatHistorySnapshot = activeMessages
       .filter(m => m && m.content)
@@ -2089,6 +2242,25 @@ app.post("/api/chat", async (req, res) => {
         hasClosedTicketHistory
       );
       if (deterministicReply) {
+        // Max clarification retry check
+        const sessionKey = getClarificationKey(rawMessages);
+        const retryCount = incrementClarificationCount(sessionKey);
+        if (retryCount > chatFlowConfig.maxClarificationRetries) {
+          resetClarificationCount(sessionKey);
+          recordAnalyticsEvent({ source: "max-retries", responseTimeMs: Date.now() - chatStartTime });
+          return res.json({
+            reply: "Gerekli bilgileri almakta güçlük yaşıyorum. Sizi canlı destek temsilcimize aktarıyorum.",
+            model: GOOGLE_MODEL,
+            source: "max-retries",
+            memory,
+            conversationContext,
+            hasClosedTicketHistory,
+            handoffReady: Boolean(getSupportAvailability().isOpen),
+            handoffReason: "max-clarification-retries",
+            support: getSupportAvailability()
+          });
+        }
+
         // Quick replies: eksik alanlara gore
         const quickReplies = [];
         if (!memory.branchCode && !memory.issueSummary) {
@@ -2569,6 +2741,32 @@ app.put("/api/admin/env", requireAdminAccess, (req, res) => {
   }
 });
 
+// Chat Flow Config
+app.get("/api/admin/chat-flow", requireAdminAccess, (_req, res) => {
+  res.json({ ok: true, config: chatFlowConfig, defaults: DEFAULT_CHAT_FLOW_CONFIG });
+});
+
+app.put("/api/admin/chat-flow", requireAdminAccess, (req, res) => {
+  try {
+    const updates = req.body?.config;
+    if (!updates || typeof updates !== "object") {
+      return res.status(400).json({ error: "config objesi zorunludur." });
+    }
+    // Only allow known keys
+    const allowed = Object.keys(DEFAULT_CHAT_FLOW_CONFIG);
+    const clean = {};
+    for (const key of allowed) {
+      if (updates[key] !== undefined) {
+        clean[key] = updates[key];
+      }
+    }
+    saveChatFlowConfig(clean);
+    res.json({ ok: true, config: chatFlowConfig });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // System: Status
 app.get("/api/admin/system", requireAdminAccess, async (_req, res) => {
   try {
@@ -2607,6 +2805,7 @@ app.get("/api/admin/system", requireAdminAccess, async (_req, res) => {
 app.post("/api/admin/agent/reload", requireAdminAccess, (_req, res) => {
   try {
     loadAllAgentConfig();
+    loadChatFlowConfig();
     return res.json({ ok: true, message: "Agent config yeniden yuklendi." });
   } catch (err) {
     return res.status(500).json({ error: err.message });

@@ -53,6 +53,9 @@ const state = {
   soundEnabled: true,
   nudgeShown: false,
   nudgeTimer: null,
+  inactivityTimer: null,
+  nudge75Shown: false,
+  nudge90Shown: false,
   sessionLoaded: false,
   offlineQueue: [],
   runtimeConfig: {
@@ -68,6 +71,19 @@ const state = {
       openHour: 8,
       closeHour: 23,
       openDays: [1, 2, 3, 4, 5, 6, 7]
+    },
+    chatFlow: {
+      messageAggregationWindowMs: 4000,
+      botResponseDelayMs: 2000,
+      typingIndicatorEnabled: true,
+      inactivityTimeoutMs: 600000,
+      nudgeEnabled: true,
+      nudgeAt75Message: "Hala buradayım. Size nasıl yardımcı olabilirim?",
+      nudgeAt90Message: "Son birkaç dakikadır mesaj almadım. Yardımcı olabilir miyim?",
+      inactivityCloseMessage: "Uzun süredir mesaj almadığım için sohbeti sonlandırıyorum. İhtiyacınız olursa tekrar yazabilirsiniz.",
+      welcomeMessage: "Merhaba, Teknik Destek hattına hoş geldiniz. Size nasıl yardımcı olabilirim?",
+      csatEnabled: true,
+      farewellMessage: "İyi günler dilerim! İhtiyacınız olursa tekrar yazabilirsiniz."
     }
   }
 };
@@ -318,10 +334,8 @@ function showWelcomeScreen() {
 function dismissWelcome() {
   chatMessages.innerHTML = "";
   state.widgetStarted = true;
-  pushMessage(
-    "assistant",
-    "Merhaba, Teknik Destek hattina hos geldiniz. Talep olusturmamiz icin firma adi (opsiyonel), sube kodu ve sorununuzu paylasir misiniz?"
-  );
+  const welcomeMsg = state.runtimeConfig.chatFlow?.welcomeMessage || "Merhaba, Teknik Destek hattına hoş geldiniz. Size nasıl yardımcı olabilirim?";
+  pushMessage("assistant", welcomeMsg);
   chatInput.focus();
 }
 
@@ -449,15 +463,48 @@ function resetNudgeTimer() {
     clearTimeout(state.nudgeTimer);
     state.nudgeTimer = null;
   }
+  if (state.inactivityTimer) {
+    clearTimeout(state.inactivityTimer);
+    state.inactivityTimer = null;
+  }
 
-  if (state.nudgeShown || !state.widgetStarted) return;
+  state.nudge75Shown = false;
+  state.nudge90Shown = false;
 
-  state.nudgeTimer = setTimeout(() => {
-    if (!state.nudgeShown && state.widgetStarted && !aiWidget.hidden && !state.isSending) {
-      state.nudgeShown = true;
-      pushMessage("assistant", "Yardımcı olabilir miyim? Teknik bir sorun yaşıyorsanız bana iletebilirsiniz.", false);
+  if (!state.widgetStarted) return;
+
+  const chatFlow = state.runtimeConfig.chatFlow || {};
+  const timeoutMs = chatFlow.inactivityTimeoutMs || 600000;
+  const nudgeEnabled = chatFlow.nudgeEnabled !== false;
+
+  if (nudgeEnabled) {
+    // Nudge at 75% of timeout
+    state.nudgeTimer = setTimeout(() => {
+      if (state.widgetStarted && !aiWidget.hidden && !state.isSending && !state.nudge75Shown) {
+        state.nudge75Shown = true;
+        const msg = chatFlow.nudgeAt75Message || "Hala buradayım. Size nasıl yardımcı olabilirim?";
+        pushMessage("assistant", msg, false);
+      }
+
+      // Nudge at 90% of timeout
+      const remaining10 = timeoutMs * 0.15;
+      setTimeout(() => {
+        if (state.widgetStarted && !aiWidget.hidden && !state.isSending && !state.nudge90Shown) {
+          state.nudge90Shown = true;
+          const msg90 = chatFlow.nudgeAt90Message || "Son birkaç dakikadır mesaj almadım. Yardımcı olabilir miyim?";
+          pushMessage("assistant", msg90, false);
+        }
+      }, remaining10);
+    }, timeoutMs * 0.75);
+  }
+
+  // Auto-close at 100% of timeout
+  state.inactivityTimer = setTimeout(() => {
+    if (state.widgetStarted && !aiWidget.hidden && !state.isSending) {
+      const closeMsg = chatFlow.inactivityCloseMessage || "Uzun süredir mesaj almadığım için sohbeti sonlandırıyorum.";
+      pushMessage("assistant", closeMsg, false);
     }
-  }, NUDGE_DELAY_MS);
+  }, timeoutMs);
 }
 
 /* ---- CSAT Survey (3.3) ---- */
@@ -691,11 +738,8 @@ function showWidget() {
       // Ilk acilis: direkt sohbeti baslat (welcome screen yok)
       state.widgetStarted = true;
       // persist=false: sadece UI'da gosterilir, backend'e gitmez (cift karsilama onlenir)
-      pushMessage(
-        "assistant",
-        "Merhaba, Teknik Destek hattina hos geldiniz. Talep olusturmamiz icin firma adi (opsiyonel), sube kodu ve sorununuzu paylasir misiniz?",
-        false
-      );
+      const welcomeMsg = state.runtimeConfig.chatFlow?.welcomeMessage || "Merhaba, Teknik Destek hattına hoş geldiniz. Size nasıl yardımcı olabilirim?";
+      pushMessage("assistant", welcomeMsg, false);
     }
   } else if (!state.widgetStarted) {
     state.widgetStarted = true;
@@ -917,6 +961,10 @@ async function loadRuntimeConfig() {
       };
 
       updateHeaderStatus(state.runtimeConfig.support.isOpen);
+    }
+
+    if (payload?.chatFlow) {
+      state.runtimeConfig.chatFlow = { ...state.runtimeConfig.chatFlow, ...payload.chatFlow };
     }
   } catch (_error) {
     // AI katmani tek basina da calissin.
@@ -1292,10 +1340,11 @@ function scheduleUserFlush() {
   }
 
   setComposeStatus("Yazıyorsunuz...");
+  const aggregationMs = state.runtimeConfig.chatFlow?.messageAggregationWindowMs || USER_BUFFER_WINDOW_MS;
   state.flushTimer = window.setTimeout(() => {
     state.flushTimer = null;
     void flushPendingUserSegments();
-  }, USER_BUFFER_WINDOW_MS);
+  }, aggregationMs);
 }
 
 function queueUserSegment(content) {
@@ -1365,11 +1414,18 @@ async function flushPendingUserSegments() {
     const payload = await sendToBackend();
     clearTimeout(longWaitTimer);
     clearComposeStatus();
-    removeTypingIndicator(typingBubble);
     hideConnectionBanner();
 
     // Mark user messages as delivered
     updateUserMessageStatuses("delivered");
+
+    // Configurable bot response delay with typing indicator
+    const botDelay = state.runtimeConfig.chatFlow?.botResponseDelayMs || 2000;
+    const typingEnabled = state.runtimeConfig.chatFlow?.typingIndicatorEnabled !== false;
+    if (typingEnabled && botDelay > 0) {
+      await sleep(Math.min(botDelay, 5000));
+    }
+    removeTypingIndicator(typingBubble);
 
     scrollToBottom();
     await sleep(80);
@@ -1378,6 +1434,11 @@ async function flushPendingUserSegments() {
 
     // Play notification sound
     playNotificationSound();
+
+    // Handle closing flow CSAT trigger (after message is displayed)
+    if (payload?.csatTrigger && payload?.ticketId) {
+      showCSATSurvey(payload.ticketId);
+    }
 
     // Render quick replies if present
     if (payload?.quickReplies && Array.isArray(payload.quickReplies) && payload.quickReplies.length) {

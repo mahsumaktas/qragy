@@ -1337,3 +1337,160 @@ tbody tr:hover {
 .file-upload-label:hover {
   opacity: 0.85;
 }
+
+/* ==========================================================================
+   Chat Flow Config
+   ========================================================================== */
+.chat-flow-config {
+  max-width: 720px;
+}
+
+.chat-flow-config h3 {
+  font-size: 1.15rem;
+  margin-bottom: 4px;
+}
+
+.chat-flow-config .section-desc {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+
+.cf-group {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.cf-group h4 {
+  font-size: 0.95rem;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--primary);
+}
+
+.cf-field {
+  margin-bottom: 14px;
+}
+
+.cf-field:last-child {
+  margin-bottom: 0;
+}
+
+.cf-field > label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.cf-field small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+
+.cf-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.cf-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(12, 93, 102, 0.12);
+}
+
+.cf-range-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cf-range-row input[type="range"] {
+  flex: 1;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--line);
+  border-radius: 3px;
+  outline: none;
+}
+
+.cf-range-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+}
+
+.cf-range-val {
+  min-width: 52px;
+  text-align: right;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.cf-toggle-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cf-toggle-field > label {
+  margin-bottom: 0;
+}
+
+.cf-toggle {
+  width: 44px;
+  height: 24px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--line);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.cf-toggle:checked {
+  background: var(--primary);
+}
+
+.cf-toggle::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+}
+
+.cf-toggle:checked::before {
+  transform: translateX(20px);
+}
+
+.cf-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}

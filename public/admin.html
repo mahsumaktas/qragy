@@ -175,6 +175,7 @@
           <button id="subTabTopics" class="sub-tab-btn" data-subtab="subContentTopics">Konular</button>
           <button id="subTabMemory" class="sub-tab-btn" data-subtab="subContentMemory">Bellek Sablonlari</button>
           <button id="subTabEnv" class="sub-tab-btn" data-subtab="subContentEnv">Ortam Degiskenleri</button>
+          <button id="subTabChatFlow" class="sub-tab-btn" data-subtab="subContentChatFlow">Sohbet Akisi</button>
           <button id="subTabWebhooks" class="sub-tab-btn" data-subtab="subContentWebhooks">Webhooks</button>
           <button id="subTabPromptVersions" class="sub-tab-btn" data-subtab="subContentPromptVersions">Prompt Gecmisi</button>
         </nav>
@@ -260,6 +261,123 @@
           <div class="env-actions">
             <button id="envSaveBtn" class="btn btn-primary">Kaydet</button>
             <span id="envSaveStatus" class="status-text"></span>
+          </div>
+        </div>
+
+        <!-- Sub-tab: Chat Flow -->
+        <div id="subContentChatFlow" class="sub-tab-content">
+          <div class="chat-flow-config">
+            <h3>Sohbet Akis Ayarlari</h3>
+            <p class="section-desc">Chatbot davranis ve zamanlama ayarlarini buradan yapilandirabilirsiniz.</p>
+
+            <div class="cf-group">
+              <h4>Karsilama</h4>
+              <div class="cf-field">
+                <label for="cfWelcomeMessage">Karsilama Mesaji</label>
+                <textarea id="cfWelcomeMessage" rows="2" class="cf-textarea"></textarea>
+              </div>
+            </div>
+
+            <div class="cf-group">
+              <h4>Zamanlama</h4>
+              <div class="cf-field">
+                <label for="cfAggregationMs">Mesaj Birlestirme Penceresi (ms)</label>
+                <div class="cf-range-row">
+                  <input id="cfAggregationMs" type="range" min="1000" max="10000" step="500" />
+                  <span id="cfAggregationMsVal" class="cf-range-val"></span>
+                </div>
+                <small>Kullanici art arda mesaj yazarken birlestirme bekleme suresi</small>
+              </div>
+              <div class="cf-field">
+                <label for="cfBotDelayMs">Bot Yanit Gecikmesi (ms)</label>
+                <div class="cf-range-row">
+                  <input id="cfBotDelayMs" type="range" min="0" max="5000" step="250" />
+                  <span id="cfBotDelayMsVal" class="cf-range-val"></span>
+                </div>
+                <small>Yaziyor animasyonu suresi (dogal hissettirmek icin)</small>
+              </div>
+              <div class="cf-field cf-toggle-field">
+                <label for="cfTypingEnabled">Yaziyor Gostergesi</label>
+                <input id="cfTypingEnabled" type="checkbox" class="cf-toggle" />
+              </div>
+            </div>
+
+            <div class="cf-group">
+              <h4>Hareketsizlik ve Uyari</h4>
+              <div class="cf-field">
+                <label for="cfInactivityMs">Hareketsizlik Zamanlayici (dakika)</label>
+                <div class="cf-range-row">
+                  <input id="cfInactivityMs" type="range" min="1" max="30" step="1" />
+                  <span id="cfInactivityMsVal" class="cf-range-val"></span>
+                </div>
+              </div>
+              <div class="cf-field cf-toggle-field">
+                <label for="cfNudgeEnabled">Uyari Mesajlari Aktif</label>
+                <input id="cfNudgeEnabled" type="checkbox" class="cf-toggle" />
+              </div>
+              <div class="cf-field">
+                <label for="cfNudge75">%75 Uyari Mesaji</label>
+                <textarea id="cfNudge75" rows="2" class="cf-textarea"></textarea>
+              </div>
+              <div class="cf-field">
+                <label for="cfNudge90">%90 Uyari Mesaji</label>
+                <textarea id="cfNudge90" rows="2" class="cf-textarea"></textarea>
+              </div>
+              <div class="cf-field">
+                <label for="cfInactivityClose">Zaman Asimi Mesaji</label>
+                <textarea id="cfInactivityClose" rows="2" class="cf-textarea"></textarea>
+              </div>
+            </div>
+
+            <div class="cf-group">
+              <h4>Akilli Algilama</h4>
+              <div class="cf-field cf-toggle-field">
+                <label for="cfGibberishEnabled">Anlamsiz Mesaj Algilama</label>
+                <input id="cfGibberishEnabled" type="checkbox" class="cf-toggle" />
+              </div>
+              <div class="cf-field">
+                <label for="cfGibberishMsg">Anlamsiz Mesaj Yaniti</label>
+                <textarea id="cfGibberishMsg" rows="2" class="cf-textarea"></textarea>
+              </div>
+              <div class="cf-field">
+                <label for="cfMaxRetries">Maks. Aydinlatma Tekrari</label>
+                <div class="cf-range-row">
+                  <input id="cfMaxRetries" type="range" min="1" max="10" step="1" />
+                  <span id="cfMaxRetriesVal" class="cf-range-val"></span>
+                </div>
+                <small>Bu sayida tekrardan sonra canli destek'e aktarilir</small>
+              </div>
+            </div>
+
+            <div class="cf-group">
+              <h4>Kapanis Akisi</h4>
+              <div class="cf-field cf-toggle-field">
+                <label for="cfClosingEnabled">Kapanis Akisi Aktif</label>
+                <input id="cfClosingEnabled" type="checkbox" class="cf-toggle" />
+              </div>
+              <div class="cf-field">
+                <label for="cfAnythingElse">Baska Bir Sey Var Mi Mesaji</label>
+                <textarea id="cfAnythingElse" rows="2" class="cf-textarea"></textarea>
+              </div>
+              <div class="cf-field">
+                <label for="cfFarewell">Veda Mesaji</label>
+                <textarea id="cfFarewell" rows="2" class="cf-textarea"></textarea>
+              </div>
+              <div class="cf-field cf-toggle-field">
+                <label for="cfCsatEnabled">CSAT Degerlendirme</label>
+                <input id="cfCsatEnabled" type="checkbox" class="cf-toggle" />
+              </div>
+              <div class="cf-field">
+                <label for="cfCsatMsg">CSAT Mesaji</label>
+                <textarea id="cfCsatMsg" rows="2" class="cf-textarea"></textarea>
+              </div>
+            </div>
+
+            <div class="cf-actions">
+              <button id="cfSaveBtn" class="btn btn-primary">Kaydet</button>
+              <button id="cfResetBtn" class="btn btn-secondary">Varsayilana Don</button>
+              <span id="cfSaveStatus" class="status-text"></span>
+            </div>
           </div>
         </div>
 
