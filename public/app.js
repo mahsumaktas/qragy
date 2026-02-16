@@ -607,6 +607,82 @@ async function submitCSATRating(ticketId, rating) {
   }
 }
 
+/* ---- Message Feedback (v3 - Thumbs Up/Down) ---- */
+
+function renderFeedbackButtons(bubble, messageIndex) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "feedback-wrapper";
+
+  const upBtn = document.createElement("button");
+  upBtn.className = "feedback-btn";
+  upBtn.type = "button";
+  upBtn.innerHTML = "&#128077;";
+  upBtn.title = "Faydali";
+
+  const downBtn = document.createElement("button");
+  downBtn.className = "feedback-btn";
+  downBtn.type = "button";
+  downBtn.innerHTML = "&#128078;";
+  downBtn.title = "Faydali degil";
+
+  const submitFeedback = (rating) => {
+    upBtn.classList.toggle("selected", rating === "up");
+    downBtn.classList.toggle("selected-down", rating === "down");
+    upBtn.disabled = true;
+    downBtn.disabled = true;
+    fetch("api/chat/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Bypass-Tunnel-Reminder": "true" },
+      body: JSON.stringify({ sessionId: getSessionId(), messageIndex, rating })
+    }).catch(() => {});
+  };
+
+  upBtn.addEventListener("click", () => submitFeedback("up"));
+  downBtn.addEventListener("click", () => submitFeedback("down"));
+
+  wrapper.appendChild(upBtn);
+  wrapper.appendChild(downBtn);
+  bubble.appendChild(wrapper);
+}
+
+/* ---- Citation Sources (v3) ---- */
+
+function renderCitationSources(bubble, sources) {
+  if (!sources || !sources.length) return;
+  const wrapper = document.createElement("div");
+  wrapper.className = "citation-wrapper";
+
+  const btn = document.createElement("button");
+  btn.className = "citation-toggle";
+  btn.type = "button";
+  btn.textContent = `Kaynaklar (${sources.length})`;
+  btn.addEventListener("click", () => {
+    list.hidden = !list.hidden;
+    btn.classList.toggle("expanded", !list.hidden);
+  });
+
+  const list = document.createElement("div");
+  list.className = "citation-list";
+  list.hidden = true;
+  for (const src of sources) {
+    const item = document.createElement("div");
+    item.className = "citation-item";
+    const q = document.createElement("div");
+    q.className = "citation-q";
+    q.textContent = src.question || "";
+    const a = document.createElement("div");
+    a.className = "citation-a";
+    a.textContent = (src.answer || "").slice(0, 150) + (src.answer && src.answer.length > 150 ? "..." : "");
+    item.appendChild(q);
+    item.appendChild(a);
+    list.appendChild(item);
+  }
+
+  wrapper.appendChild(btn);
+  wrapper.appendChild(list);
+  bubble.appendChild(wrapper);
+}
+
 /* ---- File Attach UI (3.4) ---- */
 
 function initFileAttach() {
@@ -614,11 +690,57 @@ function initFileAttach() {
     fileInput.click();
   });
 
-  fileInput.addEventListener("change", () => {
+  fileInput.addEventListener("change", async () => {
     if (fileInput.files && fileInput.files.length > 0) {
       const file = fileInput.files[0];
-      pushMessage("user", `[Dosya: ${file.name}]`, false);
-      pushMessage("assistant", "Dosya yükleme özelliği yakın zamanda aktif olacaktır. Şimdilik sorununuzu metin olarak iletebilirsiniz.", false);
+      // Validate
+      const maxSize = 5 * 1024 * 1024;
+      const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
+      if (file.size > maxSize) {
+        pushMessage("assistant", "Dosya boyutu 5MB'dan buyuk olamaz.", false);
+        fileInput.value = "";
+        return;
+      }
+      if (!allowedTypes.includes(file.type)) {
+        pushMessage("assistant", "Sadece resim (JPG, PNG, GIF, WebP) ve PDF dosyalari kabul edilir.", false);
+        fileInput.value = "";
+        return;
+      }
+      // Upload
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const resp = await fetch("api/chat/upload", {
+          method: "POST",
+          headers: { "Bypass-Tunnel-Reminder": "true" },
+          body: formData
+        });
+        const data = await resp.json();
+        if (data.ok) {
+          // Show image preview or file link in chat
+          if (file.type.startsWith("image/")) {
+            const imgBubble = document.createElement("div");
+            imgBubble.className = "message user";
+            const img = document.createElement("img");
+            img.src = data.url;
+            img.alt = file.name;
+            img.style.cssText = "max-width:200px;max-height:200px;border-radius:8px;cursor:pointer";
+            img.addEventListener("click", () => window.open(data.url, "_blank"));
+            imgBubble.appendChild(img);
+            chatMessages.appendChild(imgBubble);
+            scrollToBottom();
+            messages.push({ role: "user", content: `[Resim: ${file.name}]` });
+            saveSession();
+          } else {
+            pushMessage("user", `[Dosya: ${file.name}]`);
+          }
+          queueUserSegment(`[Kullanici dosya yukledi: ${file.name}]`);
+        } else {
+          pushMessage("assistant", data.error || "Dosya yuklenemedi.", false);
+        }
+      } catch (_e) {
+        pushMessage("assistant", "Dosya yukleme sirasinda hata olustu.", false);
+      }
       fileInput.value = "";
     }
   });
@@ -1562,8 +1684,18 @@ async function flushPendingUserSegments() {
 
     scrollToBottom();
     await sleep(80);
-    pushMessage("assistant", payload.reply);
+    const botBubble = pushMessage("assistant", payload.reply);
     scrollToBottom();
+
+    // Citation: show sources if available
+    if (payload?.sources && Array.isArray(payload.sources) && payload.sources.length && botBubble) {
+      renderCitationSources(botBubble, payload.sources);
+    }
+
+    // Feedback buttons on bot messages
+    if (botBubble) {
+      renderFeedbackButtons(botBubble, messages.length - 1);
+    }
 
     // Play notification sound
     playNotificationSound();

@@ -266,7 +266,7 @@ function renderSummary(summary) {
 
 function renderTicketRows(tickets) {
   if (!Array.isArray(tickets) || !tickets.length) {
-    ticketsTableBody.innerHTML = '<tr><td colspan="9" class="empty">Kayit yok.</td></tr>';
+    ticketsTableBody.innerHTML = '<tr><td colspan="10" class="empty">Kayit yok.</td></tr>';
     return;
   }
   ticketsTableBody.innerHTML = "";
@@ -274,6 +274,7 @@ function renderTicketRows(tickets) {
     const priorityClass = ticket.priority === "high" ? "priority-high" : ticket.priority === "low" ? "priority-low" : "";
     const tr = document.createElement("tr");
     tr.innerHTML =
+      '<td><input type="checkbox" class="bulk-check" data-id="' + escapeHtml(ticket.id) + '" /></td>' +
       "<td>" + escapeHtml(ticket.id || "-") + "</td>" +
       '<td><span class="status-pill ' + escapeHtml(ticket.status || "") + '">' + escapeHtml(ticket.status || "-") + "</span></td>" +
       '<td><span class="priority-badge ' + priorityClass + '">' + escapeHtml(ticket.priority || "normal") + "</span></td>" +
@@ -285,6 +286,7 @@ function renderTicketRows(tickets) {
       '<td><button class="open-button" type="button" data-ticket-id="' + escapeHtml(ticket.id) + '">Ac</button></td>';
     ticketsTableBody.appendChild(tr);
   }
+  updateBulkToolbar();
 }
 
 function renderTicketDetail(ticket) {
@@ -536,9 +538,70 @@ async function loadKnowledgeBase() {
     const records = payload.records || [];
     kbRecordCount.textContent = records.length;
     renderKBTable(records);
+    loadAutoFAQs();
   } catch (error) {
     kbTableBody.innerHTML = '<tr><td colspan="4" class="empty">Hata: ' + escapeHtml(error.message) + "</td></tr>";
   }
+}
+
+// ── Auto-FAQ ─────────────────────────────────────────────────────────────
+async function loadAutoFAQs() {
+  const container = $("autoFaqSection");
+  if (!container) return;
+  try {
+    const payload = await apiGet("admin/auto-faq");
+    const faqs = payload.faqs || [];
+    if (!faqs.length) {
+      container.innerHTML = "<p class='empty'>Henuz oneri yok. 'FAQ Olustur' ile olusturabilirsiniz.</p>";
+      return;
+    }
+    let html = '<table><thead><tr><th>Soru</th><th>Cevap</th><th>Ticket</th><th>Islemler</th></tr></thead><tbody>';
+    for (const f of faqs) {
+      html += "<tr><td>" + escapeHtml(f.question) + "</td><td>" + escapeHtml((f.answer || "").slice(0, 100)) + "</td><td>" + escapeHtml(f.ticketId || "-") + "</td>" +
+        '<td><button class="btn btn-primary" onclick="approveAutoFaq(\'' + f.id + '\')">Onayla</button> <button class="btn btn-secondary" onclick="rejectAutoFaq(\'' + f.id + '\')">Reddet</button></td></tr>';
+    }
+    html += "</tbody></table>";
+    container.innerHTML = html;
+  } catch (_e) {
+    container.innerHTML = "<p class='empty'>Yuklenemedi.</p>";
+  }
+}
+
+async function approveAutoFaq(id) {
+  try {
+    await apiPost("admin/auto-faq/" + id + "/approve");
+    showToast("FAQ onaylandi ve bilgi tabanina eklendi.", "success");
+    loadKnowledgeBase();
+  } catch (err) {
+    showToast("Hata: " + err.message, "error");
+  }
+}
+
+async function rejectAutoFaq(id) {
+  try {
+    await apiPost("admin/auto-faq/" + id + "/reject");
+    showToast("FAQ reddedildi.", "info");
+    loadAutoFAQs();
+  } catch (err) {
+    showToast("Hata: " + err.message, "error");
+  }
+}
+
+if ($("autoFaqGenerateBtn")) {
+  $("autoFaqGenerateBtn").addEventListener("click", async () => {
+    $("autoFaqGenerateBtn").disabled = true;
+    $("autoFaqGenerateBtn").textContent = "Olusturuluyor...";
+    try {
+      const result = await apiPost("admin/auto-faq/generate");
+      showToast((result.generated || 0) + " FAQ onerisi olusturuldu.", "success");
+      loadAutoFAQs();
+    } catch (err) {
+      showToast("Hata: " + err.message, "error");
+    } finally {
+      $("autoFaqGenerateBtn").disabled = false;
+      $("autoFaqGenerateBtn").textContent = "FAQ Olustur";
+    }
+  });
 }
 
 function renderKBTable(records) {
@@ -1310,6 +1373,8 @@ async function loadSystemInfo() {
     renderSystemHealth(payload);
     renderAgentStatus(payload.agentStatus || []);
     renderKBSystemStatus(payload.knowledgeBase || {});
+    loadAuditLog();
+    loadSLAData();
   } catch (error) {
     sysHealthGrid.innerHTML = '<div class="health-card"><h3>Hata</h3><div class="value">' + escapeHtml(error.message) + "</div></div>";
   }
@@ -1654,6 +1719,7 @@ async function loadAnalytics() {
     renderAnalyticsSummary(payload.summary || {});
     renderAnalyticsChart(payload.daily || []);
     renderTopTopics(payload.topTopics || []);
+    renderContentGaps();
   } catch (err) {
     $("analyticsSummary").innerHTML = '<article class="summary-card"><div class="label">Hata</div><div class="value">' + escapeHtml(err.message) + "</div></article>";
   }
@@ -1662,14 +1728,18 @@ async function loadAnalytics() {
 function renderAnalyticsSummary(summary) {
   const grid = $("analyticsSummary");
   grid.innerHTML = "";
+  const sentiments = summary.sentimentCounts || {};
+  const sentimentText = Object.entries(sentiments).map(([k, v]) => k + ": " + v).join(", ") || "-";
   const cards = [
     ["Toplam Sohbet", summary.totalChats || 0],
     ["AI Cagri", summary.aiCalls || 0],
     ["Ort. Yanit Suresi", (summary.avgResponseMs || 0) + "ms"],
     ["Eskalasyon Orani", "%" + (summary.escalationRate || 0)],
-    ["Model Fallback", summary.fallbackCount || 0],
+    ["Deflection Rate", "%" + (summary.deflectionRate || 0)],
     ["CSAT Ortalamasi", summary.csatAverage ? summary.csatAverage + "/5" : "-"],
-    ["Deterministic", summary.deterministicReplies || 0]
+    ["Model Fallback", summary.fallbackCount || 0],
+    ["Feedback", (summary.feedbackUp || 0) + " / " + (summary.feedbackDown || 0)],
+    ["Duygu Dagilimi", sentimentText]
   ];
   for (const [label, value] of cards) {
     grid.appendChild(createSummaryCard(label, value));
@@ -1724,7 +1794,155 @@ function renderTopTopics(topics) {
   });
 }
 
+async function renderContentGaps() {
+  const container = $("contentGapsSection");
+  if (!container) return;
+  try {
+    const payload = await apiGet("admin/content-gaps");
+    const gaps = payload.gaps || [];
+    if (!gaps.length) {
+      container.innerHTML = "<p class='empty'>Cevaplanamayan soru tespit edilmedi.</p>";
+      return;
+    }
+    let html = '<table><thead><tr><th>Soru</th><th>Tekrar</th><th>Son Gorulme</th></tr></thead><tbody>';
+    for (const g of gaps.slice(0, 30)) {
+      html += "<tr><td>" + escapeHtml(g.query) + "</td><td>" + g.count + "</td><td>" + fmtDate(g.lastSeen) + "</td></tr>";
+    }
+    html += "</tbody></table>";
+    container.innerHTML = html;
+  } catch (_e) {
+    container.innerHTML = "<p class='empty'>Yuklenemedi.</p>";
+  }
+}
+
 $("analyticsRange").addEventListener("change", () => { void loadAnalytics(); });
+
+// ══════════════════════════════════════════════════════════════════════════
+// BULK ACTIONS
+// ══════════════════════════════════════════════════════════════════════════
+
+function getSelectedTicketIds() {
+  return Array.from(document.querySelectorAll(".bulk-check:checked")).map(cb => cb.dataset.id);
+}
+
+function updateBulkToolbar() {
+  const ids = getSelectedTicketIds();
+  const toolbar = $("bulkToolbar");
+  if (toolbar) {
+    toolbar.hidden = ids.length === 0;
+    const countEl = $("bulkSelectedCount");
+    if (countEl) countEl.textContent = ids.length + " secili";
+  }
+}
+
+// Delegate checkbox change events
+if (ticketsTableBody) {
+  ticketsTableBody.addEventListener("change", (e) => {
+    if (e.target.classList.contains("bulk-check")) updateBulkToolbar();
+  });
+}
+
+async function executeBulkAction(action, value) {
+  const ids = getSelectedTicketIds();
+  if (!ids.length) return;
+  try {
+    await apiPost("admin/tickets/bulk", { ticketIds: ids, action, value });
+    showToast(ids.length + " ticket guncellendi.", "success");
+    refreshDashboard();
+  } catch (err) {
+    showToast("Hata: " + err.message, "error");
+  }
+}
+
+if ($("bulkCloseBtn")) $("bulkCloseBtn").addEventListener("click", () => executeBulkAction("close"));
+if ($("bulkPriorityBtn")) $("bulkPriorityBtn").addEventListener("click", () => {
+  const val = $("bulkPrioritySelect")?.value;
+  if (val) executeBulkAction("priority", val);
+});
+if ($("bulkAssignBtn")) $("bulkAssignBtn").addEventListener("click", () => {
+  const val = $("bulkAssignInput")?.value?.trim();
+  if (val) executeBulkAction("assign", val);
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// EXPORT
+// ══════════════════════════════════════════════════════════════════════════
+
+if ($("exportTicketsBtn")) {
+  $("exportTicketsBtn").addEventListener("click", () => {
+    const status = statusFilter?.value || "";
+    const url = "api/admin/tickets/export?format=csv&status=" + encodeURIComponent(status) + "&token=" + encodeURIComponent(state.token);
+    window.open(url, "_blank");
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// AUDIT LOG
+// ══════════════════════════════════════════════════════════════════════════
+
+async function loadAuditLog() {
+  const container = $("auditLogSection");
+  if (!container) return;
+  try {
+    const payload = await apiGet("admin/audit-log");
+    const entries = payload.entries || [];
+    if (!entries.length) {
+      container.innerHTML = "<p class='empty'>Henuz kayit yok.</p>";
+      return;
+    }
+    let html = '<table><thead><tr><th>Tarih</th><th>Islem</th><th>Detay</th><th>IP</th></tr></thead><tbody>';
+    for (const e of entries.slice(0, 50)) {
+      html += "<tr><td>" + fmtDate(e.timestamp) + "</td><td>" + escapeHtml(e.action) + "</td><td>" + escapeHtml(e.details) + "</td><td>" + escapeHtml(e.adminIp || "-") + "</td></tr>";
+    }
+    html += "</tbody></table>";
+    container.innerHTML = html;
+  } catch (_e) {
+    container.innerHTML = "<p class='empty'>Yuklenemedi.</p>";
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// SLA TRACKING
+// ══════════════════════════════════════════════════════════════════════════
+
+async function loadSLAData() {
+  const summaryEl = $("slaSummary");
+  const breachesEl = $("slaBreaches");
+  if (!summaryEl) return;
+  try {
+    const payload = await apiGet("admin/sla");
+    const s = payload.summary || {};
+    summaryEl.innerHTML = "";
+    const cards = [
+      ["Aktif Ticket", s.activeTickets || 0],
+      ["Ilk Yanit Ihlali", s.firstResponseBreaches || 0],
+      ["Cozum Ihlali", s.resolutionBreaches || 0],
+      ["SLA Uyum", "%" + (s.slaComplianceRate || 100)],
+      ["Ort. Cozum", (s.avgResolutionMin || 0) + " dk"]
+    ];
+    for (const [label, value] of cards) {
+      summaryEl.appendChild(createSummaryCard(label, value));
+    }
+
+    // Breached tickets
+    const breaches = payload.breachedTickets || [];
+    if (breaches.length && breachesEl) {
+      let html = '<table><thead><tr><th>Ticket</th><th>Sube</th><th>Sorun</th><th>Olusturulma</th><th>Ihlal</th></tr></thead><tbody>';
+      for (const b of breaches) {
+        const type = [];
+        if (b.firstResponseBreach) type.push("Ilk Yanit");
+        if (b.resolutionBreach) type.push("Cozum");
+        html += "<tr><td>" + escapeHtml(b.id) + "</td><td>" + escapeHtml(b.branchCode || "-") + "</td><td>" + escapeHtml(b.issueSummary || "-") + "</td><td>" + fmtDate(b.createdAt) + "</td><td style='color:#ef4444;font-weight:600'>" + type.join(", ") + "</td></tr>";
+      }
+      html += "</tbody></table>";
+      breachesEl.innerHTML = html;
+    } else if (breachesEl) {
+      breachesEl.innerHTML = "<p class='empty'>SLA ihlali yok.</p>";
+    }
+  } catch (_e) {
+    summaryEl.innerHTML = "<p class='empty'>SLA verisi yuklenemedi.</p>";
+  }
+}
 
 // ══════════════════════════════════════════════════════════════════════════
 // SUNSHINE CONVERSATIONS CONFIG

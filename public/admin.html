@@ -77,7 +77,18 @@
           <div class="control-buttons">
             <button id="refreshButton" type="button">Yenile</button>
             <button id="autoButton" type="button" data-active="1">Oto Yenile: Acik</button>
+            <button id="exportTicketsBtn" type="button">Disari Aktar (CSV)</button>
           </div>
+        </section>
+
+        <!-- Bulk Actions Toolbar -->
+        <section id="bulkToolbar" class="bulk-toolbar" hidden>
+          <span id="bulkSelectedCount">0 secili</span>
+          <button id="bulkCloseBtn" type="button" class="btn btn-secondary">Kapat</button>
+          <select id="bulkPrioritySelect"><option value="">Oncelik Sec</option><option value="low">Dusuk</option><option value="normal">Normal</option><option value="high">Yuksek</option></select>
+          <button id="bulkPriorityBtn" type="button" class="btn btn-secondary">Oncelik Degistir</button>
+          <input id="bulkAssignInput" type="text" placeholder="Atama..." style="width:120px" />
+          <button id="bulkAssignBtn" type="button" class="btn btn-secondary">Ata</button>
         </section>
 
         <section class="summary-grid" id="summaryGrid"></section>
@@ -193,6 +204,17 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Auto-FAQ Section -->
+        <div class="analytics-topics-section" style="margin-top:24px">
+          <div class="section-header">
+            <h3>Onerilen FAQ'lar (Otomatik)</h3>
+            <button id="autoFaqGenerateBtn" class="btn btn-secondary">FAQ Olustur</button>
+          </div>
+          <div id="autoFaqSection" class="table-section">
+            <p class="empty">Henuz oneri yok.</p>
+          </div>
         </div>
       </section>
 
@@ -649,6 +671,13 @@
             </table>
           </div>
         </div>
+
+        <div class="analytics-topics-section" style="margin-top:24px">
+          <h3>Cevaplanamayan Sorular (Content Gaps)</h3>
+          <div id="contentGapsSection" class="table-section">
+            <p class="empty">Yukleniyor...</p>
+          </div>
+        </div>
       </section>
 
       <!-- TAB 5: Sistem -->
@@ -663,6 +692,19 @@
 
         <div id="sysHealthGrid" class="health-grid">
           <!-- Health cards populated by JS -->
+        </div>
+
+        <!-- SLA Summary -->
+        <div class="analytics-topics-section" style="margin-bottom:20px">
+          <h3>SLA Durumu</h3>
+          <div id="slaSummary" class="summary-grid"></div>
+          <div id="slaBreaches" class="table-section" style="margin-top:8px"></div>
+        </div>
+
+        <!-- Audit Log -->
+        <div class="analytics-topics-section" style="margin-bottom:20px">
+          <h3>Degisiklik Gecmisi (Audit Log)</h3>
+          <div id="auditLogSection" class="table-section"></div>
         </div>
 
         <div class="status-sections">

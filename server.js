@@ -79,6 +79,9 @@ let ZENDESK_SC_SUBDOMAIN = (process.env.ZENDESK_SC_SUBDOMAIN || "").trim();
 // Auto-deploy webhook
 let DEPLOY_WEBHOOK_SECRET = (process.env.DEPLOY_WEBHOOK_SECRET || "").trim();
 
+// Data Retention
+const DATA_RETENTION_DAYS = Number(process.env.DATA_RETENTION_DAYS || 90);
+
 const AGENT_DIR = path.join(__dirname, "agent");
 const TOPICS_DIR = path.join(AGENT_DIR, "topics");
 const MEMORY_DIR = path.join(__dirname, "memory");
@@ -95,6 +98,10 @@ const SITE_CONFIG_FILE = path.join(DATA_DIR, "site-config.json");
 const CONVERSATIONS_FILE = path.join(DATA_DIR, "conversations.json");
 const SUNSHINE_SESSIONS_FILE = path.join(DATA_DIR, "sunshine-sessions.json");
 const SUNSHINE_CONFIG_FILE = path.join(DATA_DIR, "sunshine-config.json");
+const FEEDBACK_FILE = path.join(DATA_DIR, "feedback.json");
+const CONTENT_GAPS_FILE = path.join(DATA_DIR, "content-gaps.json");
+const AUDIT_LOG_FILE = path.join(DATA_DIR, "audit-log.json");
+const WEBHOOK_DELIVERY_LOG_FILE = path.join(DATA_DIR, "webhook-delivery-log.json");
 
 let knowledgeTable = null;
 
@@ -143,7 +150,10 @@ function saveAnalyticsData() {
 }
 
 function recordAnalyticsEvent(event) {
-  analyticsBuffer.push({ ...event, timestamp: Date.now() });
+  // PII masking for analytics
+  const safeEvent = { ...event, timestamp: Date.now() };
+  if (safeEvent.query) safeEvent.query = maskPII(safeEvent.query);
+  analyticsBuffer.push(safeEvent);
 }
 
 function flushAnalyticsBuffer() {
@@ -176,6 +186,11 @@ function flushAnalyticsBuffer() {
     }
     if (evt.source) {
       day.sourceCounts[evt.source] = (day.sourceCounts[evt.source] || 0) + 1;
+    }
+    // Sentiment tracking
+    if (evt.sentiment) {
+      if (!day.sentimentCounts) day.sentimentCounts = {};
+      day.sentimentCounts[evt.sentiment] = (day.sentimentCounts[evt.sentiment] || 0) + 1;
     }
   }
 
@@ -222,6 +237,54 @@ function saveWebhooks(hooks) {
   fs.writeFileSync(WEBHOOKS_FILE, JSON.stringify(hooks, null, 2), "utf8");
 }
 
+// ── Webhook Delivery Log ─────────────────────────────────────────────────
+function loadWebhookDeliveryLog() {
+  try {
+    if (fs.existsSync(WEBHOOK_DELIVERY_LOG_FILE)) return JSON.parse(fs.readFileSync(WEBHOOK_DELIVERY_LOG_FILE, "utf8"));
+  } catch (_e) { /* silent */ }
+  return { deliveries: [] };
+}
+
+function saveWebhookDeliveryLog(data) {
+  if (data.deliveries.length > 200) data.deliveries = data.deliveries.slice(-200);
+  fs.writeFileSync(WEBHOOK_DELIVERY_LOG_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+function recordWebhookDelivery(hookId, eventType, status, attempt, error) {
+  const data = loadWebhookDeliveryLog();
+  data.deliveries.push({
+    hookId, eventType, status, attempt,
+    error: error ? String(error).slice(0, 200) : "",
+    timestamp: nowIso()
+  });
+  saveWebhookDeliveryLog(data);
+}
+
+async function fireWebhookWithRetry(hook, eventType, payload, maxRetries = 3) {
+  const body = JSON.stringify({ event: eventType, data: payload, timestamp: new Date().toISOString() });
+  const headers = { "Content-Type": "application/json" };
+  if (hook.secret) {
+    headers["X-Qragy-Signature"] = crypto.createHmac("sha256", hook.secret).update(body).digest("hex");
+  }
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 5000);
+      const resp = await fetch(hook.url, { method: "POST", headers, body, signal: controller.signal });
+      clearTimeout(tid);
+      recordWebhookDelivery(hook.id, eventType, resp.ok ? "success" : "http_" + resp.status, attempt, resp.ok ? "" : "HTTP " + resp.status);
+      if (resp.ok) return;
+    } catch (err) {
+      recordWebhookDelivery(hook.id, eventType, "error", attempt, err.message);
+    }
+    // Exponential backoff: 1s, 2s, 4s
+    if (attempt < maxRetries) {
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+    }
+  }
+}
+
 function fireWebhook(eventType, payload) {
   const hooks = loadWebhooks();
   let fired = 0;
@@ -229,16 +292,8 @@ function fireWebhook(eventType, payload) {
     if (!hook.active) continue;
     if (!hook.events.includes(eventType) && !hook.events.includes("*")) continue;
     if (fired >= 10) break; // Max 10 webhooks per event
-    const body = JSON.stringify({ event: eventType, data: payload, timestamp: new Date().toISOString() });
-    const headers = { "Content-Type": "application/json" };
-    if (hook.secret) {
-      headers["X-Qragy-Signature"] = crypto.createHmac("sha256", hook.secret).update(body).digest("hex");
-    }
-    const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 5000);
-    fetch(hook.url, { method: "POST", headers, body, signal: controller.signal })
-      .finally(() => clearTimeout(tid))
-      .catch(_e => { /* fire-and-forget */ });
+    // Fire with retry (async, fire-and-forget)
+    fireWebhookWithRetry(hook, eventType, payload).catch(() => {});
     fired++;
   }
 }
@@ -778,6 +833,10 @@ function buildTicketRecord(memory, supportAvailability, context = {}) {
     },
     source: context.source || "chat-api",
     model: context.model || GOOGLE_MODEL,
+    sentiment: context.sentiment || "neutral",
+    qualityScore: null,
+    firstResponseAt: null,
+    resolvedAt: null,
     handoffAttempts: 0,
     lastHandoffAt: "",
     chatHistory: context.chatHistory || [],
@@ -1763,6 +1822,7 @@ function buildSystemPrompt(memory, conversationContext, knowledgeResults) {
   parts.push("ÖNEMLİ: Escalation yapmadan ÖNCE mutlaka şube kodunu topla. Şube kodu yoksa escalation mesajı verme, önce şube kodunu sor.");
   parts.push("ÖNEMLİ: Escalation öncesi ONAY sor. Direkt aktarma. Önce şu mesajı ver: 'Bu konuda canlı destek temsilcimiz size yardımcı olabilir. Sizi temsilcimize aktarmamı ister misiniz?' Kullanıcı onay verdikten sonra (evet, tamam, olur, aktar gibi): 'Sizi canlı destek temsilcimize aktarıyorum. Kısa sürede yardımcı olacaktır.' Tek istisna: Kullanıcı kendisi 'temsilciye aktar' veya 'canlı destek istiyorum' derse direkt aktarım mesajı ver.");
   parts.push("Onay metni (sadece ticket toplama için): Talebinizi aldım. Şube kodu: <KOD>. Kısa açıklama: <ÖZET>. Destek ekibi en kısa sürede dönüş yapacaktır.");
+  parts.push("Uygun olduğunda yanıtının sonuna hızlı yanıt seçenekleri ekle: [QUICK_REPLIES: secenek1 | secenek2 | secenek3]. Maks 3 seçenek. Yalnızca kullanıcıyı yönlendirmek mantıklıysa ekle.");
 
   // RAG: Bilgi tabani sonuclarini ekle
   if (Array.isArray(knowledgeResults) && knowledgeResults.length > 0) {
@@ -1825,21 +1885,94 @@ async function reingestKnowledgeBase() {
 
 // embedText — moved to lib/providers.js
 
-async function searchKnowledge(query, topK = 3) {
-  if (!knowledgeTable) return [];
+// ── Full-text search helper ──────────────────────────────────────────────
+function fullTextSearch(query, topK = 5) {
   try {
-    const queryVector = await embedText(query);
-    const results = await knowledgeTable
-      .vectorSearch(queryVector)
-      .limit(topK)
-      .toArray();
-    return results
-      .filter((r) => r._distance < 1.0)
-      .map((r) => ({ question: r.question, answer: r.answer, distance: r._distance }));
-  } catch (err) {
-    console.warn("Bilgi tabani arama hatasi:", err.message);
+    const rows = loadCSVData();
+    if (!rows.length) return [];
+    const queryLower = query.toLowerCase();
+    const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2);
+    if (!queryWords.length) return [];
+
+    const scored = [];
+    for (const row of rows) {
+      if (!row.question || !row.answer) continue;
+      const qLower = (row.question || "").toLowerCase();
+      const aLower = (row.answer || "").toLowerCase();
+      let score = 0;
+      // Exact substring match (highest weight)
+      if (qLower.includes(queryLower) || aLower.includes(queryLower)) {
+        score += 10;
+      }
+      // Individual word matches
+      for (const word of queryWords) {
+        if (qLower.includes(word)) score += 2;
+        if (aLower.includes(word)) score += 1;
+      }
+      if (score > 0) {
+        scored.push({ question: row.question, answer: row.answer, textScore: score });
+      }
+    }
+    scored.sort((a, b) => b.textScore - a.textScore);
+    return scored.slice(0, topK);
+  } catch (_e) {
     return [];
   }
+}
+
+// ── Reciprocal Rank Fusion ──────────────────────────────────────────────
+function reciprocalRankFusion(vectorResults, textResults, k = 60) {
+  const scoreMap = new Map();
+  const dataMap = new Map();
+
+  vectorResults.forEach((item, rank) => {
+    const key = (item.question || "").slice(0, 100);
+    scoreMap.set(key, (scoreMap.get(key) || 0) + 1 / (k + rank + 1));
+    dataMap.set(key, item);
+  });
+
+  textResults.forEach((item, rank) => {
+    const key = (item.question || "").slice(0, 100);
+    scoreMap.set(key, (scoreMap.get(key) || 0) + 1 / (k + rank + 1));
+    if (!dataMap.has(key)) dataMap.set(key, item);
+  });
+
+  return Array.from(scoreMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([key, score]) => ({ ...dataMap.get(key), rrfScore: score }));
+}
+
+async function searchKnowledge(query, topK = 3) {
+  // Full-text search (always available)
+  const textResults = fullTextSearch(query, topK * 2);
+
+  // Vector search
+  let vectorResults = [];
+  if (knowledgeTable) {
+    try {
+      const queryVector = await embedText(query);
+      const results = await knowledgeTable
+        .vectorSearch(queryVector)
+        .limit(topK * 2)
+        .toArray();
+      vectorResults = results
+        .filter((r) => r._distance < 1.0)
+        .map((r) => ({ question: r.question, answer: r.answer, distance: r._distance }));
+    } catch (err) {
+      console.warn("Bilgi tabani vector arama hatasi:", err.message);
+    }
+  }
+
+  // Hybrid: RRF fusion if both have results
+  if (vectorResults.length && textResults.length) {
+    const fused = reciprocalRankFusion(vectorResults, textResults);
+    return fused.slice(0, topK);
+  }
+
+  // Fallback to whichever has results
+  if (vectorResults.length) return vectorResults.slice(0, topK);
+  if (textResults.length) return textResults.slice(0, topK).map(r => ({ question: r.question, answer: r.answer, distance: 0.5 }));
+  return [];
 }
 
 async function generateEscalationSummary(contents, memory, conversationContext) {
@@ -1865,6 +1998,144 @@ async function generateEscalationSummary(contents, memory, conversationContext) 
   } catch (_err) {
     return fallback;
   }
+}
+
+// ── Sentiment Analysis (keyword-based) ──────────────────────────────────
+const POSITIVE_WORDS = new Set(["tesekkurler", "tesekkur", "sagol", "sagolun", "harika", "super", "muhtesem", "guzel", "memnunum", "tatmin", "basarili", "cozuldu", "duzeldim", "halloldu", "cok iyi"]);
+const NEGATIVE_WORDS = new Set(["rezalet", "skandal", "berbat", "korkunç", "iğrenç", "kotu", "kizgin", "sinirli", "saçma", "aptal", "yetersiz", "beceriksiz", "cozumsuz", "hala bekliyorum", "maalesef", "hayal kirikligi", "sikayetci", "utanç"]);
+
+function analyzeSentiment(text) {
+  if (!text) return "neutral";
+  const normalized = (text || "").toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, "");
+  let posScore = 0, negScore = 0;
+  for (const word of POSITIVE_WORDS) { if (normalized.includes(word)) posScore++; }
+  for (const word of NEGATIVE_WORDS) { if (normalized.includes(word)) negScore++; }
+  if (negScore >= 2) return "angry";
+  if (negScore > posScore) return "negative";
+  if (posScore > negScore) return "positive";
+  return "neutral";
+}
+
+// ── Content Gap Detection ───────────────────────────────────────────────
+function loadContentGaps() {
+  try {
+    if (fs.existsSync(CONTENT_GAPS_FILE)) return JSON.parse(fs.readFileSync(CONTENT_GAPS_FILE, "utf8"));
+  } catch (_e) { /* silent */ }
+  return { gaps: [] };
+}
+
+function saveContentGaps(data) {
+  if (data.gaps.length > 500) data.gaps = data.gaps.slice(-500);
+  fs.writeFileSync(CONTENT_GAPS_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+function recordContentGap(query) {
+  const data = loadContentGaps();
+  const normalized = (query || "").toLowerCase().trim().slice(0, 200);
+  if (!normalized) return;
+  const existing = data.gaps.find(g => g.query === normalized);
+  if (existing) {
+    existing.count++;
+    existing.lastSeen = nowIso();
+  } else {
+    data.gaps.push({ query: normalized, count: 1, firstSeen: nowIso(), lastSeen: nowIso() });
+  }
+  saveContentGaps(data);
+}
+
+// ── PII Masking ─────────────────────────────────────────────────────────
+function maskPII(text) {
+  if (!text || typeof text !== "string") return text;
+  // TC Kimlik No (11 digits)
+  let masked = text.replace(/\b\d{11}\b/g, "[TC_MASKED]");
+  // Phone numbers (05xx xxx xx xx patterns)
+  masked = masked.replace(/\b0?5\d{2}[\s\-.]?\d{3}[\s\-.]?\d{2}[\s\-.]?\d{2}\b/g, "[TEL_MASKED]");
+  // Email
+  masked = masked.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[EMAIL_MASKED]");
+  // IBAN (TR + 24 digits)
+  masked = masked.replace(/TR\s?\d{2}[\s]?\d{4}[\s]?\d{4}[\s]?\d{4}[\s]?\d{4}[\s]?\d{4}[\s]?\d{2}/gi, "[IBAN_MASKED]");
+  return masked;
+}
+
+// ── Conversation Quality Score ──────────────────────────────────────────
+function calculateQualityScore(ticket) {
+  let score = 10;
+  // More messages = likely harder to resolve (penalty)
+  const msgCount = (ticket.chatHistory || []).length;
+  if (msgCount > 15) score -= 2;
+  else if (msgCount > 8) score -= 1;
+  // Escalation = negative signal
+  if (ticket.status === "handoff_pending" || ticket.status === "handoff_failed") score -= 1;
+  // CSAT rating
+  if (ticket.csatRating) {
+    if (ticket.csatRating >= 4) score += 1;
+    else if (ticket.csatRating <= 2) score -= 2;
+  }
+  // Sentiment
+  const sentiment = ticket.sentiment || "neutral";
+  if (sentiment === "angry") score -= 2;
+  else if (sentiment === "negative") score -= 1;
+  else if (sentiment === "positive") score += 1;
+  // Resolution time
+  if (ticket.resolvedAt && ticket.createdAt) {
+    const resolveMs = Date.parse(ticket.resolvedAt) - Date.parse(ticket.createdAt);
+    if (resolveMs < 5 * 60 * 1000) score += 1; // < 5 min
+    else if (resolveMs > 60 * 60 * 1000) score -= 1; // > 1 hour
+  }
+  return Math.max(1, Math.min(10, score));
+}
+
+// ── Context Window Compression ──────────────────────────────────────────
+async function compressConversationHistory(messages) {
+  if (messages.length <= 10) return messages;
+  const oldMessages = messages.slice(0, -6);
+  const recentMessages = messages.slice(-6);
+
+  // Try LLM-based summarization
+  const providerCfg = getProviderConfig();
+  if (providerCfg.apiKey || providerCfg.provider === "ollama") {
+    try {
+      const chatText = oldMessages
+        .map(m => `${m.role === "user" ? "Kullanici" : "Bot"}: ${(m.content || "").slice(0, 200)}`)
+        .join("\n");
+      const result = await callLLM(
+        [{ role: "user", parts: [{ text: chatText }] }],
+        "Bu konusma gecmisini tek paragrafta ozetle. Turkce yaz, 2-3 cumle. Sadece ozeti yaz.",
+        128
+      );
+      const summary = (result.reply || "").trim();
+      if (summary) {
+        return [
+          { role: "assistant", content: `[Önceki konuşma özeti: ${summary}]` },
+          ...recentMessages
+        ];
+      }
+    } catch (_e) { /* fallback to simple truncation */ }
+  }
+
+  // Simple fallback: keep first 2 + last 6
+  return [...messages.slice(0, 2), ...recentMessages];
+}
+
+// ── Response Quality Validation ─────────────────────────────────────────
+function validateBotResponse(reply, sources) {
+  if (!reply || typeof reply !== "string") return { valid: false, reason: "empty" };
+  const trimmed = reply.trim();
+  if (trimmed.length < 10) return { valid: false, reason: "too_short" };
+  // Detect repetition (same sentence 3+ times)
+  const sentences = trimmed.split(/[.!?]+/).filter(s => s.trim().length > 5);
+  if (sentences.length >= 3) {
+    const unique = new Set(sentences.map(s => s.trim().toLowerCase()));
+    if (unique.size === 1) return { valid: false, reason: "repetitive" };
+  }
+  // Detect hallucination markers
+  const hallucMarkers = ["ben bir yapay zeka olarak", "as an ai", "i cannot", "i'm sorry but"];
+  for (const marker of hallucMarkers) {
+    if (trimmed.toLowerCase().includes(marker)) return { valid: false, reason: "hallucination_marker" };
+  }
+  return { valid: true };
 }
 
 ensureTicketsDbFile();
@@ -2049,6 +2320,66 @@ app.post("/api/tickets/:ticketId/rating", (req, res) => {
   recordCsatAnalytics(rating);
   fireWebhook("csat_rating", { ticketId, rating });
   return res.json({ ok: true, rating });
+});
+
+// ── Message Feedback (thumbs up/down) ────────────────────────────────────
+function loadFeedback() {
+  try {
+    if (fs.existsSync(FEEDBACK_FILE)) return JSON.parse(fs.readFileSync(FEEDBACK_FILE, "utf8"));
+  } catch (_e) { /* silent */ }
+  return { entries: [] };
+}
+
+function saveFeedback(data) {
+  // Keep last 1000 entries
+  if (data.entries.length > 1000) data.entries = data.entries.slice(-1000);
+  fs.writeFileSync(FEEDBACK_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+// ── Chat File Upload (user→bot) ──────────────────────────────────────────
+const chatUpload = multer({
+  dest: UPLOADS_DIR,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error("Desteklenmeyen dosya tipi. Sadece resim ve PDF kabul edilir."));
+  }
+});
+
+app.post("/api/chat/upload", chatUpload.single("file"), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "Dosya gerekli." });
+  const fileUrl = `/uploads/${req.file.filename}`;
+  return res.json({ ok: true, url: fileUrl, name: req.file.originalname, size: req.file.size });
+});
+
+// Serve uploaded files
+app.use("/uploads", express.static(UPLOADS_DIR));
+
+app.post("/api/chat/feedback", (req, res) => {
+  const { sessionId, messageIndex, rating } = req.body || {};
+  if (!rating || !["up", "down"].includes(rating)) {
+    return res.status(400).json({ error: "rating: 'up' veya 'down' olmalidir." });
+  }
+  const data = loadFeedback();
+  data.entries.push({
+    sessionId: String(sessionId || "").slice(0, 100),
+    messageIndex: Number(messageIndex) || 0,
+    rating,
+    timestamp: nowIso()
+  });
+  saveFeedback(data);
+  // Update analytics
+  const dayKey = new Date().toISOString().slice(0, 10);
+  if (!analyticsData.daily[dayKey]) {
+    analyticsData.daily[dayKey] = { totalChats: 0, aiCalls: 0, deterministicReplies: 0, totalResponseMs: 0, responseCount: 0, escalationCount: 0, csatSum: 0, csatCount: 0, topicCounts: {}, sourceCounts: {} };
+  }
+  const day = analyticsData.daily[dayKey];
+  if (!day.feedbackUp) day.feedbackUp = 0;
+  if (!day.feedbackDown) day.feedbackDown = 0;
+  if (rating === "up") day.feedbackUp++; else day.feedbackDown++;
+  saveAnalyticsData();
+  return res.json({ ok: true });
 });
 
 app.get("/api/admin/summary", requireAdminAccess, (_req, res) => {
@@ -2330,7 +2661,13 @@ app.post("/api/chat", async (req, res) => {
       }
     }
 
-    const contents = activeMessages
+    // Context window compression: 10+ mesajda eski mesajlari ozetle
+    let processedMessages = activeMessages;
+    if (activeMessages.length > 10) {
+      processedMessages = await compressConversationHistory(activeMessages);
+    }
+
+    const contents = processedMessages
       .filter((item) => item && typeof item.content === "string" && item.content.trim())
       .map((item) => ({
         role: item.role === "assistant" ? "model" : "user",
@@ -2520,8 +2857,21 @@ app.post("/api/chat", async (req, res) => {
       }
     }
 
-    // RAG: Bilgi tabanindan ilgili Q&A ciftlerini bul
+    // Sentiment analysis
+    const sentiment = analyzeSentiment(latestUserMessage);
+
+    // RAG: Bilgi tabanindan ilgili Q&A ciftlerini bul (hybrid search)
     const knowledgeResults = await searchKnowledge(latestUserMessage);
+    // Content gap detection: if no good KB results, record the gap
+    if (knowledgeResults.length === 0 && latestUserMessage.length > 10) {
+      recordContentGap(latestUserMessage);
+    }
+    // Build citation sources for response
+    const sources = knowledgeResults.map(r => ({
+      question: r.question,
+      answer: (r.answer || "").slice(0, 200),
+      score: r.rrfScore || r.distance || 0
+    }));
     const systemPrompt = buildSystemPrompt(memory, conversationContext, knowledgeResults);
     let geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
 
@@ -2534,12 +2884,26 @@ app.post("/api/chat", async (req, res) => {
 
     reply = sanitizeAssistantReply(geminiResult.reply);
 
+    // Response quality validation
+    const qualityCheck = validateBotResponse(reply, sources);
+    if (!qualityCheck.valid) {
+      reply = buildMissingFieldsReply(memory, latestUserMessage);
+    }
+
     if (!conversationContext.currentTopic && !hasRequiredFields(memory) && CONFIRMATION_PREFIX_REGEX.test(reply)) {
       reply = buildMissingFieldsReply(memory, latestUserMessage);
     }
 
     if (!reply) {
       reply = buildMissingFieldsReply(memory, latestUserMessage);
+    }
+
+    // Parse dynamic quick replies from LLM response
+    let dynamicQuickReplies = [];
+    const qrMatch = reply.match(/\[QUICK_REPLIES:\s*(.+?)\]/i);
+    if (qrMatch) {
+      dynamicQuickReplies = qrMatch[1].split("|").map(s => s.trim()).filter(Boolean).slice(0, 3);
+      reply = reply.replace(/\s*\[QUICK_REPLIES:\s*.+?\]/i, "").trim();
     }
 
     const isEscalationReply = ESCALATION_MESSAGE_REGEX.test(normalizeForMatching(reply));
@@ -2575,7 +2939,8 @@ app.post("/api/chat", async (req, res) => {
       source: chatSource,
       responseTimeMs: Date.now() - chatStartTime,
       topicId: conversationContext.currentTopic || null,
-      fallbackUsed: Boolean(geminiResult.fallbackUsed)
+      fallbackUsed: Boolean(geminiResult.fallbackUsed),
+      sentiment
     });
 
     if (isEscalationReply && ticketCreated) {
@@ -2589,6 +2954,7 @@ app.post("/api/chat", async (req, res) => {
       reply,
       model: GOOGLE_MODEL,
       source: chatSource,
+      sources: sources.length ? sources : undefined,
       memory,
       conversationContext,
       hasClosedTicketHistory,
@@ -2598,6 +2964,7 @@ app.post("/api/chat", async (req, res) => {
       handoffReady,
       handoffReason: isEscalationReply ? (topicMeta?.id || "ai-escalation") : "",
       handoffMessage: !supportAvailability.isOpen && isEscalationReply ? getOutsideSupportHoursMessage() : "",
+      quickReplies: dynamicQuickReplies.length ? dynamicQuickReplies : undefined,
       support: supportAvailability
     });
   } catch (error) {
@@ -3127,6 +3494,334 @@ app.post("/api/admin/agent/reload", requireAdminAccess, (_req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════
+// AUDIT LOG
+// ══════════════════════════════════════════════════════════════════════════
+
+function loadAuditLog() {
+  try {
+    if (fs.existsSync(AUDIT_LOG_FILE)) return JSON.parse(fs.readFileSync(AUDIT_LOG_FILE, "utf8"));
+  } catch (_e) { /* silent */ }
+  return { entries: [] };
+}
+
+function saveAuditLog(data) {
+  if (data.entries.length > 500) data.entries = data.entries.slice(-500);
+  fs.writeFileSync(AUDIT_LOG_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+function recordAuditEvent(action, details, adminIp) {
+  const data = loadAuditLog();
+  data.entries.push({
+    action,
+    details: String(details || "").slice(0, 500),
+    adminIp: String(adminIp || "").slice(0, 50),
+    timestamp: nowIso()
+  });
+  saveAuditLog(data);
+}
+
+app.get("/api/admin/audit-log", requireAdminAccess, (_req, res) => {
+  const data = loadAuditLog();
+  return res.json({ ok: true, entries: (data.entries || []).slice(-100).reverse() });
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// BULK TICKET OPERATIONS
+// ══════════════════════════════════════════════════════════════════════════
+
+app.post("/api/admin/tickets/bulk", requireAdminAccess, (req, res) => {
+  const { ticketIds, action, value } = req.body || {};
+  if (!Array.isArray(ticketIds) || !ticketIds.length) {
+    return res.status(400).json({ error: "ticketIds dizisi zorunludur." });
+  }
+  const validActions = ["close", "assign", "priority"];
+  if (!validActions.includes(action)) {
+    return res.status(400).json({ error: "action: close/assign/priority olmalidir." });
+  }
+
+  const db = loadTicketsDb();
+  const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
+  let updated = 0;
+
+  for (const ticketId of ticketIds.slice(0, 100)) {
+    const ticket = db.tickets.find(t => t.id === ticketId);
+    if (!ticket) continue;
+
+    const timestamp = nowIso();
+    ticket.updatedAt = timestamp;
+    ticket.events = Array.isArray(ticket.events) ? ticket.events : [];
+
+    if (action === "close") {
+      ticket.status = "handoff_success";
+      ticket.resolvedAt = timestamp;
+      ticket.qualityScore = calculateQualityScore(ticket);
+      ticket.events.push({ at: timestamp, type: "bulk_closed", message: "Toplu islemle kapatildi." });
+    } else if (action === "assign") {
+      ticket.assignedTo = String(value || "").trim().slice(0, 100);
+      ticket.events.push({ at: timestamp, type: "bulk_assigned", message: `Toplu islemle ${ticket.assignedTo || "?"} atandi.` });
+    } else if (action === "priority") {
+      const validPriority = ["low", "normal", "high"];
+      if (validPriority.includes(value)) {
+        ticket.priority = value;
+        ticket.events.push({ at: timestamp, type: "bulk_priority", message: `Toplu islemle oncelik ${value} yapildi.` });
+      }
+    }
+    updated++;
+  }
+
+  saveTicketsDb(db);
+  recordAuditEvent("bulk_" + action, `${updated} ticket guncellendi`, clientIp);
+  return res.json({ ok: true, updated });
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// EXPORT (CSV/JSON)
+// ══════════════════════════════════════════════════════════════════════════
+
+app.get("/api/admin/tickets/export", requireAdminAccess, (req, res) => {
+  const format = String(req.query.format || "json").toLowerCase();
+  const status = String(req.query.status || "").trim();
+  const db = loadTicketsDb();
+  let tickets = db.tickets;
+  if (status) tickets = tickets.filter(t => t.status === status);
+
+  const exportData = tickets.map(t => ({
+    id: t.id, status: t.status, createdAt: t.createdAt, updatedAt: t.updatedAt,
+    branchCode: t.branchCode, issueSummary: t.issueSummary, companyName: t.companyName || "",
+    fullName: t.fullName || "", phone: t.phone || "", source: t.source || "",
+    priority: t.priority || "normal", assignedTo: t.assignedTo || "",
+    csatRating: t.csatRating || "", sentiment: t.sentiment || "",
+    qualityScore: t.qualityScore || ""
+  }));
+
+  if (format === "csv") {
+    const csv = Papa.unparse(exportData, { header: true });
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename=tickets-${new Date().toISOString().slice(0, 10)}.csv`);
+    return res.send("\uFEFF" + csv); // BOM for Excel Turkish chars
+  }
+
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Content-Disposition", `attachment; filename=tickets-${new Date().toISOString().slice(0, 10)}.json`);
+  return res.json(exportData);
+});
+
+app.get("/api/admin/analytics/export", requireAdminAccess, (req, res) => {
+  const format = String(req.query.format || "json").toLowerCase();
+  const range = String(req.query.range || "30d").trim();
+  const days = range === "90d" ? 90 : range === "30d" ? 30 : 7;
+  const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+
+  flushAnalyticsBuffer();
+  const entries = [];
+  for (const [dayKey, day] of Object.entries(analyticsData.daily || {})) {
+    if (dayKey < cutoff) continue;
+    entries.push({ date: dayKey, ...day });
+  }
+  entries.sort((a, b) => a.date.localeCompare(b.date));
+
+  if (format === "csv") {
+    const csv = Papa.unparse(entries, { header: true });
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename=analytics-${new Date().toISOString().slice(0, 10)}.csv`);
+    return res.send("\uFEFF" + csv);
+  }
+
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Content-Disposition", `attachment; filename=analytics-${new Date().toISOString().slice(0, 10)}.json`);
+  return res.json(entries);
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// SLA TRACKING
+// ══════════════════════════════════════════════════════════════════════════
+
+const SLA_FIRST_RESPONSE_MIN = Number(process.env.SLA_FIRST_RESPONSE_MIN || 5);
+const SLA_RESOLUTION_MIN = Number(process.env.SLA_RESOLUTION_MIN || 60);
+
+function checkSLABreach(ticket) {
+  const now = Date.now();
+  const created = Date.parse(ticket.createdAt || "");
+  if (!Number.isFinite(created)) return { firstResponse: false, resolution: false };
+
+  const firstResponseBreach = !ticket.firstResponseAt && (now - created) > SLA_FIRST_RESPONSE_MIN * 60000;
+  const resolutionBreach = !ticket.resolvedAt && (now - created) > SLA_RESOLUTION_MIN * 60000;
+
+  return { firstResponse: firstResponseBreach, resolution: resolutionBreach };
+}
+
+app.get("/api/admin/sla", requireAdminAccess, (_req, res) => {
+  const db = loadTicketsDb();
+  const activeTickets = db.tickets.filter(t => !t.resolvedAt);
+  let firstResponseBreaches = 0, resolutionBreaches = 0;
+  const breachedTickets = [];
+
+  for (const ticket of activeTickets) {
+    const breach = checkSLABreach(ticket);
+    if (breach.firstResponse) firstResponseBreaches++;
+    if (breach.resolution) resolutionBreaches++;
+    if (breach.firstResponse || breach.resolution) {
+      breachedTickets.push({
+        id: ticket.id, branchCode: ticket.branchCode, issueSummary: (ticket.issueSummary || "").slice(0, 100),
+        createdAt: ticket.createdAt, firstResponseBreach: breach.firstResponse, resolutionBreach: breach.resolution
+      });
+    }
+  }
+
+  const resolvedTickets = db.tickets.filter(t => t.resolvedAt && t.createdAt);
+  let totalResolutionMs = 0;
+  for (const t of resolvedTickets) {
+    totalResolutionMs += Date.parse(t.resolvedAt) - Date.parse(t.createdAt);
+  }
+  const avgResolutionMs = resolvedTickets.length ? Math.round(totalResolutionMs / resolvedTickets.length) : 0;
+  const slaComplianceRate = activeTickets.length > 0
+    ? Math.round(((activeTickets.length - breachedTickets.length) / activeTickets.length) * 100)
+    : 100;
+
+  return res.json({
+    ok: true,
+    config: { firstResponseMin: SLA_FIRST_RESPONSE_MIN, resolutionMin: SLA_RESOLUTION_MIN },
+    summary: { activeTickets: activeTickets.length, firstResponseBreaches, resolutionBreaches, slaComplianceRate, avgResolutionMin: Math.round(avgResolutionMs / 60000) },
+    breachedTickets: breachedTickets.slice(0, 50)
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// AUTO-FAQ GENERATION
+// ══════════════════════════════════════════════════════════════════════════
+
+const SUGGESTED_FAQS_FILE = path.join(DATA_DIR, "suggested-faqs.json");
+
+function loadSuggestedFAQs() {
+  try {
+    if (fs.existsSync(SUGGESTED_FAQS_FILE)) return JSON.parse(fs.readFileSync(SUGGESTED_FAQS_FILE, "utf8"));
+  } catch (_e) { /* silent */ }
+  return { faqs: [] };
+}
+
+function saveSuggestedFAQs(data) {
+  if (data.faqs.length > 200) data.faqs = data.faqs.slice(-200);
+  fs.writeFileSync(SUGGESTED_FAQS_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+app.post("/api/admin/auto-faq/generate", requireAdminAccess, async (_req, res) => {
+  const providerCfg = getProviderConfig();
+  if (!providerCfg.apiKey && providerCfg.provider !== "ollama") {
+    return res.status(400).json({ error: "LLM API key gerekli." });
+  }
+
+  const db = loadTicketsDb();
+  // Find resolved tickets with chat history
+  const resolved = db.tickets
+    .filter(t => t.status === "handoff_success" && Array.isArray(t.chatHistory) && t.chatHistory.length >= 3)
+    .slice(-10);
+
+  if (!resolved.length) {
+    return res.json({ ok: true, generated: 0, message: "Uygun cozulmus ticket bulunamadi." });
+  }
+
+  const data = loadSuggestedFAQs();
+  let generated = 0;
+
+  for (const ticket of resolved.slice(0, 5)) {
+    const chatText = ticket.chatHistory
+      .map(m => `${m.role === "user" ? "Kullanici" : "Bot"}: ${(m.content || "").slice(0, 300)}`)
+      .join("\n");
+
+    try {
+      const result = await callLLM(
+        [{ role: "user", parts: [{ text: chatText }] }],
+        'Bu konusma gecmisinden bir FAQ Q&A cifti olustur. Format: {"question":"...", "answer":"..."}. Turkce yaz. Sadece JSON yaz.',
+        256
+      );
+      const reply = (result.reply || "").trim();
+      // Try to parse JSON from reply
+      const jsonMatch = reply.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.question && parsed.answer) {
+          data.faqs.push({
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+            question: String(parsed.question).slice(0, 500),
+            answer: String(parsed.answer).slice(0, 1000),
+            ticketId: ticket.id,
+            status: "pending",
+            createdAt: nowIso()
+          });
+          generated++;
+        }
+      }
+    } catch (_e) { /* skip */ }
+  }
+
+  saveSuggestedFAQs(data);
+  return res.json({ ok: true, generated });
+});
+
+app.get("/api/admin/auto-faq", requireAdminAccess, (_req, res) => {
+  const data = loadSuggestedFAQs();
+  return res.json({ ok: true, faqs: (data.faqs || []).filter(f => f.status === "pending") });
+});
+
+app.post("/api/admin/auto-faq/:id/approve", requireAdminAccess, async (req, res) => {
+  const data = loadSuggestedFAQs();
+  const faq = data.faqs.find(f => f.id === req.params.id);
+  if (!faq) return res.status(404).json({ error: "FAQ bulunamadi." });
+
+  // Add to KB
+  const rows = loadCSVData();
+  rows.push({ question: faq.question, answer: faq.answer, source: "auto-faq" });
+  saveCSVData(rows);
+  await reingestKnowledgeBase();
+
+  faq.status = "approved";
+  saveSuggestedFAQs(data);
+  const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "";
+  recordAuditEvent("faq_approved", faq.question.slice(0, 100), clientIp);
+  return res.json({ ok: true });
+});
+
+app.post("/api/admin/auto-faq/:id/reject", requireAdminAccess, (req, res) => {
+  const data = loadSuggestedFAQs();
+  const faq = data.faqs.find(f => f.id === req.params.id);
+  if (!faq) return res.status(404).json({ error: "FAQ bulunamadi." });
+  faq.status = "rejected";
+  saveSuggestedFAQs(data);
+  return res.json({ ok: true });
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// CONTENT GAPS
+// ══════════════════════════════════════════════════════════════════════════
+
+app.get("/api/admin/content-gaps", requireAdminAccess, (_req, res) => {
+  const data = loadContentGaps();
+  const sorted = (data.gaps || []).sort((a, b) => b.count - a.count).slice(0, 100);
+  return res.json({ ok: true, gaps: sorted });
+});
+
+app.delete("/api/admin/content-gaps/:index", requireAdminAccess, (req, res) => {
+  const data = loadContentGaps();
+  const idx = Number(req.params.index);
+  const sorted = (data.gaps || []).sort((a, b) => b.count - a.count);
+  if (idx >= 0 && idx < sorted.length) {
+    const query = sorted[idx].query;
+    data.gaps = data.gaps.filter(g => g.query !== query);
+    saveContentGaps(data);
+  }
+  return res.json({ ok: true });
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// FEEDBACK
+// ══════════════════════════════════════════════════════════════════════════
+
+app.get("/api/admin/feedback", requireAdminAccess, (_req, res) => {
+  const data = loadFeedback();
+  return res.json({ ok: true, entries: (data.entries || []).slice(-100).reverse() });
+});
+
+// ══════════════════════════════════════════════════════════════════════════
 // ANALYTICS
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -3141,7 +3836,9 @@ app.get("/api/admin/analytics", requireAdminAccess, (_req, res) => {
     let totalChats = 0, totalAiCalls = 0, totalDeterministic = 0;
     let totalResponseMs = 0, totalResponseCount = 0;
     let totalEscalations = 0, totalCsatSum = 0, totalCsatCount = 0, totalFallbacks = 0;
+    let totalFeedbackUp = 0, totalFeedbackDown = 0;
     const topicTotals = {};
+    const sentimentTotals = {};
 
     for (const [dayKey, day] of Object.entries(analyticsData.daily || {})) {
       if (dayKey < cutoff) continue;
@@ -3155,8 +3852,13 @@ app.get("/api/admin/analytics", requireAdminAccess, (_req, res) => {
       totalFallbacks += day.fallbackCount || 0;
       totalCsatSum += day.csatSum || 0;
       totalCsatCount += day.csatCount || 0;
+      totalFeedbackUp += day.feedbackUp || 0;
+      totalFeedbackDown += day.feedbackDown || 0;
       for (const [tid, cnt] of Object.entries(day.topicCounts || {})) {
         topicTotals[tid] = (topicTotals[tid] || 0) + cnt;
+      }
+      for (const [sent, cnt] of Object.entries(day.sentimentCounts || {})) {
+        sentimentTotals[sent] = (sentimentTotals[sent] || 0) + cnt;
       }
     }
 
@@ -3179,7 +3881,11 @@ app.get("/api/admin/analytics", requireAdminAccess, (_req, res) => {
         escalationRate: totalChats > 0 ? Math.round((totalEscalations / totalChats) * 100) : 0,
         fallbackCount: totalFallbacks,
         csatAverage: totalCsatCount > 0 ? Math.round((totalCsatSum / totalCsatCount) * 10) / 10 : 0,
-        csatCount: totalCsatCount
+        csatCount: totalCsatCount,
+        deflectionRate: totalChats > 0 ? Math.round(((totalChats - totalEscalations) / totalChats) * 100) : 0,
+        feedbackUp: totalFeedbackUp,
+        feedbackDown: totalFeedbackDown,
+        sentimentCounts: sentimentTotals
       },
       daily: dailyEntries,
       topTopics
@@ -3228,6 +3934,11 @@ app.put("/api/admin/webhooks/:id", requireAdminAccess, (req, res) => {
   if (secret !== undefined) hook.secret = secret;
   saveWebhooks(hooks);
   return res.json({ ok: true, webhook: hook });
+});
+
+app.get("/api/admin/webhooks/deliveries", requireAdminAccess, (_req, res) => {
+  const data = loadWebhookDeliveryLog();
+  return res.json({ ok: true, deliveries: (data.deliveries || []).slice(-50).reverse() });
 });
 
 app.delete("/api/admin/webhooks/:id", requireAdminAccess, (req, res) => {
@@ -3340,9 +4051,12 @@ app.put("/api/admin/tickets/:ticketId/assign", requireAdminAccess, (req, res) =>
   if (!ticket) return res.status(404).json({ error: "Ticket bulunamadi." });
   ticket.assignedTo = String(assignedTo || "").trim();
   ticket.updatedAt = nowIso();
+  if (!ticket.firstResponseAt) ticket.firstResponseAt = ticket.updatedAt;
   ticket.events = Array.isArray(ticket.events) ? ticket.events : [];
   ticket.events.push({ at: ticket.updatedAt, type: "assigned", message: `Ticket ${ticket.assignedTo || "kimseye"} atandi.` });
   saveTicketsDb(db);
+  const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "";
+  recordAuditEvent("ticket_assign", `${ticketId} -> ${ticket.assignedTo}`, clientIp);
   return res.json({ ok: true, ticket: sanitizeTicketForList(ticket) });
 });
 
@@ -3374,6 +4088,8 @@ app.put("/api/admin/tickets/:ticketId/priority", requireAdminAccess, (req, res) 
   ticket.events = Array.isArray(ticket.events) ? ticket.events : [];
   ticket.events.push({ at: ticket.updatedAt, type: "priority_changed", message: `Oncelik ${priority} olarak degistirildi.` });
   saveTicketsDb(db);
+  const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "";
+  recordAuditEvent("ticket_priority", `${ticketId} -> ${priority}`, clientIp);
   return res.json({ ok: true, ticket: sanitizeTicketForList(ticket) });
 });
 
@@ -3828,6 +4544,27 @@ app.get("*", (_req, res) => {
   // Ensure uploads directory
   if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   await initKnowledgeBase();
+
+  // Data retention: clean up old tickets daily
+  function runDataRetention() {
+    try {
+      const cutoffMs = Date.now() - DATA_RETENTION_DAYS * 86400000;
+      const db = loadTicketsDb();
+      const before = db.tickets.length;
+      db.tickets = db.tickets.filter(t => {
+        const ts = Date.parse(t.createdAt || "");
+        return Number.isFinite(ts) && ts > cutoffMs;
+      });
+      if (db.tickets.length < before) {
+        saveTicketsDb(db);
+        console.log(`[Retention] ${before - db.tickets.length} eski ticket silindi (${DATA_RETENTION_DAYS} gun).`);
+      }
+    } catch (_e) { /* silent */ }
+  }
+  // Run once at startup, then daily
+  runDataRetention();
+  setInterval(runDataRetention, 24 * 60 * 60 * 1000);
+
   // Start inactivity checks every 60s (Telegram + Sunshine)
   setInterval(checkTelegramInactivity, 60000);
   setInterval(checkSunshineInactivity, 60000);
