@@ -3,28 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#2563EB" />
-    <title>Qragy Teknik Destek</title>
-    <link rel="icon" type="image/jpeg" href="qragy_logo.jpg" />
-    <link rel="apple-touch-icon" href="qragy_logo.jpg" />
-    <meta property="og:image" content="qragy_logo.jpg" />
-    <link rel="stylesheet" href="style.css?v=20260215" />
+    <meta id="metaThemeColor" name="theme-color" content="#2563EB" />
+    <title id="pageTitle">Teknik Destek</title>
+    <link rel="icon" type="image/jpeg" href="qragy_logo.jpg" id="favicon" />
+    <link rel="apple-touch-icon" href="qragy_logo.jpg" id="appleTouchIcon" />
+    <meta property="og:image" content="qragy_logo.jpg" id="ogImage" />
+    <link rel="stylesheet" href="style.css?v=20260216" />
   </head>
   <body>
     <main class="page-shell">
       <section class="hero-card">
-        <img src="qragy_logo.jpg" alt="Qragy" style="width:80px;height:80px;object-fit:contain;margin-bottom:12px;border-radius:12px" />
-        <h1>Qragy Teknik Destek</h1>
-        <p>Teknik destek taleplerinizi AI katmaninda toplayalim.</p>
-        <button id="launchSupportButton" class="launch-button" type="button">Canlı Destek</button>
+        <img id="heroLogo" src="qragy_logo.jpg" alt="Logo" style="width:80px;height:80px;object-fit:contain;margin-bottom:12px;border-radius:12px" />
+        <h1 id="heroTitle">Teknik Destek</h1>
+        <p id="heroDescription">Teknik destek taleplerinizi AI katmaninda toplayalim.</p>
+        <button id="launchSupportButton" class="launch-button" type="button">Canli Destek</button>
         <small id="launchHint" class="launch-hint">
-          AI gerekli bilgileri topladığında temsilciye otomatik aktarım yapılır.
+          AI gerekli bilgileri topladiginda temsilciye otomatik aktarim yapilir.
         </small>
       </section>
     </main>
 
     <!-- FAB Launcher (2.1) -->
-    <button id="fabLauncher" class="fab-launcher" type="button" aria-label="Sohbet aç" hidden>
+    <button id="fabLauncher" class="fab-launcher" type="button" aria-label="Sohbet ac" hidden>
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/>
       </svg>
@@ -41,10 +41,10 @@
       <header class="ai-widget-header">
         <div class="header-left">
           <div class="header-avatar" aria-hidden="true">
-            <img src="qragy_logo.jpg" alt="Qragy" style="width:100%;height:100%;object-fit:contain;border-radius:50%" />
+            <img id="headerLogo" src="qragy_logo.jpg" alt="Logo" style="width:100%;height:100%;object-fit:contain;border-radius:50%" />
           </div>
           <div class="header-info">
-            <h2>Qragy Teknik Destek</h2>
+            <h2 id="headerTitle">Teknik Destek</h2>
             <div class="header-status">
               <span id="statusDot" class="status-dot" aria-hidden="true"></span>
               <span id="statusText">Aktif</span>
@@ -53,25 +53,25 @@
         </div>
         <div class="header-actions">
           <!-- Dark Mode Toggle (3.5) -->
-          <button id="darkModeToggle" class="icon-button" type="button" aria-label="Tema değiştir" title="Tema değiştir">
+          <button id="darkModeToggle" class="icon-button" type="button" aria-label="Tema degistir" title="Tema degistir">
             <svg id="darkModeIcon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 3a9 9 0 1 0 9 9c0-.5-.04-.99-.12-1.47a5.5 5.5 0 0 1-7.41-7.41A9.06 9.06 0 0 0 12 3z"/>
             </svg>
           </button>
           <!-- Sound Toggle (3.2) -->
-          <button id="soundToggle" class="icon-button" type="button" aria-label="Ses bildirimini aç/kapat" title="Ses bildirimi">
+          <button id="soundToggle" class="icon-button" type="button" aria-label="Ses bildirimini ac/kapat" title="Ses bildirimi">
             <svg id="soundIcon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8.5v7a4.47 4.47 0 0 0 2.5-3.5zM14 3.23v2.06a6.51 6.51 0 0 1 0 13.42v2.06A8.5 8.5 0 0 0 14 3.23z"/>
             </svg>
           </button>
           <!-- Export (4.1) -->
-          <button id="exportBtn" class="icon-button" type="button" aria-label="Sohbeti dışa aktar" title="Sohbeti dışa aktar">
+          <button id="exportBtn" class="icon-button" type="button" aria-label="Sohbeti disa aktar" title="Sohbeti disa aktar">
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
             </svg>
           </button>
           <!-- End Session -->
-          <button id="endSessionBtn" class="icon-button" type="button" aria-label="Sohbeti sonlandır" title="Sohbeti sonlandır">
+          <button id="endSessionBtn" class="icon-button" type="button" aria-label="Sohbeti sonlandir" title="Sohbeti sonlandir">
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42A6.92 6.92 0 0 1 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.27 1.08-4.28 2.76-5.56L6.34 5.02A8.94 8.94 0 0 0 3 12a9 9 0 0 0 18 0c0-2.74-1.23-5.18-3.17-6.83z"/>
             </svg>
@@ -86,14 +86,14 @@
       </header>
 
       <!-- Connection Banner (1.4) -->
-      <div id="connectionBanner" class="connection-banner" hidden>Bağlantı kesildi. Yeniden bağlanılıyor...</div>
+      <div id="connectionBanner" class="connection-banner" hidden>Baglanti kesildi. Yeniden baglaniliyor...</div>
 
       <section
         id="chatMessages"
         class="chat-messages"
         role="log"
         aria-live="polite"
-        aria-label="Sohbet mesajları"
+        aria-label="Sohbet mesajlari"
       ></section>
 
       <!-- Scroll to Bottom (1.5) -->
@@ -110,7 +110,7 @@
       <div id="handoffStatus" class="handoff-status" hidden></div>
       <div id="handoffActions" class="handoff-actions" hidden>
         <button id="manualHandoffButton" class="handoff-button" type="button">
-          Temsilciye Bağlan
+          Temsilciye Baglan
         </button>
       </div>
 
@@ -126,14 +126,14 @@
           id="chatInput"
           type="text"
           autocomplete="off"
-          placeholder="Mesajınızı yazın..."
+          placeholder="Mesajinizi yazin..."
           aria-label="Mesaj girin"
           required
         />
-        <button id="sendButton" type="submit" aria-label="Mesaj gönder">Gönder</button>
+        <button id="sendButton" type="submit" aria-label="Mesaj gonder">Gonder</button>
       </form>
     </section>
 
-    <script src="app.js?v=20260211-9"></script>
+    <script src="app.js?v=20260216"></script>
   </body>
 </html>

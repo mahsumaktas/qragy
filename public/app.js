@@ -966,8 +966,81 @@ async function loadRuntimeConfig() {
     if (payload?.chatFlow) {
       state.runtimeConfig.chatFlow = { ...state.runtimeConfig.chatFlow, ...payload.chatFlow };
     }
+
+    // Apply site branding
+    if (payload?.site) {
+      applySiteConfig(payload.site);
+    }
   } catch (_error) {
     // AI katmani tek basina da calissin.
+  }
+}
+
+/* ---- Site Branding ---- */
+
+function applySiteConfig(site) {
+  if (!site) return;
+
+  if (site.pageTitle) {
+    document.title = site.pageTitle;
+    const pageTitle = document.getElementById("pageTitle");
+    if (pageTitle) pageTitle.textContent = site.pageTitle;
+  }
+
+  if (site.logoUrl) {
+    const logoSrc = site.logoUrl;
+    const heroLogo = document.getElementById("heroLogo");
+    const headerLogo = document.getElementById("headerLogo");
+    const favicon = document.getElementById("favicon");
+    const appleTouchIcon = document.getElementById("appleTouchIcon");
+    if (heroLogo) heroLogo.src = logoSrc;
+    if (headerLogo) headerLogo.src = logoSrc;
+    if (favicon) favicon.href = logoSrc;
+    if (appleTouchIcon) appleTouchIcon.href = logoSrc;
+  }
+
+  if (site.heroTitle) {
+    const el = document.getElementById("heroTitle");
+    if (el) el.textContent = site.heroTitle;
+  }
+
+  if (site.heroDescription) {
+    const el = document.getElementById("heroDescription");
+    if (el) el.textContent = site.heroDescription;
+  }
+
+  if (site.heroButtonText) {
+    const el = document.getElementById("launchSupportButton");
+    if (el) el.textContent = site.heroButtonText;
+  }
+
+  if (site.heroHint) {
+    const el = document.getElementById("launchHint");
+    if (el) el.textContent = site.heroHint;
+  }
+
+  if (site.headerTitle) {
+    const el = document.getElementById("headerTitle");
+    if (el) el.textContent = site.headerTitle;
+  }
+
+  if (site.themeColor) {
+    const meta = document.getElementById("metaThemeColor");
+    if (meta) meta.content = site.themeColor;
+  }
+
+  if (site.primaryColor) {
+    document.documentElement.style.setProperty("--primary", site.primaryColor);
+  }
+
+  if (site.inputPlaceholder) {
+    const el = document.getElementById("chatInput");
+    if (el) el.placeholder = site.inputPlaceholder;
+  }
+
+  if (site.sendButtonText) {
+    const el = document.getElementById("sendButton");
+    if (el && !state.isSending) el.textContent = site.sendButtonText;
   }
 }
 

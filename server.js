@@ -66,6 +66,7 @@ const TELEGRAM_SESSIONS_FILE = path.join(DATA_DIR, "telegram-sessions.json");
 const PROMPT_VERSIONS_FILE = path.join(DATA_DIR, "prompt-versions.json");
 const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 const CHAT_FLOW_CONFIG_FILE = path.join(DATA_DIR, "chat-flow-config.json");
+const SITE_CONFIG_FILE = path.join(DATA_DIR, "site-config.json");
 
 let knowledgeTable = null;
 
@@ -282,6 +283,41 @@ function saveChatFlowConfig(updates) {
 }
 
 loadChatFlowConfig();
+
+// ── Site Branding Configuration ─────────────────────────────────────────
+const DEFAULT_SITE_CONFIG = {
+  pageTitle: "Teknik Destek",
+  heroTitle: "Teknik Destek",
+  heroDescription: "Teknik destek taleplerinizi AI katmaninda toplayalim.",
+  heroButtonText: "Canli Destek",
+  heroHint: "AI gerekli bilgileri topladiginda temsilciye otomatik aktarim yapilir.",
+  headerTitle: "Teknik Destek",
+  logoUrl: "",
+  themeColor: "#2563EB",
+  primaryColor: "",
+  inputPlaceholder: "Mesajinizi yazin...",
+  sendButtonText: "Gonder"
+};
+
+let siteConfig = { ...DEFAULT_SITE_CONFIG };
+
+function loadSiteConfig() {
+  try {
+    if (fs.existsSync(SITE_CONFIG_FILE)) {
+      const saved = JSON.parse(fs.readFileSync(SITE_CONFIG_FILE, "utf8"));
+      siteConfig = { ...DEFAULT_SITE_CONFIG, ...saved };
+    }
+  } catch (_e) {
+    siteConfig = { ...DEFAULT_SITE_CONFIG };
+  }
+}
+
+function saveSiteConfig(updates) {
+  siteConfig = { ...siteConfig, ...updates };
+  fs.writeFileSync(SITE_CONFIG_FILE, JSON.stringify(siteConfig, null, 2), "utf8");
+}
+
+loadSiteConfig();
 
 // ── Gibberish Detection ─────────────────────────────────────────────────
 function isGibberishMessage(text) {
@@ -1850,7 +1886,8 @@ app.get("/api/config", (_req, res) => {
     admin: {
       tokenRequired: Boolean(ADMIN_TOKEN)
     },
-    chatFlow: chatFlowConfig
+    chatFlow: chatFlowConfig,
+    site: siteConfig
   });
 });
 
@@ -2767,6 +2804,56 @@ app.put("/api/admin/chat-flow", requireAdminAccess, (req, res) => {
   }
 });
 
+// Site Config
+app.get("/api/admin/site-config", requireAdminAccess, (_req, res) => {
+  res.json({ ok: true, config: siteConfig, defaults: DEFAULT_SITE_CONFIG });
+});
+
+app.put("/api/admin/site-config", requireAdminAccess, (req, res) => {
+  try {
+    const updates = req.body?.config;
+    if (!updates || typeof updates !== "object") {
+      return res.status(400).json({ error: "config objesi zorunludur." });
+    }
+    const allowed = Object.keys(DEFAULT_SITE_CONFIG);
+    const clean = {};
+    for (const key of allowed) {
+      if (updates[key] !== undefined) {
+        clean[key] = updates[key];
+      }
+    }
+    saveSiteConfig(clean);
+    res.json({ ok: true, config: siteConfig });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Logo upload
+const LOGO_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/svg+xml", "image/webp", "image/gif"]);
+
+app.post("/api/admin/site-logo", requireAdminAccess, express.raw({ type: ["image/jpeg", "image/png", "image/svg+xml", "image/webp", "image/gif"], limit: "2mb" }), (req, res) => {
+  try {
+    const contentType = req.headers["content-type"] || "";
+    if (!LOGO_ALLOWED_TYPES.has(contentType)) {
+      return res.status(400).json({ error: "Desteklenmeyen dosya tipi. JPEG, PNG, SVG, WebP veya GIF kullanin." });
+    }
+    const ext = contentType.split("/")[1] === "svg+xml" ? "svg" : contentType.split("/")[1];
+    const logoPath = path.join(__dirname, "public", "custom-logo." + ext);
+    // Remove old custom logos
+    for (const old of ["custom-logo.jpeg", "custom-logo.png", "custom-logo.svg", "custom-logo.webp", "custom-logo.gif"]) {
+      const oldPath = path.join(__dirname, "public", old);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+    fs.writeFileSync(logoPath, req.body);
+    const logoUrl = "custom-logo." + ext;
+    saveSiteConfig({ logoUrl });
+    res.json({ ok: true, logoUrl });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // System: Status
 app.get("/api/admin/system", requireAdminAccess, async (_req, res) => {
   try {
@@ -2806,6 +2893,7 @@ app.post("/api/admin/agent/reload", requireAdminAccess, (_req, res) => {
   try {
     loadAllAgentConfig();
     loadChatFlowConfig();
+    loadSiteConfig();
     return res.json({ ok: true, message: "Agent config yeniden yuklendi." });
   } catch (err) {
     return res.status(500).json({ error: err.message });

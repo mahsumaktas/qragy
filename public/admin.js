@@ -214,6 +214,7 @@ function switchSubTab(subTabId) {
   else if (subTabId === "subContentMemory") loadMemoryFiles();
   else if (subTabId === "subContentEnv") loadEnvConfig();
   else if (subTabId === "subContentChatFlow") loadChatFlowConfig();
+  else if (subTabId === "subContentSiteConfig") loadSiteConfig();
   else if (subTabId === "subContentWebhooks") loadWebhooks();
   else if (subTabId === "subContentPromptVersions") loadPromptVersions();
 }
@@ -1031,6 +1032,162 @@ const cfSaveBtn = $("cfSaveBtn");
 const cfResetBtn = $("cfResetBtn");
 if (cfSaveBtn) cfSaveBtn.addEventListener("click", () => { void saveChatFlowConfig(); });
 if (cfResetBtn) cfResetBtn.addEventListener("click", () => { void resetChatFlowConfig(); });
+
+// ══════════════════════════════════════════════════════════════════════════
+// SITE CONFIG
+// ══════════════════════════════════════════════════════════════════════════
+
+let siteConfigDefaults = {};
+
+async function loadSiteConfig() {
+  try {
+    const payload = await apiGet("admin/site-config");
+    siteConfigDefaults = payload.defaults || {};
+    renderSiteConfig(payload.config || {});
+  } catch (error) {
+    showToast("Site ayarlari yuklenemedi: " + error.message, "error");
+  }
+}
+
+function renderSiteConfig(config) {
+  const fields = {
+    scPageTitle: "pageTitle",
+    scHeroTitle: "heroTitle",
+    scHeroDescription: "heroDescription",
+    scHeroButtonText: "heroButtonText",
+    scHeroHint: "heroHint",
+    scHeaderTitle: "headerTitle",
+    scInputPlaceholder: "inputPlaceholder",
+    scSendButtonText: "sendButtonText"
+  };
+
+  for (const [id, key] of Object.entries(fields)) {
+    const el = $(id);
+    if (el) el.value = config[key] || "";
+  }
+
+  // Colors
+  const themeColor = $("scThemeColor");
+  const themeHex = $("scThemeColorHex");
+  if (themeColor) {
+    themeColor.value = config.themeColor || "#2563EB";
+    if (themeHex) themeHex.textContent = themeColor.value;
+    themeColor.oninput = () => { if (themeHex) themeHex.textContent = themeColor.value; };
+  }
+
+  const primaryColor = $("scPrimaryColor");
+  const primaryHex = $("scPrimaryColorHex");
+  if (primaryColor) {
+    primaryColor.value = config.primaryColor || "#2563EB";
+    if (primaryHex) primaryHex.textContent = primaryColor.value;
+    primaryColor.oninput = () => { if (primaryHex) primaryHex.textContent = primaryColor.value; };
+  }
+
+  // Logo preview
+  const preview = $("scLogoPreview");
+  const logoName = $("scLogoName");
+  if (preview && config.logoUrl) {
+    preview.src = config.logoUrl;
+    if (logoName) logoName.textContent = config.logoUrl;
+  } else if (logoName) {
+    logoName.textContent = "Varsayilan logo";
+  }
+}
+
+async function saveSiteConfigAdmin() {
+  const config = {
+    pageTitle: ($("scPageTitle") || {}).value || "",
+    heroTitle: ($("scHeroTitle") || {}).value || "",
+    heroDescription: ($("scHeroDescription") || {}).value || "",
+    heroButtonText: ($("scHeroButtonText") || {}).value || "",
+    heroHint: ($("scHeroHint") || {}).value || "",
+    headerTitle: ($("scHeaderTitle") || {}).value || "",
+    inputPlaceholder: ($("scInputPlaceholder") || {}).value || "",
+    sendButtonText: ($("scSendButtonText") || {}).value || "",
+    themeColor: ($("scThemeColor") || {}).value || "#2563EB",
+    primaryColor: ($("scPrimaryColor") || {}).value || ""
+  };
+
+  const saveBtn = $("scSaveBtn");
+  const status = $("scSaveStatus");
+  if (saveBtn) saveBtn.disabled = true;
+  if (status) status.textContent = "Kaydediliyor...";
+
+  try {
+    await apiPut("admin/site-config", { config });
+    showToast("Site ayarlari kaydedildi.", "success");
+    if (status) status.textContent = "Kaydedildi";
+    setTimeout(() => { if (status) status.textContent = ""; }, 3000);
+  } catch (error) {
+    showToast("Kaydetme hatasi: " + error.message, "error");
+    if (status) status.textContent = "Hata!";
+  } finally {
+    if (saveBtn) saveBtn.disabled = false;
+  }
+}
+
+async function resetSiteConfigAdmin() {
+  const confirmed = await confirmAction("Tum site ayarlarini varsayilana dondurmek istediginize emin misiniz?");
+  if (!confirmed) return;
+
+  try {
+    await apiPut("admin/site-config", { config: siteConfigDefaults });
+    showToast("Varsayilan ayarlar yuklendi.", "success");
+    loadSiteConfig();
+  } catch (error) {
+    showToast("Sifirlama hatasi: " + error.message, "error");
+  }
+}
+
+async function uploadSiteLogo() {
+  const input = $("scLogoInput");
+  if (!input || !input.files || !input.files.length) return;
+
+  const file = input.files[0];
+  if (file.size > 2 * 1024 * 1024) {
+    showToast("Logo dosyasi 2MB'dan buyuk olamaz.", "error");
+    return;
+  }
+
+  const status = $("scLogoStatus");
+  if (status) status.textContent = "Yukleniyor...";
+
+  try {
+    const headers = { "Content-Type": file.type, "Bypass-Tunnel-Reminder": "true" };
+    if (state.token) headers["x-admin-token"] = state.token;
+
+    const response = await fetch("api/admin/site-logo", {
+      method: "POST",
+      headers,
+      body: file
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload?.error || "Yukleme hatasi");
+
+    showToast("Logo yuklendi.", "success");
+    if (status) status.textContent = "Yuklendi";
+    setTimeout(() => { if (status) status.textContent = ""; }, 3000);
+
+    // Update preview
+    const preview = $("scLogoPreview");
+    const logoName = $("scLogoName");
+    if (preview && payload.logoUrl) preview.src = payload.logoUrl + "?t=" + Date.now();
+    if (logoName && payload.logoUrl) logoName.textContent = payload.logoUrl;
+  } catch (error) {
+    showToast("Logo yukleme hatasi: " + error.message, "error");
+    if (status) status.textContent = "Hata!";
+  }
+
+  input.value = "";
+}
+
+// Event listeners
+const scSaveBtn = $("scSaveBtn");
+const scResetBtn = $("scResetBtn");
+const scLogoInput = $("scLogoInput");
+if (scSaveBtn) scSaveBtn.addEventListener("click", () => { void saveSiteConfigAdmin(); });
+if (scResetBtn) scResetBtn.addEventListener("click", () => { void resetSiteConfigAdmin(); });
+if (scLogoInput) scLogoInput.addEventListener("change", () => { void uploadSiteLogo(); });
 
 // ══════════════════════════════════════════════════════════════════════════
 // TAB 4: SYSTEM

@@ -176,6 +176,7 @@
           <button id="subTabMemory" class="sub-tab-btn" data-subtab="subContentMemory">Bellek Sablonlari</button>
           <button id="subTabEnv" class="sub-tab-btn" data-subtab="subContentEnv">Ortam Degiskenleri</button>
           <button id="subTabChatFlow" class="sub-tab-btn" data-subtab="subContentChatFlow">Sohbet Akisi</button>
+          <button id="subTabSiteConfig" class="sub-tab-btn" data-subtab="subContentSiteConfig">Site Ayarlari</button>
           <button id="subTabWebhooks" class="sub-tab-btn" data-subtab="subContentWebhooks">Webhooks</button>
           <button id="subTabPromptVersions" class="sub-tab-btn" data-subtab="subContentPromptVersions">Prompt Gecmisi</button>
         </nav>
@@ -377,6 +378,95 @@
               <button id="cfSaveBtn" class="btn btn-primary">Kaydet</button>
               <button id="cfResetBtn" class="btn btn-secondary">Varsayilana Don</button>
               <span id="cfSaveStatus" class="status-text"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-tab: Site Config -->
+        <div id="subContentSiteConfig" class="sub-tab-content">
+          <div class="chat-flow-config">
+            <h3>Site Ayarlari</h3>
+            <p class="section-desc">Chatbot sayfasinin gorunumunu ve markasini buradan ozellestirin. Degisiklikler sunucuda saklanir, GitHub reposunu etkilemez.</p>
+
+            <div class="cf-group">
+              <h4>Logo</h4>
+              <div class="cf-field">
+                <label>Mevcut Logo</label>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+                  <img id="scLogoPreview" src="qragy_logo.jpg" alt="Logo" style="width:48px;height:48px;object-fit:contain;border-radius:8px;border:1px solid var(--line)" />
+                  <span id="scLogoName" style="color:var(--muted);font-size:0.85rem">Varsayilan logo</span>
+                </div>
+                <label class="btn btn-secondary file-upload-label" style="display:inline-block">
+                  Logo Yukle (max 2MB)
+                  <input type="file" id="scLogoInput" accept="image/jpeg,image/png,image/svg+xml,image/webp,image/gif" hidden />
+                </label>
+                <span id="scLogoStatus" class="status-text" style="margin-left:8px"></span>
+              </div>
+            </div>
+
+            <div class="cf-group">
+              <h4>Sayfa Metinleri</h4>
+              <div class="cf-field">
+                <label for="scPageTitle">Sayfa Basligi (browser tab)</label>
+                <input id="scPageTitle" type="text" class="cf-textarea" style="height:auto" />
+              </div>
+              <div class="cf-field">
+                <label for="scHeroTitle">Ana Baslik</label>
+                <input id="scHeroTitle" type="text" class="cf-textarea" style="height:auto" />
+              </div>
+              <div class="cf-field">
+                <label for="scHeroDescription">Aciklama Metni</label>
+                <textarea id="scHeroDescription" rows="2" class="cf-textarea"></textarea>
+              </div>
+              <div class="cf-field">
+                <label for="scHeroButtonText">Baslat Butonu Metni</label>
+                <input id="scHeroButtonText" type="text" class="cf-textarea" style="height:auto" />
+              </div>
+              <div class="cf-field">
+                <label for="scHeroHint">Alt Aciklama</label>
+                <textarea id="scHeroHint" rows="2" class="cf-textarea"></textarea>
+              </div>
+            </div>
+
+            <div class="cf-group">
+              <h4>Sohbet Penceresi</h4>
+              <div class="cf-field">
+                <label for="scHeaderTitle">Header Basligi</label>
+                <input id="scHeaderTitle" type="text" class="cf-textarea" style="height:auto" />
+              </div>
+              <div class="cf-field">
+                <label for="scInputPlaceholder">Mesaj Alani Placeholder</label>
+                <input id="scInputPlaceholder" type="text" class="cf-textarea" style="height:auto" />
+              </div>
+              <div class="cf-field">
+                <label for="scSendButtonText">Gonder Butonu Metni</label>
+                <input id="scSendButtonText" type="text" class="cf-textarea" style="height:auto" />
+              </div>
+            </div>
+
+            <div class="cf-group">
+              <h4>Renkler</h4>
+              <div class="cf-field">
+                <label for="scThemeColor">Tema Rengi (browser)</label>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input id="scThemeColor" type="color" style="width:40px;height:32px;border:1px solid var(--line);border-radius:4px;cursor:pointer" />
+                  <span id="scThemeColorHex" style="font-size:0.85rem;color:var(--muted)"></span>
+                </div>
+              </div>
+              <div class="cf-field">
+                <label for="scPrimaryColor">Ana Renk (butonlar, vurgular)</label>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input id="scPrimaryColor" type="color" style="width:40px;height:32px;border:1px solid var(--line);border-radius:4px;cursor:pointer" />
+                  <span id="scPrimaryColorHex" style="font-size:0.85rem;color:var(--muted)"></span>
+                </div>
+                <small>Bos birakirsaniz varsayilan tema rengi kullanilir</small>
+              </div>
+            </div>
+
+            <div class="cf-actions">
+              <button id="scSaveBtn" class="btn btn-primary">Kaydet</button>
+              <button id="scResetBtn" class="btn btn-secondary">Varsayilana Don</button>
+              <span id="scSaveStatus" class="status-text"></span>
             </div>
           </div>
         </div>
