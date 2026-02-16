@@ -154,6 +154,7 @@ function flushAnalyticsBuffer() {
         totalChats: 0, aiCalls: 0, deterministicReplies: 0,
         totalResponseMs: 0, responseCount: 0,
         escalationCount: 0, csatSum: 0, csatCount: 0,
+        fallbackCount: 0,
         topicCounts: {}, sourceCounts: {}
       };
     }
@@ -162,6 +163,7 @@ function flushAnalyticsBuffer() {
     if (evt.source === "gemini" || evt.source === "topic-guided") day.aiCalls++;
     if (evt.source === "rule-engine" || evt.source === "fallback-no-key") day.deterministicReplies++;
     if (evt.source === "escalation-trigger" || evt.source === "topic-escalation") day.escalationCount++;
+    if (evt.fallbackUsed) day.fallbackCount = (day.fallbackCount || 0) + 1;
     if (evt.responseTimeMs) {
       day.totalResponseMs += evt.responseTimeMs;
       day.responseCount++;
@@ -2566,7 +2568,8 @@ app.post("/api/chat", async (req, res) => {
     recordAnalyticsEvent({
       source: chatSource,
       responseTimeMs: Date.now() - chatStartTime,
-      topicId: conversationContext.currentTopic || null
+      topicId: conversationContext.currentTopic || null,
+      fallbackUsed: Boolean(geminiResult.fallbackUsed)
     });
 
     if (isEscalationReply && ticketCreated) {
@@ -3130,7 +3133,7 @@ app.get("/api/admin/analytics", requireAdminAccess, (_req, res) => {
     const dailyEntries = [];
     let totalChats = 0, totalAiCalls = 0, totalDeterministic = 0;
     let totalResponseMs = 0, totalResponseCount = 0;
-    let totalEscalations = 0, totalCsatSum = 0, totalCsatCount = 0;
+    let totalEscalations = 0, totalCsatSum = 0, totalCsatCount = 0, totalFallbacks = 0;
     const topicTotals = {};
 
     for (const [dayKey, day] of Object.entries(analyticsData.daily || {})) {
@@ -3142,6 +3145,7 @@ app.get("/api/admin/analytics", requireAdminAccess, (_req, res) => {
       totalResponseMs += day.totalResponseMs || 0;
       totalResponseCount += day.responseCount || 0;
       totalEscalations += day.escalationCount || 0;
+      totalFallbacks += day.fallbackCount || 0;
       totalCsatSum += day.csatSum || 0;
       totalCsatCount += day.csatCount || 0;
       for (const [tid, cnt] of Object.entries(day.topicCounts || {})) {
@@ -3166,6 +3170,7 @@ app.get("/api/admin/analytics", requireAdminAccess, (_req, res) => {
         avgResponseMs: totalResponseCount > 0 ? Math.round(totalResponseMs / totalResponseCount) : 0,
         escalationCount: totalEscalations,
         escalationRate: totalChats > 0 ? Math.round((totalEscalations / totalChats) * 100) : 0,
+        fallbackCount: totalFallbacks,
         csatAverage: totalCsatCount > 0 ? Math.round((totalCsatSum / totalCsatCount) * 10) / 10 : 0,
         csatCount: totalCsatCount
       },
@@ -3480,7 +3485,7 @@ async function processChatMessage(messagesArray, source = "web") {
   let reply = sanitizeAssistantReply(geminiResult.reply);
   if (!reply) reply = buildMissingFieldsReply(memory, latestUserMessage);
 
-  recordAnalyticsEvent({ source: conversationContext.currentTopic ? "topic-guided" : "gemini", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null });
+  recordAnalyticsEvent({ source: conversationContext.currentTopic ? "topic-guided" : "gemini", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null, fallbackUsed: Boolean(geminiResult.fallbackUsed) });
   return { reply, source: conversationContext.currentTopic ? "topic-guided" : "gemini", memory };
 }
 

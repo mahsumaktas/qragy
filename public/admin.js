@@ -900,7 +900,9 @@ memorySchemaSaveBtn.addEventListener("click", () => { void saveMemoryFile("conve
 
 // ── Environment Variables ──────────────────────────────────────────────────
 const ENV_GROUPS = {
-  "Model Ayarlari": ["GOOGLE_API_KEY", "GOOGLE_MODEL", "GOOGLE_MAX_OUTPUT_TOKENS", "GOOGLE_THINKING_BUDGET", "GOOGLE_REQUEST_TIMEOUT_MS", "GOOGLE_FALLBACK_MODEL"],
+  "LLM Provider": ["LLM_PROVIDER", "LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL", "LLM_FALLBACK_MODEL", "LLM_MAX_OUTPUT_TOKENS", "LLM_REQUEST_TIMEOUT_MS"],
+  "Embedding Provider": ["EMBEDDING_PROVIDER", "EMBEDDING_MODEL", "EMBEDDING_API_KEY", "EMBEDDING_BASE_URL", "EMBEDDING_DIMENSIONS"],
+  "Legacy Gemini": ["GOOGLE_API_KEY", "GOOGLE_MODEL", "GOOGLE_MAX_OUTPUT_TOKENS", "GOOGLE_THINKING_BUDGET", "GOOGLE_REQUEST_TIMEOUT_MS", "GOOGLE_FALLBACK_MODEL"],
   "Destek Saatleri": ["SUPPORT_HOURS_ENABLED", "SUPPORT_TIMEZONE", "SUPPORT_OPEN_HOUR", "SUPPORT_CLOSE_HOUR", "SUPPORT_OPEN_DAYS"],
   "Zendesk": ["ZENDESK_ENABLED", "ZENDESK_SNIPPET_KEY", "ZENDESK_DEFAULT_TAGS"],
   "Rate Limiting": ["RATE_LIMIT_ENABLED", "RATE_LIMIT_MAX", "RATE_LIMIT_WINDOW_MS"],
@@ -957,6 +959,21 @@ function renderEnvForm(env) {
   }
 }
 
+const ENV_HINTS = {
+  LLM_PROVIDER: "gemini, openai veya ollama",
+  LLM_API_KEY: "Provider API anahtari",
+  LLM_MODEL: "orn: gemini-2.5-flash, gpt-4o, llama3",
+  LLM_BASE_URL: "Ollama icin: http://localhost:11434",
+  LLM_FALLBACK_MODEL: "Birincil model hatada kullanilacak model",
+  LLM_MAX_OUTPUT_TOKENS: "Maks cikti token (varsayilan: 1024)",
+  LLM_REQUEST_TIMEOUT_MS: "Istek zaman asimi ms (varsayilan: 15000)",
+  EMBEDDING_PROVIDER: "gemini, openai veya ollama",
+  EMBEDDING_MODEL: "orn: gemini-embedding-001, text-embedding-3-small",
+  EMBEDDING_API_KEY: "Embedding API anahtari (bossa LLM key kullanilir)",
+  EMBEDDING_BASE_URL: "Ollama icin: http://localhost:11434",
+  EMBEDDING_DIMENSIONS: "Embedding boyutu (0 = varsayilan)"
+};
+
 function createEnvField(key, value) {
   const div = document.createElement("div");
   const isSensitive = envSensitiveKeys.includes(key);
@@ -969,7 +986,7 @@ function createEnvField(key, value) {
   input.type = isSensitive ? "password" : "text";
   input.name = key;
   input.value = value || "";
-  input.placeholder = key;
+  input.placeholder = ENV_HINTS[key] || key;
 
   div.appendChild(label);
   div.appendChild(input);
@@ -1645,6 +1662,7 @@ function renderAnalyticsSummary(summary) {
     ["AI Cagri", summary.aiCalls || 0],
     ["Ort. Yanit Suresi", (summary.avgResponseMs || 0) + "ms"],
     ["Eskalasyon Orani", "%" + (summary.escalationRate || 0)],
+    ["Model Fallback", summary.fallbackCount || 0],
     ["CSAT Ortalamasi", summary.csatAverage ? summary.csatAverage + "/5" : "-"],
     ["Deterministic", summary.deterministicReplies || 0]
   ];
