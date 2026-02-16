@@ -1002,6 +1002,12 @@ function reloadRuntimeEnv() {
   if (env.ZENDESK_SC_KEY_SECRET !== undefined) ZENDESK_SC_KEY_SECRET = (env.ZENDESK_SC_KEY_SECRET || "").trim();
   if (env.ZENDESK_SC_WEBHOOK_SECRET !== undefined) ZENDESK_SC_WEBHOOK_SECRET = (env.ZENDESK_SC_WEBHOOK_SECRET || "").trim();
   if (env.ZENDESK_SC_SUBDOMAIN !== undefined) ZENDESK_SC_SUBDOMAIN = (env.ZENDESK_SC_SUBDOMAIN || "").trim();
+  if (env.ZENDESK_ENABLED !== undefined) ZENDESK_ENABLED = /^(1|true|yes)$/i.test(env.ZENDESK_ENABLED) || Boolean((env.ZENDESK_SNIPPET_KEY || "").trim());
+  if (env.ZENDESK_SNIPPET_KEY !== undefined) ZENDESK_SNIPPET_KEY = (env.ZENDESK_SNIPPET_KEY || "").trim();
+  if (env.ZENDESK_DEFAULT_TAGS !== undefined) ZENDESK_DEFAULT_TAGS = (env.ZENDESK_DEFAULT_TAGS || "").split(",").map(t => t.trim()).filter(Boolean);
+  if (env.TELEGRAM_ENABLED !== undefined) TELEGRAM_ENABLED = /^(1|true|yes)$/i.test(env.TELEGRAM_ENABLED);
+  if (env.TELEGRAM_BOT_TOKEN !== undefined) TELEGRAM_BOT_TOKEN = (env.TELEGRAM_BOT_TOKEN || "").trim();
+  if (env.DEPLOY_WEBHOOK_SECRET !== undefined) DEPLOY_WEBHOOK_SECRET = (env.DEPLOY_WEBHOOK_SECRET || "").trim();
   console.log("[ENV] Runtime degiskenleri guncellendi. Model:", GOOGLE_MODEL);
 }
 
@@ -2948,7 +2954,7 @@ app.get("/api/admin/env", requireAdminAccess, (_req, res) => {
   try {
     const env = readEnvFile();
     // Mask sensitive values
-    const SENSITIVE_KEYS = ["GOOGLE_API_KEY", "ADMIN_TOKEN", "ZENDESK_SNIPPET_KEY", "ZENDESK_SC_KEY_SECRET", "ZENDESK_SC_WEBHOOK_SECRET"];
+    const SENSITIVE_KEYS = ["GOOGLE_API_KEY", "ADMIN_TOKEN", "ZENDESK_SNIPPET_KEY", "ZENDESK_SC_KEY_SECRET", "ZENDESK_SC_WEBHOOK_SECRET", "DEPLOY_WEBHOOK_SECRET", "TELEGRAM_BOT_TOKEN"];
     const masked = {};
     for (const [key, value] of Object.entries(env)) {
       if (SENSITIVE_KEYS.includes(key) && value) {
@@ -3693,6 +3699,10 @@ async function handleTelegramUpdate(update) {
     const result = await processChatMessage(sessions[chatId].messages, "telegram");
     sessions[chatId].messages.push({ role: "assistant", content: result.reply });
     saveTelegramSessions(sessions);
+
+    // Track conversation
+    const memory = result.memory || {};
+    upsertConversation("tg-" + chatId, sessions[chatId].messages, memory, { source: "telegram" });
 
     // Send reply via Telegram API
     await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
