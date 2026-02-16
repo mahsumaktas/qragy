@@ -23,6 +23,9 @@ process.on("uncaughtException", (err) => {
 
 // ── LLM Health Check state ──────────────────────────────────────────────
 let llmHealthStatus = { ok: false, checkedAt: null, error: null, latencyMs: null, provider: null };
+// Runtime error tracking — son 10dk'daki LLM hatalarini sayar
+const llmErrorLog = []; // { timestamp, error, status }
+const LLM_ERROR_WINDOW_MS = 10 * 60 * 1000; // 10 dakika
 
 const PORT = Number(process.env.PORT || 3000);
 let GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
@@ -2525,6 +2528,9 @@ app.post("/api/chat", async (req, res) => {
     if (geminiResult.finishReason === "MAX_TOKENS" && geminiResult.reply.length < 160) {
       geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2);
     }
+    if (geminiResult.fallbackUsed) {
+      recordLLMError({ message: "Primary model failed, fallback used", status: 429 }, "web-chat-fallback");
+    }
 
     reply = sanitizeAssistantReply(geminiResult.reply);
 
@@ -2595,6 +2601,7 @@ app.post("/api/chat", async (req, res) => {
       support: supportAvailability
     });
   } catch (error) {
+    recordLLMError(error, "web-chat");
     const statusCode = Number(error?.status) || 500;
     if (statusCode >= 500) {
       const rawMessages = Array.isArray(req.body?.messages) ? req.body.messages : [];
@@ -3482,6 +3489,9 @@ async function processChatMessage(messagesArray, source = "web") {
   if (geminiResult.finishReason === "MAX_TOKENS" && geminiResult.reply.length < 160) {
     geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2);
   }
+  if (geminiResult.fallbackUsed) {
+    recordLLMError({ message: "Primary model failed, fallback used", status: 429 }, "tg-chat-fallback");
+  }
   let reply = sanitizeAssistantReply(geminiResult.reply);
   if (!reply) reply = buildMissingFieldsReply(memory, latestUserMessage);
 
@@ -3833,31 +3843,79 @@ app.get("*", (_req, res) => {
 })();
 
 // ── LLM Health Check ──────────────────────────────────────────────────────
+function recordLLMError(error, context) {
+  const now = Date.now();
+  llmErrorLog.push({ timestamp: now, error: (error?.message || String(error)).slice(0, 200), status: Number(error?.status) || 0, context });
+  // Eski kayitlari temizle (10dk pencere)
+  while (llmErrorLog.length > 0 && llmErrorLog[0].timestamp < now - LLM_ERROR_WINDOW_MS) {
+    llmErrorLog.shift();
+  }
+  // Maks 100 kayit tut
+  if (llmErrorLog.length > 100) llmErrorLog.splice(0, llmErrorLog.length - 100);
+}
+
+function getLLMErrorSummary() {
+  const now = Date.now();
+  const recent = llmErrorLog.filter(e => e.timestamp > now - LLM_ERROR_WINDOW_MS);
+  if (!recent.length) return { recentErrors: 0, lastError: null };
+  const statusCounts = {};
+  for (const e of recent) {
+    const key = e.status || "unknown";
+    statusCounts[key] = (statusCounts[key] || 0) + 1;
+  }
+  return {
+    recentErrors: recent.length,
+    statusCounts,
+    lastError: recent[recent.length - 1].error,
+    lastErrorAt: new Date(recent[recent.length - 1].timestamp).toISOString()
+  };
+}
+
 async function checkLLMHealth() {
   const start = Date.now();
+  const cfg = getProviderConfig();
   try {
-    await callLLM(
+    const result = await callLLM(
       [{ role: "user", parts: [{ text: "ping" }] }],
       "Respond with pong.",
       8
     );
     const latencyMs = Date.now() - start;
-    const cfg = getProviderConfig();
+    const reply = (result?.reply || "").toLowerCase();
+    // Yanit dogrulamasi — API cevap donmeli
+    if (!reply) {
+      throw new Error("API yanit donmedi (bos response)");
+    }
+    const errorSummary = getLLMErrorSummary();
     llmHealthStatus = {
       ok: true,
       checkedAt: new Date().toISOString(),
       error: null,
       latencyMs,
-      provider: cfg.provider + " / " + cfg.model
+      provider: cfg.provider + " / " + cfg.model,
+      recentErrors: errorSummary.recentErrors,
+      lastError: errorSummary.lastError,
+      lastErrorAt: errorSummary.lastErrorAt || null
     };
-    console.log(`[LLM Health] OK (${latencyMs}ms)`);
+    // Eger son 10dk'da hatalar varsa uyari ver
+    if (errorSummary.recentErrors > 0) {
+      llmHealthStatus.warning = errorSummary.recentErrors + " hata (son 10dk)";
+      console.log(`[LLM Health] OK (${latencyMs}ms) — UYARI: ${errorSummary.recentErrors} hata (son 10dk)`);
+    } else {
+      console.log(`[LLM Health] OK (${latencyMs}ms)`);
+    }
   } catch (err) {
+    recordLLMError(err, "health-check");
+    const errorSummary = getLLMErrorSummary();
     llmHealthStatus = {
       ok: false,
       checkedAt: new Date().toISOString(),
       error: err.message || "Bilinmeyen hata",
       latencyMs: null,
-      provider: null
+      provider: cfg.provider + " / " + cfg.model,
+      recentErrors: errorSummary.recentErrors,
+      lastError: errorSummary.lastError,
+      lastErrorAt: errorSummary.lastErrorAt || null
     };
     console.error("[LLM Health] FAIL:", err.message);
   }

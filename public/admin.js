@@ -1321,6 +1321,7 @@ function renderSystemHealth(data) {
   // LLM Health card (ozel renklendirme)
   const llm = data.llmHealth || {};
   const llmOk = llm.ok === true;
+  const hasWarning = llmOk && llm.recentErrors > 0;
   const llmValue = llmOk
     ? "Aktif (" + llm.latencyMs + "ms)"
     : (llm.error || "Kontrol edilmedi");
@@ -1328,11 +1329,15 @@ function renderSystemHealth(data) {
     ? "Son kontrol: " + new Date(llm.checkedAt).toLocaleTimeString("tr-TR")
     : "";
   const llmCard = document.createElement("div");
-  llmCard.className = "health-card " + (llm.checkedAt ? (llmOk ? "health-ok" : "health-error") : "");
+  // Renk: hata=kirmizi, uyari(hatalar var ama ping ok)=sari, ok=yesil
+  const llmClass = !llm.checkedAt ? "" : (!llmOk ? "health-error" : (hasWarning ? "health-warning" : "health-ok"));
+  llmCard.className = "health-card " + llmClass;
   llmCard.innerHTML = "<h3>LLM API</h3>" +
     '<div class="value">' + escapeHtml(String(llmValue)) + "</div>" +
     (llmSub ? '<div class="label">' + escapeHtml(llmSub) + "</div>" : "") +
-    (llm.provider ? '<div class="label">' + escapeHtml(llm.provider) + "</div>" : "");
+    (llm.provider ? '<div class="label">' + escapeHtml(llm.provider) + "</div>" : "") +
+    (hasWarning ? '<div class="label" style="color:#f59e0b;font-weight:600">' + escapeHtml(llm.warning) + "</div>" : "") +
+    (llm.lastError && hasWarning ? '<div class="label" style="color:#f59e0b">' + escapeHtml(llm.lastError) + "</div>" : "");
   sysHealthGrid.appendChild(llmCard);
 
   const cards = [
