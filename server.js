@@ -21,6 +21,9 @@ process.on("uncaughtException", (err) => {
   process.exit(1);
 });
 
+// ── LLM Health Check state ──────────────────────────────────────────────
+let llmHealthStatus = { ok: false, checkedAt: null, error: null, latencyMs: null, provider: null };
+
 const PORT = Number(process.env.PORT || 3000);
 let GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
 let GOOGLE_MODEL = process.env.GOOGLE_MODEL || "gemini-3-pro-preview";
@@ -1929,9 +1932,10 @@ app.get("/api/health", (_req, res) => {
   const ticketsDb = loadTicketsDb();
   const ticketSummary = getAdminSummary(ticketsDb.tickets);
   res.json({
-    ok: true,
+    ok: llmHealthStatus.ok && Boolean(GOOGLE_API_KEY),
     model: GOOGLE_MODEL,
     hasApiKey: Boolean(GOOGLE_API_KEY),
+    llmStatus: llmHealthStatus,
     maxOutputTokens: GOOGLE_MAX_OUTPUT_TOKENS,
     requestTimeoutMs: GOOGLE_REQUEST_TIMEOUT_MS,
     thinkingBudget: GOOGLE_THINKING_BUDGET,
@@ -3091,7 +3095,8 @@ app.get("/api/admin/system", requireAdminAccess, async (_req, res) => {
         recordCount: kbRowCount
       },
       topicsCount: TOPIC_INDEX.topics.length,
-      model: GOOGLE_MODEL
+      model: GOOGLE_MODEL,
+      llmHealth: llmHealthStatus
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -3815,7 +3820,42 @@ app.get("*", (_req, res) => {
   app.listen(PORT, () => {
     console.log(`${BOT_NAME} ${PORT} portunda hazir.`);
     startTelegramPolling();
+
+    // LLM health check: ilk kontrol 10s sonra, sonra her 5dk'da bir
+    setTimeout(checkLLMHealth, 10000);
+    setInterval(checkLLMHealth, 5 * 60 * 1000);
   });
 })();
+
+// ── LLM Health Check ──────────────────────────────────────────────────────
+async function checkLLMHealth() {
+  const start = Date.now();
+  try {
+    await callLLM(
+      [{ role: "user", parts: [{ text: "ping" }] }],
+      "Respond with pong.",
+      8
+    );
+    const latencyMs = Date.now() - start;
+    const cfg = getProviderConfig();
+    llmHealthStatus = {
+      ok: true,
+      checkedAt: new Date().toISOString(),
+      error: null,
+      latencyMs,
+      provider: cfg.provider + " / " + cfg.model
+    };
+    console.log(`[LLM Health] OK (${latencyMs}ms)`);
+  } catch (err) {
+    llmHealthStatus = {
+      ok: false,
+      checkedAt: new Date().toISOString(),
+      error: err.message || "Bilinmeyen hata",
+      latencyMs: null,
+      provider: null
+    };
+    console.error("[LLM Health] FAIL:", err.message);
+  }
+}
 
 

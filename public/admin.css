@@ -858,6 +858,9 @@ tbody tr:hover {
   margin-top: 0.25rem;
 }
 
+.health-card.health-ok { border-left: 4px solid #22c55e; }
+.health-card.health-error { border-left: 4px solid #ef4444; }
+
 .status-sections {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

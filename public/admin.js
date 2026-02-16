@@ -1300,6 +1300,24 @@ async function loadSystemInfo() {
 
 function renderSystemHealth(data) {
   sysHealthGrid.innerHTML = "";
+
+  // LLM Health card (ozel renklendirme)
+  const llm = data.llmHealth || {};
+  const llmOk = llm.ok === true;
+  const llmValue = llmOk
+    ? "Aktif (" + llm.latencyMs + "ms)"
+    : (llm.error || "Kontrol edilmedi");
+  const llmSub = llm.checkedAt
+    ? "Son kontrol: " + new Date(llm.checkedAt).toLocaleTimeString("tr-TR")
+    : "";
+  const llmCard = document.createElement("div");
+  llmCard.className = "health-card " + (llm.checkedAt ? (llmOk ? "health-ok" : "health-error") : "");
+  llmCard.innerHTML = "<h3>LLM API</h3>" +
+    '<div class="value">' + escapeHtml(String(llmValue)) + "</div>" +
+    (llmSub ? '<div class="label">' + escapeHtml(llmSub) + "</div>" : "") +
+    (llm.provider ? '<div class="label">' + escapeHtml(llm.provider) + "</div>" : "");
+  sysHealthGrid.appendChild(llmCard);
+
   const cards = [
     ["Uptime", formatUptime(data.uptime || 0)],
     ["Node.js", data.nodeVersion || "-"],
