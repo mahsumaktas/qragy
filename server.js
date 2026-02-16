@@ -3,6 +3,8 @@
 const fs = require("fs");
 const express = require("express");
 const path = require("path");
+const { callLLM, callLLMWithFallback, embedText, getProviderConfig } = require("./lib/providers");
+const { chunkText } = require("./lib/chunker");
 const lancedb = require("@lancedb/lancedb");
 const Papa = require("papaparse");
 const CSV_EXAMPLE_FILE = path.join(__dirname, "knowledge_base.example.csv");
@@ -1030,6 +1032,12 @@ function reloadRuntimeEnv() {
   if (env.TELEGRAM_ENABLED !== undefined) TELEGRAM_ENABLED = /^(1|true|yes)$/i.test(env.TELEGRAM_ENABLED);
   if (env.TELEGRAM_BOT_TOKEN !== undefined) TELEGRAM_BOT_TOKEN = (env.TELEGRAM_BOT_TOKEN || "").trim();
   if (env.DEPLOY_WEBHOOK_SECRET !== undefined) DEPLOY_WEBHOOK_SECRET = (env.DEPLOY_WEBHOOK_SECRET || "").trim();
+  // LLM/Embedding provider vars are read directly from process.env by lib/providers.js
+  // Sync new vars to process.env so getProviderConfig() picks them up
+  const providerKeys = ["LLM_PROVIDER", "LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL", "LLM_FALLBACK_MODEL", "LLM_MAX_OUTPUT_TOKENS", "LLM_REQUEST_TIMEOUT_MS", "EMBEDDING_PROVIDER", "EMBEDDING_MODEL", "EMBEDDING_API_KEY", "EMBEDDING_BASE_URL", "EMBEDDING_DIMENSIONS"];
+  for (const key of providerKeys) {
+    if (env[key] !== undefined) process.env[key] = env[key];
+  }
   console.log("[ENV] Runtime degiskenleri guncellendi. Model:", GOOGLE_MODEL);
 }
 
@@ -1764,129 +1772,7 @@ function buildSystemPrompt(memory, conversationContext, knowledgeResults) {
   return parts.join("\n\n");
 }
 
-function buildGenerationConfig(maxOutputTokens) {
-  const config = {
-    temperature: 0.2,
-    maxOutputTokens
-  };
-
-  if (GOOGLE_THINKING_BUDGET > 0) {
-    config.thinkingConfig = { thinkingBudget: GOOGLE_THINKING_BUDGET };
-  }
-
-  return config;
-}
-
-async function callGemini(contents, systemPrompt, maxOutputTokens) {
-  const endpoint =
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    encodeURIComponent(GOOGLE_MODEL) +
-    ":generateContent?key=" +
-    encodeURIComponent(GOOGLE_API_KEY);
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), GOOGLE_REQUEST_TIMEOUT_MS);
-  let geminiResponse;
-
-  try {
-    geminiResponse = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: systemPrompt }]
-        },
-        contents,
-        generationConfig: buildGenerationConfig(maxOutputTokens)
-      })
-    });
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      const timeoutError = new Error("Gemini istegi zaman asimina ugradi.");
-      timeoutError.status = 504;
-      throw timeoutError;
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-
-  const payload = await geminiResponse.json().catch(() => ({}));
-
-  if (!geminiResponse.ok) {
-    const error = new Error(payload?.error?.message || "Gemini API hatasi.");
-    error.status = geminiResponse.status;
-    throw error;
-  }
-
-  const reply = (payload?.candidates?.[0]?.content?.parts || [])
-    .map((part) => (typeof part?.text === "string" ? part.text : ""))
-    .join("\n")
-    .trim();
-
-  return {
-    reply,
-    finishReason: payload?.candidates?.[0]?.finishReason || "",
-    payload
-  };
-}
-
-async function callGeminiWithFallback(contents, systemPrompt, maxOutputTokens) {
-  try {
-    return await callGemini(contents, systemPrompt, maxOutputTokens);
-  } catch (error) {
-    const status = Number(error?.status) || 0;
-    if (GOOGLE_FALLBACK_MODEL && (status === 404 || status === 429 || status === 500 || status === 503)) {
-      console.warn(`Primary model hatasi (${status}), fallback model deneniyor: ${GOOGLE_FALLBACK_MODEL}`);
-      const endpoint =
-        "https://generativelanguage.googleapis.com/v1beta/models/" +
-        encodeURIComponent(GOOGLE_FALLBACK_MODEL) +
-        ":generateContent?key=" +
-        encodeURIComponent(GOOGLE_API_KEY);
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), GOOGLE_REQUEST_TIMEOUT_MS);
-      let geminiResponse;
-      try {
-        geminiResponse = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents,
-            generationConfig: buildGenerationConfig(maxOutputTokens)
-          })
-        });
-      } catch (fbError) {
-        if (fbError?.name === "AbortError") {
-          const timeoutError = new Error("Fallback model zaman asimina ugradi.");
-          timeoutError.status = 504;
-          throw timeoutError;
-        }
-        throw fbError;
-      } finally {
-        clearTimeout(timeoutId);
-      }
-
-      const payload = await geminiResponse.json().catch(() => ({}));
-      if (!geminiResponse.ok) {
-        const fbErr = new Error(payload?.error?.message || "Fallback model hatasi.");
-        fbErr.status = geminiResponse.status;
-        throw fbErr;
-      }
-
-      const reply = (payload?.candidates?.[0]?.content?.parts || [])
-        .map((part) => (typeof part?.text === "string" ? part.text : ""))
-        .join("\n")
-        .trim();
-
-      return { reply, finishReason: payload?.candidates?.[0]?.finishReason || "", payload, fallbackUsed: true };
-    }
-    throw error;
-  }
-}
+// buildGenerationConfig, callGemini, callGeminiWithFallback — moved to lib/providers.js
 
 async function initKnowledgeBase() {
   try {
@@ -1929,17 +1815,7 @@ async function reingestKnowledgeBase() {
   console.log(`Bilgi tabani yeniden yuklendi: ${records.length} kayit.`);
 }
 
-async function embedText(text) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${encodeURIComponent(GOOGLE_API_KEY)}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content: { parts: [{ text }] } })
-  });
-  if (!res.ok) throw new Error(`Embedding hatasi: ${res.status}`);
-  const data = await res.json();
-  return data.embedding.values;
-}
+// embedText — moved to lib/providers.js
 
 async function searchKnowledge(query, topK = 3) {
   if (!knowledgeTable) return [];
@@ -1963,7 +1839,8 @@ async function generateEscalationSummary(contents, memory, conversationContext) 
     || conversationContext?.currentTopic
     || "Canlı destek talebi";
 
-  if (!GOOGLE_API_KEY) return fallback;
+  const providerCfg = getProviderConfig();
+  if (!providerCfg.apiKey && providerCfg.provider !== "ollama") return fallback;
 
   const summaryPrompt = [
     "Aşağıdaki konuşma geçmişini analiz et ve canlı destek temsilcisi için kısa bir sorun özeti yaz.",
@@ -1974,7 +1851,7 @@ async function generateEscalationSummary(contents, memory, conversationContext) 
   ].join("\n");
 
   try {
-    const result = await callGeminiWithFallback(contents, summaryPrompt, 512);
+    const result = await callLLMWithFallback(contents, summaryPrompt, 512);
     const summary = (result.reply || "").trim();
     return summary || fallback;
   } catch (_err) {
@@ -2594,7 +2471,7 @@ app.post("/api/chat", async (req, res) => {
       }
     }
 
-    if (!GOOGLE_API_KEY) {
+    if (!getProviderConfig().apiKey && getProviderConfig().provider !== "ollama") {
       return res.json({
         reply: buildMissingFieldsReply(memory, latestUserMessage),
         model: GOOGLE_MODEL,
@@ -2620,7 +2497,7 @@ app.post("/api/chat", async (req, res) => {
       ].join("\n");
 
       try {
-        const classifyResult = await callGemini(contents, classifyPrompt, 64);
+        const classifyResult = await callLLM(contents, classifyPrompt, 64);
         const detectedId = (classifyResult.reply || "").trim().toLowerCase().replace(/[^a-z0-9\-]/g, "");
         const matchedTopic = TOPIC_INDEX.topics.find((t) => t.id === detectedId);
 
@@ -2637,10 +2514,10 @@ app.post("/api/chat", async (req, res) => {
     // RAG: Bilgi tabanindan ilgili Q&A ciftlerini bul
     const knowledgeResults = await searchKnowledge(latestUserMessage);
     const systemPrompt = buildSystemPrompt(memory, conversationContext, knowledgeResults);
-    let geminiResult = await callGeminiWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
+    let geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
 
     if (geminiResult.finishReason === "MAX_TOKENS" && geminiResult.reply.length < 160) {
-      geminiResult = await callGeminiWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2);
+      geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2);
     }
 
     reply = sanitizeAssistantReply(geminiResult.reply);
@@ -3014,7 +2891,7 @@ app.get("/api/admin/env", requireAdminAccess, (_req, res) => {
   try {
     const env = readEnvFile();
     // Mask sensitive values
-    const SENSITIVE_KEYS = ["GOOGLE_API_KEY", "ADMIN_TOKEN", "ZENDESK_SNIPPET_KEY", "ZENDESK_SC_KEY_SECRET", "ZENDESK_SC_WEBHOOK_SECRET", "DEPLOY_WEBHOOK_SECRET", "TELEGRAM_BOT_TOKEN"];
+    const SENSITIVE_KEYS = ["GOOGLE_API_KEY", "LLM_API_KEY", "EMBEDDING_API_KEY", "ADMIN_TOKEN", "ZENDESK_SNIPPET_KEY", "ZENDESK_SC_KEY_SECRET", "ZENDESK_SC_WEBHOOK_SECRET", "DEPLOY_WEBHOOK_SECRET", "TELEGRAM_BOT_TOKEN"];
     const masked = {};
     for (const [key, value] of Object.entries(env)) {
       if (SENSITIVE_KEYS.includes(key) && value) {
@@ -3369,16 +3246,7 @@ app.post("/api/admin/webhooks/:id/test", requireAdminAccess, async (req, res) =>
 const multer = require("multer");
 const upload = multer({ dest: UPLOADS_DIR, limits: { fileSize: 10 * 1024 * 1024 } });
 
-function chunkText(text, chunkSize = 500, overlap = 50) {
-  const chunks = [];
-  let start = 0;
-  while (start < text.length) {
-    const end = Math.min(start + chunkSize, text.length);
-    chunks.push(text.slice(start, end).trim());
-    start += chunkSize - overlap;
-  }
-  return chunks.filter(c => c.length > 20);
-}
+// chunkText — moved to lib/chunker.js
 
 async function extractTextFromFile(filePath, mimetype, originalname) {
   const ext = path.extname(originalname).toLowerCase();
@@ -3405,7 +3273,7 @@ app.post("/api/admin/knowledge/upload", requireAdminAccess, upload.single("file"
     const text = await extractTextFromFile(req.file.path, req.file.mimetype, req.file.originalname);
     if (!text.trim()) return res.status(400).json({ error: "Dosyadan metin cikarilamadi." });
 
-    const chunks = chunkText(text);
+    const chunks = chunkText(text, { filename: req.file.originalname });
     if (!chunks.length) return res.status(400).json({ error: "Yeterli icerik bulunamadi." });
 
     const rows = loadCSVData();
@@ -3415,7 +3283,7 @@ app.post("/api/admin/knowledge/upload", requireAdminAccess, upload.single("file"
       // Generate a question from the chunk using Gemini
       let question;
       try {
-        const qResult = await callGemini(
+        const qResult = await callLLM(
           [{ role: "user", parts: [{ text: chunk }] }],
           "Bu metin parcasini ozetleyen tek bir soru yaz. Turkce yaz. Sadece soruyu yaz, baska bir sey yazma.",
           64
@@ -3556,7 +3424,7 @@ async function processChatMessage(messagesArray, source = "web") {
     }
   }
 
-  if (!GOOGLE_API_KEY) {
+  if (!getProviderConfig().apiKey && getProviderConfig().provider !== "ollama") {
     return { reply: buildMissingFieldsReply(memory, latestUserMessage), source: "fallback-no-key", memory };
   }
 
@@ -3600,9 +3468,9 @@ async function processChatMessage(messagesArray, source = "web") {
   // AI reply
   const knowledgeResults = await searchKnowledge(latestUserMessage);
   const systemPrompt = buildSystemPrompt(memory, conversationContext, knowledgeResults);
-  let geminiResult = await callGeminiWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
+  let geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
   if (geminiResult.finishReason === "MAX_TOKENS" && geminiResult.reply.length < 160) {
-    geminiResult = await callGeminiWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2);
+    geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2);
   }
   let reply = sanitizeAssistantReply(geminiResult.reply);
   if (!reply) reply = buildMissingFieldsReply(memory, latestUserMessage);

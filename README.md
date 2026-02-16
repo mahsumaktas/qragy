@@ -18,12 +18,12 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick Start</a> · 
-  <a href="#features">Features</a> · 
-  <a href="#architecture">Architecture</a> · 
-  <a href="#admin-panel">Admin Panel</a> · 
-  <a href="#deploy">Deploy</a> · 
-  <a href="#api">API</a> · 
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#admin-panel">Admin Panel</a> ·
+  <a href="#deploy">Deploy</a> ·
+  <a href="#api">API</a> ·
   <a href="#configuration">Configuration</a>
 </p>
 
@@ -37,11 +37,21 @@
 
 **Dify needs Docker, Redis, and Postgres.** Botpress is cloud-only. Intercom costs $74/seat/month.
 
-**Qragy needs one command: `npm start`.**
+**Qragy needs one command: `npm start`.** Multi-model support (Gemini, OpenAI, Ollama) with zero extra dependencies.
 
-It uses [LanceDB](https://lancedb.com) (embedded vector DB) and Google Gemini (free tier), so you get a production-ready AI support chatbot with zero infrastructure cost — even on a **$35 Raspberry Pi**.
+It uses [LanceDB](https://lancedb.com) (embedded vector DB) and supports multiple AI providers, so you get a production-ready AI support chatbot with zero infrastructure cost — even on a **$35 Raspberry Pi**.
 
-> One process. One CSV file. Zero cloud bills.
+> One process. One CSV file. 7 npm dependencies. Zero cloud bills.
+
+| Feature | Qragy | Dify | LibreChat | Open WebUI |
+|---------|-------|------|-----------|------------|
+| Runs on Pi | Yes | No | No | No |
+| Min RAM | 150MB | 4GB+ | 2GB+ | 1GB+ |
+| Dependencies | 7 npm | Docker+ | 5 services | Docker+ |
+| Setup time | 30sec | 30min+ | 20min+ | 15min+ |
+| Multi-model | Yes | Yes | Yes | Yes |
+| RAG built-in | Yes | Yes | No | Yes |
+| Admin panel | Yes | Yes | No | Yes |
 
 ---
 
@@ -49,9 +59,11 @@ It uses [LanceDB](https://lancedb.com) (embedded vector DB) and Google Gemini (f
 
 ### 🧠 RAG-Powered AI
 - **Vector search** over your knowledge base using LanceDB (embedded, serverless)
+- **Multi-model** — Gemini, OpenAI, Ollama (local LLM) out of the box
 - **Topic routing** — keywords + AI classify issues into structured flows
 - **Deterministic collection** — bot gathers required info before escalating
-- **Model fallback** — automatic retry with a secondary Gemini model
+- **Model fallback** — automatic retry with a secondary model
+- **Smart chunking** — markdown, recursive, and sentence-based document splitting
 
 ### 🎛️ Admin Panel (`/admin`)
 Manage everything from the browser — no code, no CLI:
@@ -82,8 +94,12 @@ Manage everything from the browser — no code, no CLI:
 |----------|-------|-----------|------|
 | **Google Gemini** *(default)* | `gemini-embedding-001` | 3072 | Free tier |
 | **OpenAI** | `text-embedding-3-small` | 1536 | $0.02/1M tokens |
+| **Ollama** | `nomic-embed-text` | 768 | Free (local) |
 
 ### 🚀 v2 Highlights
+- **Multi-model support** — Gemini + OpenAI + Ollama via raw fetch() (zero new deps)
+- **Document chunking engine** — markdown, recursive, sentence strategies
+- **Docker support** — `docker run` and you're live
 - Rate limiting (per-IP, configurable)
 - File upload with auto-chunking (PDF, DOCX, TXT)
 - Team features: ticket assignment, priority levels, internal notes
@@ -118,7 +134,7 @@ graph TB
     end
 
     subgraph External
-        GEM[Google Gemini API<br/>Chat + Embedding]
+        LLM[LLM Provider<br/>Gemini / OpenAI / Ollama]
         ZD[Zendesk<br/>Handoff]
     end
 
@@ -126,7 +142,7 @@ graph TB
     EXP --> TC -->|topic match| RAG
     RAG -->|vector search| LDB
     RAG -->|read/write| CSV
-    RAG -->|generate| GEM
+    RAG -->|generate| LLM
     EXP --> TKT --> TDB
     TKT -->|escalate| ZD
     TKT -->|notify| WH
@@ -135,14 +151,27 @@ graph TB
 
 **Message flow:**
 
-1. User sends a message → **Topic detection** (keywords + AI classification)  
-2. **RAG search** finds relevant Q&A from the knowledge base  
-3. **Gemini** generates a contextual reply using topic instructions + RAG results  
-4. Bot collects required fields → **Escalation** to Zendesk when needed  
+1. User sends a message → **Topic detection** (keywords + AI classification)
+2. **RAG search** finds relevant Q&A from the knowledge base
+3. **LLM** generates a contextual reply using topic instructions + RAG results
+4. Bot collects required fields → **Escalation** to Zendesk when needed
 
 ---
 
 ## Quick Start
+
+### Docker (Fastest)
+
+```bash
+docker run -d -p 3001:3000 \
+  -e GOOGLE_API_KEY=your_key \
+  -v qragy-data:/app/data \
+  ghcr.io/mahsumaktas/qragy
+```
+
+Open `http://localhost:3001` — done.
+
+### From Source
 
 ```bash
 # Clone & install
@@ -164,7 +193,55 @@ Open [localhost:3000](http://localhost:3000) for the chatbot, [localhost:3000/ad
 
 ---
 
+## Multi-Model Configuration
+
+Qragy supports **Gemini**, **OpenAI**, and **Ollama** (local LLM) out of the box. No extra dependencies needed.
+
+### Gemini (Default, Free Tier)
+
+```env
+GOOGLE_API_KEY=your_key_here
+```
+
+### OpenAI
+
+```env
+LLM_PROVIDER=openai
+LLM_API_KEY=sk-...
+LLM_MODEL=gpt-4o-mini
+EMBEDDING_PROVIDER=openai
+EMBEDDING_MODEL=text-embedding-3-small
+```
+
+### Ollama (Fully Local, No API Key)
+
+```env
+LLM_PROVIDER=ollama
+LLM_MODEL=llama3.2
+LLM_BASE_URL=http://localhost:11434/v1
+EMBEDDING_PROVIDER=ollama
+EMBEDDING_MODEL=nomic-embed-text
+EMBEDDING_BASE_URL=http://localhost:11434
+```
+
+All `GOOGLE_*` environment variables continue to work for backward compatibility. See [`.env.example`](.env.example) for all options.
+
+---
+
 ## Deploy
+
+### Render (One-Click)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/mahsumaktas/qragy)
+
+### Docker Compose
+
+```bash
+git clone https://github.com/mahsumaktas/qragy.git
+cd qragy
+cp .env.example .env   # add your API key
+docker compose up -d
+```
 
 ### Raspberry Pi
 
@@ -178,10 +255,6 @@ pm2 start server.js --name qragy
 pm2 save && pm2 startup
 ```
 
-### Render (One-Click)
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/mahsumaktas/qragy)
-
 ### Any VPS / Docker
 
 Works on any machine with Node.js 18+. No Docker required, but runs fine in a container too.
@@ -192,7 +265,13 @@ Works on any machine with Node.js 18+. No Docker required, but runs fine in a co
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GOOGLE_API_KEY` | Gemini API key **(required)** | — |
+| `GOOGLE_API_KEY` | Gemini API key **(required for Gemini)** | — |
+| `LLM_PROVIDER` | LLM provider (`gemini`, `openai`, `ollama`) | `gemini` |
+| `LLM_API_KEY` | API key (falls back to GOOGLE_API_KEY) | — |
+| `LLM_MODEL` | Chat model (falls back to GOOGLE_MODEL) | — |
+| `LLM_BASE_URL` | Custom base URL (Ollama, etc.) | — |
+| `EMBEDDING_PROVIDER` | Embedding provider | `gemini` |
+| `EMBEDDING_MODEL` | Embedding model | `gemini-embedding-001` |
 | `GOOGLE_MODEL` | Chat model | `gemini-3-pro-preview` |
 | `GOOGLE_FALLBACK_MODEL` | Fallback model on error | — |
 | `BOT_NAME` | Bot display name | `QRAGY Bot` |
@@ -231,6 +310,9 @@ Add Qragy to any website:
 ```
 qragy/
 ├── server.js                    # API, AI, RAG, tickets — single file
+├── lib/
+│   ├── providers.js             # Multi-model LLM + embedding abstraction
+│   └── chunker.js               # Document chunking engine
 ├── knowledge_base.example.csv   # Example Q&A data
 ├── agent/                       # Bot personality & rules
 │   ├── soul.md                  # Identity
@@ -245,6 +327,8 @@ qragy/
 │   ├── admin.html               # Admin panel
 │   └── embed.js                 # Embeddable widget
 ├── scripts/ingest.js            # CSV → LanceDB embedder
+├── Dockerfile                   # Docker image definition
+├── docker-compose.yml           # Easy container setup
 └── data/                        # Runtime data (auto-created)
 ```
 
@@ -256,12 +340,14 @@ qragy/
 |---|:---:|:---:|:---:|:---:|
 | Fully self-hosted | ✅ | ⚠️ Partial | ❌ | ❌ |
 | Runs on Raspberry Pi | ✅ | ❌ | ❌ | ❌ |
+| Multi-model | ✅ | ✅ | ✅ | ❌ |
 | Vector DB | Embedded | External | External | Managed |
+| Min RAM | **150MB** | 4GB+ | 2GB+ | N/A |
 | Monthly cost | **$0** | Free tier limited | Free tier limited | $74+/seat |
 | Admin panel | Built-in | ✅ | ✅ | ✅ |
-| Setup time | **2 min** | 30+ min | 15+ min | N/A |
+| Setup time | **30 sec** | 30+ min | 15+ min | N/A |
 | Open source | MIT | Apache 2.0 | AGPL | ❌ |
-| Dependencies | 6 npm packages | Docker + Redis + Postgres | Cloud | Cloud |
+| Dependencies | 7 npm packages | Docker + Redis + Postgres | Cloud | Cloud |
 
 ---
 
@@ -321,11 +407,12 @@ All admin endpoints require `x-admin-token` header when `ADMIN_TOKEN` is set.
 |-------|-----------|
 | Runtime | Node.js 18+ |
 | Framework | Express.js |
-| AI | Google Gemini (chat + embedding) |
+| AI | Gemini, OpenAI, Ollama (multi-provider) |
 | Vector DB | LanceDB (embedded, serverless) |
-| Embeddings | `gemini-embedding-001` (3072d) |
+| Embeddings | Gemini / OpenAI / Ollama (configurable) |
 | Frontend | Vanilla JS — zero build step |
 | Storage | CSV + JSON files |
+| Container | Docker (optional) |
 
 ---
 

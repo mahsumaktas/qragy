@@ -5,7 +5,7 @@
  *   node scripts/ingest.js
  *
  * CSV formati: question,answer
- * Embedding: Gemini gemini-embedding-001 (3072 boyut)
+ * Embedding: Multi-provider (Gemini/OpenAI/Ollama via lib/providers.js)
  * Hedef: data/lancedb/knowledge_qa tablosu
  */
 
@@ -15,8 +15,8 @@ const fs = require("fs");
 const path = require("path");
 const Papa = require("papaparse");
 const lancedb = require("@lancedb/lancedb");
+const { embedText, getProviderConfig } = require("../lib/providers");
 
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
 const CSV_EXAMPLE = path.join(__dirname, "..", "knowledge_base.example.csv");
 const CSV_PATH = path.join(__dirname, "..", "data", "knowledge_base.csv");
 const LANCE_DB_PATH = path.join(__dirname, "..", "data", "lancedb");
@@ -24,30 +24,12 @@ const TABLE_NAME = "knowledge_qa";
 const EMBED_DELAY_MS = 250;
 const MAX_RETRIES = 5;
 
-async function embedText(text) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${encodeURIComponent(GOOGLE_API_KEY)}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content: { parts: [{ text }] } })
-  });
-
-  if (!res.ok) {
-    const errBody = await res.text().catch(() => "");
-    const err = new Error(`Embedding hatasi: ${res.status} - ${errBody}`);
-    err.status = res.status;
-    throw err;
-  }
-
-  const data = await res.json();
-  return new Float32Array(data.embedding.values);
-}
-
 async function embedWithRetry(text, idx) {
   let delay = 1000;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      return await embedText(text);
+      const values = await embedText(text);
+      return new Float32Array(values);
     } catch (err) {
       if (err.status === 429 && attempt < MAX_RETRIES) {
         console.warn(`  [${idx}] Rate limit (429), ${delay}ms bekleniyor... (deneme ${attempt}/${MAX_RETRIES})`);
@@ -65,10 +47,13 @@ function sleep(ms) {
 }
 
 async function main() {
-  if (!GOOGLE_API_KEY) {
-    console.error("GOOGLE_API_KEY veya GEMINI_API_KEY env degiskeni gerekli.");
+  const cfg = getProviderConfig();
+  if (!cfg.embeddingApiKey && cfg.embeddingProvider !== "ollama") {
+    console.error("API key gerekli. GOOGLE_API_KEY, LLM_API_KEY veya EMBEDDING_API_KEY env degiskeni ayarlayin.");
     process.exit(1);
   }
+
+  console.log(`Embedding provider: ${cfg.embeddingProvider}, model: ${cfg.embeddingModel}`);
 
   // First run: copy example KB if no runtime KB exists
   if (!fs.existsSync(CSV_PATH) && fs.existsSync(CSV_EXAMPLE)) {
