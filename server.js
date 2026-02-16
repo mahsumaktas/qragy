@@ -2114,6 +2114,22 @@ app.post("/api/tickets/:ticketId/handoff", (req, res) => {
   });
 });
 
+// ── Conversation Close (inactivity / user / farewell) ────────────────────
+app.post("/api/conversations/close", (req, res) => {
+  const sessionId = String(req.body?.sessionId || "").trim();
+  if (!sessionId) {
+    return res.status(400).json({ error: "sessionId zorunludur." });
+  }
+  const reason = String(req.body?.reason || "inactivity").trim();
+  const allowed = ["inactivity", "user", "farewell"];
+  const safeReason = allowed.includes(reason) ? reason : "inactivity";
+
+  upsertConversation(sessionId, null, null, { status: "closed" });
+  recordAnalyticsEvent({ source: "chat-closed", reason: safeReason });
+
+  return res.json({ ok: true });
+});
+
 app.post("/api/tickets/:ticketId/rating", (req, res) => {
   const ticketId = String(req.params.ticketId || "").trim();
   if (!ticketId) {
@@ -3703,6 +3719,9 @@ app.post("/api/sunshine/webhook", express.json({ limit: "100kb" }), (req, res) =
         const session = sessions[sessionKey];
         session.messages.push({ role: "user", content: message.content.text });
         session.lastActivity = Date.now();
+        session.nudge75Sent = false;
+        session.nudge90Sent = false;
+        session.closed = false;
 
         // Keep last 30 messages
         if (session.messages.length > 30) {
@@ -3743,6 +3762,12 @@ async function handleTelegramUpdate(update) {
   const chatId = String(msg.chat.id);
   const sessions = loadTelegramSessions();
   if (!sessions[chatId]) sessions[chatId] = { messages: [] };
+
+  // Track activity & reset nudge flags
+  sessions[chatId].lastActivity = Date.now();
+  sessions[chatId].nudge75Sent = false;
+  sessions[chatId].nudge90Sent = false;
+  sessions[chatId].closed = false;
 
   sessions[chatId].messages.push({ role: "user", content: msg.text });
   // Keep last 30 messages
@@ -3796,6 +3821,99 @@ function startTelegramPolling() {
   pollTelegram();
 }
 
+// ── Telegram Inactivity Helper ──────────────────────────────────────────
+async function sendTelegramMessage(chatId, text) {
+  if (!TELEGRAM_BOT_TOKEN || !text) return;
+  await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text })
+  }).catch(() => {});
+}
+
+function checkTelegramInactivity() {
+  if (!TELEGRAM_ENABLED || !TELEGRAM_BOT_TOKEN) return;
+  const sessions = loadTelegramSessions();
+  const timeout = chatFlowConfig.inactivityTimeoutMs || 600000;
+  const now = Date.now();
+  let changed = false;
+
+  for (const [chatId, session] of Object.entries(sessions)) {
+    if (!session.lastActivity || session.closed) continue;
+    const elapsed = now - session.lastActivity;
+
+    // 75% nudge
+    if (elapsed >= timeout * 0.75 && !session.nudge75Sent) {
+      const msg75 = chatFlowConfig.nudgeAt75Message || "Hala buradayım. Size nasıl yardımcı olabilirim?";
+      sendTelegramMessage(chatId, msg75);
+      session.nudge75Sent = true;
+      changed = true;
+    }
+    // 90% nudge
+    if (elapsed >= timeout * 0.90 && !session.nudge90Sent) {
+      const msg90 = chatFlowConfig.nudgeAt90Message || "Son birkaç dakikadır mesaj almadım. Yardımcı olabilir miyim?";
+      sendTelegramMessage(chatId, msg90);
+      session.nudge90Sent = true;
+      changed = true;
+    }
+    // 100% close
+    if (elapsed >= timeout) {
+      const closeMsg = chatFlowConfig.inactivityCloseMessage || "Uzun süredir mesaj almadığım için sohbeti sonlandırıyorum.";
+      sendTelegramMessage(chatId, closeMsg);
+      session.closed = true;
+      session.messages = [];
+      changed = true;
+      upsertConversation("tg-" + chatId, [], {}, { source: "telegram", status: "closed" });
+      recordAnalyticsEvent({ source: "chat-closed", reason: "inactivity" });
+    }
+  }
+
+  if (changed) saveTelegramSessions(sessions);
+}
+
+// ── Sunshine Inactivity Check ───────────────────────────────────────────
+function checkSunshineInactivity() {
+  const sessions = loadSunshineSessions();
+  const timeout = chatFlowConfig.inactivityTimeoutMs || 600000;
+  const now = Date.now();
+  let changed = false;
+
+  for (const [sessionKey, session] of Object.entries(sessions)) {
+    if (!session.lastActivity || session.closed) continue;
+    if (!session.appId) continue;
+    const elapsed = now - session.lastActivity;
+    // Extract conversationId from sessionKey (format: "zd-<conversationId>")
+    const conversationId = sessionKey.startsWith("zd-") ? sessionKey.slice(3) : sessionKey;
+
+    // 75% nudge
+    if (elapsed >= timeout * 0.75 && !session.nudge75Sent) {
+      const msg75 = chatFlowConfig.nudgeAt75Message || "Hala buradayım. Size nasıl yardımcı olabilirim?";
+      sunshineSendMessage(session.appId, conversationId, msg75).catch(() => {});
+      session.nudge75Sent = true;
+      changed = true;
+    }
+    // 90% nudge
+    if (elapsed >= timeout * 0.90 && !session.nudge90Sent) {
+      const msg90 = chatFlowConfig.nudgeAt90Message || "Son birkaç dakikadır mesaj almadım. Yardımcı olabilir miyim?";
+      sunshineSendMessage(session.appId, conversationId, msg90).catch(() => {});
+      session.nudge90Sent = true;
+      changed = true;
+    }
+    // 100% close
+    if (elapsed >= timeout) {
+      const closeMsg = chatFlowConfig.inactivityCloseMessage || "Uzun süredir mesaj almadığım için sohbeti sonlandırıyorum.";
+      sunshineSendMessage(session.appId, conversationId, closeMsg).catch(() => {});
+      session.closed = true;
+      session.messages = [];
+      changed = true;
+      upsertConversation(sessionKey, [], {}, { source: "sunshine", status: "closed" });
+      recordAnalyticsEvent({ source: "chat-closed", reason: "inactivity" });
+    }
+  }
+
+  if (changed) saveSunshineSessions(sessions);
+}
+
 app.get("/admin", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
@@ -3822,6 +3940,10 @@ app.get("*", (_req, res) => {
   // Ensure uploads directory
   if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   await initKnowledgeBase();
+  // Start inactivity checks every 60s (Telegram + Sunshine)
+  setInterval(checkTelegramInactivity, 60000);
+  setInterval(checkSunshineInactivity, 60000);
+
   app.listen(PORT, () => {
     console.log(`${BOT_NAME} ${PORT} portunda hazir.`);
     startTelegramPolling();

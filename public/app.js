@@ -49,6 +49,7 @@ const state = {
   handedOffTickets: new Set(),
   lastHandoffPayload: null,
   lastSystemStatus: "",
+  lastTicketId: null,
   triggerElement: null,
   lastMessageTime: 0,
   soundEnabled: true,
@@ -504,8 +505,47 @@ function resetNudgeTimer() {
     if (state.widgetStarted && !aiWidget.hidden && !state.isSending) {
       const closeMsg = chatFlow.inactivityCloseMessage || "Uzun süredir mesaj almadığım için sohbeti sonlandırıyorum.";
       pushMessage("assistant", closeMsg, false);
+      closeChat("inactivity");
     }
   }, timeoutMs);
+}
+
+/* ---- Auto-Close Chat (inactivity / user / farewell) ---- */
+
+function closeChat(reason) {
+  // 1. Disable input
+  chatInput.disabled = true;
+  sendButton.disabled = true;
+
+  // 2. Show CSAT if ticket exists
+  if (state.runtimeConfig.chatFlow?.csatEnabled && state.lastTicketId) {
+    showCSATSurvey(state.lastTicketId);
+  }
+
+  // 3. Notify backend (fire-and-forget)
+  fetch("api/conversations/close", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Bypass-Tunnel-Reminder": "true" },
+    body: JSON.stringify({ sessionId: getSessionId(), reason: reason || "inactivity" })
+  }).catch(() => {});
+
+  // 4. Clear timers
+  if (state.nudgeTimer) {
+    clearTimeout(state.nudgeTimer);
+    state.nudgeTimer = null;
+  }
+  if (state.inactivityTimer) {
+    clearTimeout(state.inactivityTimer);
+    state.inactivityTimer = null;
+  }
+
+  // 5. Reset session after 3s (ready for new conversation)
+  setTimeout(() => {
+    resetSessionId();
+    chatInput.disabled = false;
+    sendButton.disabled = false;
+    state.lastTicketId = null;
+  }, 3000);
 }
 
 /* ---- CSAT Survey (3.3) ---- */
@@ -672,6 +712,7 @@ function performEndSession() {
   state.lastMessageTime = 0;
   state.nudgeShown = false;
   state.lastHandoffPayload = null;
+  state.lastTicketId = null;
   state.handedOffTickets.clear();
   state.lastSystemStatus = "";
   state.pendingUserSegments = [];
@@ -1526,6 +1567,11 @@ async function flushPendingUserSegments() {
 
     // Play notification sound
     playNotificationSound();
+
+    // Track last ticketId for inactivity CSAT
+    if (payload?.ticketId) {
+      state.lastTicketId = payload.ticketId;
+    }
 
     // Handle closing flow CSAT trigger (after message is displayed)
     if (payload?.csatTrigger && payload?.ticketId) {
