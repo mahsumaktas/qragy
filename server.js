@@ -1748,7 +1748,7 @@ async function callGeminiWithFallback(contents, systemPrompt, maxOutputTokens) {
     return await callGemini(contents, systemPrompt, maxOutputTokens);
   } catch (error) {
     const status = Number(error?.status) || 0;
-    if (GOOGLE_FALLBACK_MODEL && (status === 429 || status === 500 || status === 503)) {
+    if (GOOGLE_FALLBACK_MODEL && (status === 404 || status === 429 || status === 500 || status === 503)) {
       console.warn(`Primary model hatasi (${status}), fallback model deneniyor: ${GOOGLE_FALLBACK_MODEL}`);
       const endpoint =
         "https://generativelanguage.googleapis.com/v1beta/models/" +
