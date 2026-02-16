@@ -10,6 +10,15 @@ const CSV_FILE = path.join(__dirname, "data", "knowledge_base.csv");
 
 const app = express();
 
+// ── Global error handlers ───────────────────────────────────────────────
+process.on("unhandledRejection", (reason) => {
+  console.error("[FATAL] Unhandled rejection:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[FATAL] Uncaught exception:", err);
+  process.exit(1);
+});
+
 const PORT = Number(process.env.PORT || 3000);
 let GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
 let GOOGLE_MODEL = process.env.GOOGLE_MODEL || "gemini-3-pro-preview";
@@ -205,15 +214,22 @@ function saveWebhooks(hooks) {
 
 function fireWebhook(eventType, payload) {
   const hooks = loadWebhooks();
+  let fired = 0;
   for (const hook of hooks) {
     if (!hook.active) continue;
     if (!hook.events.includes(eventType) && !hook.events.includes("*")) continue;
+    if (fired >= 10) break; // Max 10 webhooks per event
     const body = JSON.stringify({ event: eventType, data: payload, timestamp: new Date().toISOString() });
     const headers = { "Content-Type": "application/json" };
     if (hook.secret) {
       headers["X-Qragy-Signature"] = crypto.createHmac("sha256", hook.secret).update(body).digest("hex");
     }
-    fetch(hook.url, { method: "POST", headers, body }).catch(_e => { /* fire-and-forget */ });
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 5000);
+    fetch(hook.url, { method: "POST", headers, body, signal: controller.signal })
+      .finally(() => clearTimeout(tid))
+      .catch(_e => { /* fire-and-forget */ });
+    fired++;
   }
 }
 
@@ -897,13 +913,19 @@ function sanitizeTicketForList(ticket) {
 
 function requireAdminAccess(req, res, next) {
   if (!ADMIN_TOKEN) {
-    return next();
+    return res.status(503).json({ error: "Admin panel yapilandirilmamis. ADMIN_TOKEN ayarlayin." });
   }
 
   const headerToken = String(req.headers["x-admin-token"] || "").trim();
   const queryToken = String(req.query.token || "").trim();
   const candidate = headerToken || queryToken;
-  if (!candidate || candidate !== ADMIN_TOKEN) {
+  if (!candidate || candidate.length !== ADMIN_TOKEN.length) {
+    return res.status(401).json({ error: "Admin erisimi icin token gerekli." });
+  }
+
+  const candidateBuf = Buffer.from(candidate);
+  const tokenBuf = Buffer.from(ADMIN_TOKEN);
+  if (!crypto.timingSafeEqual(candidateBuf, tokenBuf)) {
     return res.status(401).json({ error: "Admin erisimi icin token gerekli." });
   }
 
@@ -1962,21 +1984,43 @@ async function generateEscalationSummary(contents, memory, conversationContext) 
 
 ensureTicketsDbFile();
 
-app.use((_req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
+app.use((req, res, next) => {
+  // Security headers
+  res.header("X-Content-Type-Options", "nosniff");
+  res.header("X-Frame-Options", "DENY");
+  res.header("X-XSS-Protection", "1; mode=block");
+  res.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.header("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+
+  // CORS - allow same-origin and configured origins
+  const origin = req.headers.origin || "";
+  const allowed = [
+    "http://localhost:" + PORT,
+    "http://127.0.0.1:" + PORT
+  ];
+  const envOrigin = (process.env.ALLOWED_ORIGIN || "").trim();
+  if (envOrigin) envOrigin.split(",").forEach(o => allowed.push(o.trim()));
+  if (allowed.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, X-Admin-Token");
-  if (_req.method === "OPTIONS") return res.sendStatus(204);
+  res.header("Access-Control-Allow-Headers", "Content-Type, X-Admin-Token, X-API-Key");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
   return next();
 });
 // --- Auto-deploy webhook (must be before express.json() to access raw body) ---
 if (DEPLOY_WEBHOOK_SECRET) {
-  app.post("/deploy", express.raw({ type: "application/json" }), (req, res) => {
+  app.post("/deploy", express.raw({ type: "application/json", limit: "500kb" }), (req, res) => {
     const sig = req.headers["x-hub-signature-256"] || "";
     const expected = "sha256=" + crypto.createHmac("sha256", DEPLOY_WEBHOOK_SECRET).update(req.body).digest("hex");
-    if (sig !== expected) return res.status(403).json({ error: "Invalid signature" });
+    if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+      return res.status(403).json({ error: "Invalid signature" });
+    }
 
-    const payload = JSON.parse(req.body.toString());
+    let payload;
+    try { payload = JSON.parse(req.body.toString()); } catch (_e) {
+      return res.status(400).json({ error: "Invalid JSON" });
+    }
     if (payload.ref !== "refs/heads/main") return res.json({ status: "ignored", reason: "not main branch" });
 
     console.log("[deploy] Main branch push detected, deploying...");
@@ -3240,7 +3284,11 @@ app.get("/api/admin/analytics", requireAdminAccess, (_req, res) => {
 // ══════════════════════════════════════════════════════════════════════════
 
 app.get("/api/admin/webhooks", requireAdminAccess, (_req, res) => {
-  return res.json({ ok: true, webhooks: loadWebhooks() });
+  const hooks = loadWebhooks().map(h => ({
+    ...h,
+    secret: h.secret ? h.secret.slice(0, 4) + "****" + h.secret.slice(-4) : ""
+  }));
+  return res.json({ ok: true, webhooks: hooks });
 });
 
 app.post("/api/admin/webhooks", requireAdminAccess, (req, res) => {
@@ -3562,6 +3610,8 @@ function getSunshineBaseUrl() {
 async function sunshineSendMessage(appId, conversationId, text) {
   const baseUrl = getSunshineBaseUrl();
   const url = baseUrl + "/apps/" + appId + "/conversations/" + conversationId + "/messages";
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
   const resp = await fetch(url, {
     method: "POST",
     headers: {
@@ -3571,8 +3621,9 @@ async function sunshineSendMessage(appId, conversationId, text) {
     body: JSON.stringify({
       author: { type: "business" },
       content: { type: "text", text }
-    })
-  });
+    }),
+    signal: controller.signal
+  }).finally(() => clearTimeout(timeoutId));
   if (!resp.ok) {
     const errText = await resp.text().catch(() => "");
     console.warn("[Sunshine] Mesaj gonderilemedi:", resp.status, errText);
@@ -3583,6 +3634,8 @@ async function sunshineSendMessage(appId, conversationId, text) {
 async function sunshinePassControl(appId, conversationId) {
   const baseUrl = getSunshineBaseUrl();
   const url = baseUrl + "/apps/" + appId + "/conversations/" + conversationId + "/passControl";
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
   const resp = await fetch(url, {
     method: "POST",
     headers: {
@@ -3592,8 +3645,9 @@ async function sunshinePassControl(appId, conversationId) {
     body: JSON.stringify({
       switchboardIntegration: { next: true },
       metadata: { reason: "escalation" }
-    })
-  });
+    }),
+    signal: controller.signal
+  }).finally(() => clearTimeout(timeoutId));
   if (!resp.ok) {
     const errText = await resp.text().catch(() => "");
     console.warn("[Sunshine] passControl hatasi:", resp.status, errText);
@@ -3602,12 +3656,13 @@ async function sunshinePassControl(appId, conversationId) {
 }
 
 // ── Sunshine Conversations Webhook ──────────────────────────────────────
-app.post("/api/sunshine/webhook", express.json(), (req, res) => {
-  // Validate webhook secret
+app.post("/api/sunshine/webhook", express.json({ limit: "100kb" }), (req, res) => {
+  // Validate webhook secret (timing-safe)
   const secret = sunshineConfig.webhookSecret || ZENDESK_SC_WEBHOOK_SECRET;
   if (secret) {
     const provided = (req.headers["x-api-key"] || "").trim();
-    if (provided !== secret) {
+    if (!provided || provided.length !== secret.length ||
+        !crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(secret))) {
       return res.status(401).json({ error: "Unauthorized" });
     }
   }
