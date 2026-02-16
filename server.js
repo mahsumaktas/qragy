@@ -11,48 +11,48 @@ const CSV_FILE = path.join(__dirname, "data", "knowledge_base.csv");
 const app = express();
 
 const PORT = Number(process.env.PORT || 3000);
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
-const GOOGLE_MODEL = process.env.GOOGLE_MODEL || "gemini-3-pro-preview";
-const GOOGLE_MAX_OUTPUT_TOKENS = Number(process.env.GOOGLE_MAX_OUTPUT_TOKENS || 1024);
-const GOOGLE_THINKING_BUDGET = Number(process.env.GOOGLE_THINKING_BUDGET || 64);
-const GOOGLE_REQUEST_TIMEOUT_MS = Number(process.env.GOOGLE_REQUEST_TIMEOUT_MS || 15000);
-const ZENDESK_SNIPPET_KEY = (process.env.ZENDESK_SNIPPET_KEY || "").trim();
-const ZENDESK_ENABLED =
+let GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
+let GOOGLE_MODEL = process.env.GOOGLE_MODEL || "gemini-3-pro-preview";
+let GOOGLE_MAX_OUTPUT_TOKENS = Number(process.env.GOOGLE_MAX_OUTPUT_TOKENS || 1024);
+let GOOGLE_THINKING_BUDGET = Number(process.env.GOOGLE_THINKING_BUDGET || 64);
+let GOOGLE_REQUEST_TIMEOUT_MS = Number(process.env.GOOGLE_REQUEST_TIMEOUT_MS || 15000);
+let ZENDESK_SNIPPET_KEY = (process.env.ZENDESK_SNIPPET_KEY || "").trim();
+let ZENDESK_ENABLED =
   /^(1|true|yes)$/i.test(process.env.ZENDESK_ENABLED || "") || Boolean(ZENDESK_SNIPPET_KEY);
-const ZENDESK_DEFAULT_TAGS = (process.env.ZENDESK_DEFAULT_TAGS || "qragy,ai_handoff")
+let ZENDESK_DEFAULT_TAGS = (process.env.ZENDESK_DEFAULT_TAGS || "qragy,ai_handoff")
   .split(",")
   .map((item) => item.trim())
   .filter(Boolean);
-const SUPPORT_HOURS_ENABLED = /^(1|true|yes)$/i.test(process.env.SUPPORT_HOURS_ENABLED || "");
-const SUPPORT_TIMEZONE = process.env.SUPPORT_TIMEZONE || "Europe/Istanbul";
-const SUPPORT_OPEN_HOUR = Number(process.env.SUPPORT_OPEN_HOUR || 7);
-const SUPPORT_CLOSE_HOUR = Number(process.env.SUPPORT_CLOSE_HOUR || 24);
-const SUPPORT_OPEN_DAYS = (process.env.SUPPORT_OPEN_DAYS || "1,2,3,4,5,6,7")
+let SUPPORT_HOURS_ENABLED = /^(1|true|yes)$/i.test(process.env.SUPPORT_HOURS_ENABLED || "");
+let SUPPORT_TIMEZONE = process.env.SUPPORT_TIMEZONE || "Europe/Istanbul";
+let SUPPORT_OPEN_HOUR = Number(process.env.SUPPORT_OPEN_HOUR || 7);
+let SUPPORT_CLOSE_HOUR = Number(process.env.SUPPORT_CLOSE_HOUR || 24);
+let SUPPORT_OPEN_DAYS = (process.env.SUPPORT_OPEN_DAYS || "1,2,3,4,5,6,7")
   .split(",")
   .map((item) => Number(item.trim()))
   .filter((day) => Number.isInteger(day) && day >= 1 && day <= 7);
-const DETERMINISTIC_COLLECTION_MODE =
+let DETERMINISTIC_COLLECTION_MODE =
   !/^(0|false|no)$/i.test(process.env.DETERMINISTIC_COLLECTION_MODE || "true");
-const ADMIN_TOKEN = (process.env.ADMIN_TOKEN || "").trim();
-const BOT_NAME = (process.env.BOT_NAME || "QRAGY Bot").trim();
-const COMPANY_NAME = (process.env.COMPANY_NAME || "").trim();
-const REMOTE_TOOL_NAME = (process.env.REMOTE_TOOL_NAME || "").trim();
+let ADMIN_TOKEN = (process.env.ADMIN_TOKEN || "").trim();
+let BOT_NAME = (process.env.BOT_NAME || "QRAGY Bot").trim();
+let COMPANY_NAME = (process.env.COMPANY_NAME || "").trim();
+let REMOTE_TOOL_NAME = (process.env.REMOTE_TOOL_NAME || "").trim();
 
 // Rate Limiting
-const RATE_LIMIT_ENABLED = /^(1|true|yes)$/i.test(process.env.RATE_LIMIT_ENABLED || "true");
-const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 20);
-const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60000);
+let RATE_LIMIT_ENABLED = /^(1|true|yes)$/i.test(process.env.RATE_LIMIT_ENABLED || "true");
+let RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 20);
+let RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60000);
 
 // Model Fallback
-const GOOGLE_FALLBACK_MODEL = (process.env.GOOGLE_FALLBACK_MODEL || "").trim();
+let GOOGLE_FALLBACK_MODEL = (process.env.GOOGLE_FALLBACK_MODEL || "").trim();
 
 // Telegram
-const TELEGRAM_ENABLED = /^(1|true|yes)$/i.test(process.env.TELEGRAM_ENABLED || "false");
-const TELEGRAM_BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || "").trim();
-const TELEGRAM_POLLING_INTERVAL_MS = Number(process.env.TELEGRAM_POLLING_INTERVAL_MS || 2000);
+let TELEGRAM_ENABLED = /^(1|true|yes)$/i.test(process.env.TELEGRAM_ENABLED || "false");
+let TELEGRAM_BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || "").trim();
+let TELEGRAM_POLLING_INTERVAL_MS = Number(process.env.TELEGRAM_POLLING_INTERVAL_MS || 2000);
 
 // Auto-deploy webhook
-const DEPLOY_WEBHOOK_SECRET = (process.env.DEPLOY_WEBHOOK_SECRET || "").trim();
+let DEPLOY_WEBHOOK_SECRET = (process.env.DEPLOY_WEBHOOK_SECRET || "").trim();
 
 const AGENT_DIR = path.join(__dirname, "agent");
 const TOPICS_DIR = path.join(AGENT_DIR, "topics");
@@ -918,6 +918,30 @@ function writeEnvFile(updates) {
   }
 
   fs.writeFileSync(envPath, newLines.join("\n"), "utf8");
+}
+
+function reloadRuntimeEnv() {
+  const env = readEnvFile();
+  if (env.GOOGLE_API_KEY) GOOGLE_API_KEY = env.GOOGLE_API_KEY;
+  if (env.GOOGLE_MODEL) GOOGLE_MODEL = env.GOOGLE_MODEL;
+  if (env.GOOGLE_MAX_OUTPUT_TOKENS) GOOGLE_MAX_OUTPUT_TOKENS = Number(env.GOOGLE_MAX_OUTPUT_TOKENS) || GOOGLE_MAX_OUTPUT_TOKENS;
+  if (env.GOOGLE_THINKING_BUDGET !== undefined) GOOGLE_THINKING_BUDGET = Number(env.GOOGLE_THINKING_BUDGET);
+  if (env.GOOGLE_REQUEST_TIMEOUT_MS) GOOGLE_REQUEST_TIMEOUT_MS = Number(env.GOOGLE_REQUEST_TIMEOUT_MS) || GOOGLE_REQUEST_TIMEOUT_MS;
+  if (env.GOOGLE_FALLBACK_MODEL !== undefined) GOOGLE_FALLBACK_MODEL = (env.GOOGLE_FALLBACK_MODEL || "").trim();
+  if (env.BOT_NAME) BOT_NAME = env.BOT_NAME.trim();
+  if (env.COMPANY_NAME !== undefined) COMPANY_NAME = (env.COMPANY_NAME || "").trim();
+  if (env.REMOTE_TOOL_NAME !== undefined) REMOTE_TOOL_NAME = (env.REMOTE_TOOL_NAME || "").trim();
+  if (env.RATE_LIMIT_ENABLED !== undefined) RATE_LIMIT_ENABLED = /^(1|true|yes)$/i.test(env.RATE_LIMIT_ENABLED);
+  if (env.RATE_LIMIT_MAX) RATE_LIMIT_MAX = Number(env.RATE_LIMIT_MAX) || RATE_LIMIT_MAX;
+  if (env.RATE_LIMIT_WINDOW_MS) RATE_LIMIT_WINDOW_MS = Number(env.RATE_LIMIT_WINDOW_MS) || RATE_LIMIT_WINDOW_MS;
+  if (env.DETERMINISTIC_COLLECTION_MODE !== undefined) DETERMINISTIC_COLLECTION_MODE = !/^(0|false|no)$/i.test(env.DETERMINISTIC_COLLECTION_MODE || "true");
+  if (env.SUPPORT_HOURS_ENABLED !== undefined) SUPPORT_HOURS_ENABLED = /^(1|true|yes)$/i.test(env.SUPPORT_HOURS_ENABLED);
+  if (env.SUPPORT_TIMEZONE) SUPPORT_TIMEZONE = env.SUPPORT_TIMEZONE;
+  if (env.SUPPORT_OPEN_HOUR !== undefined) SUPPORT_OPEN_HOUR = Number(env.SUPPORT_OPEN_HOUR);
+  if (env.SUPPORT_CLOSE_HOUR !== undefined) SUPPORT_CLOSE_HOUR = Number(env.SUPPORT_CLOSE_HOUR);
+  if (env.SUPPORT_OPEN_DAYS) SUPPORT_OPEN_DAYS = env.SUPPORT_OPEN_DAYS.split(",").map(d => Number(d.trim())).filter(d => d >= 1 && d <= 7);
+  if (env.ADMIN_TOKEN !== undefined) ADMIN_TOKEN = (env.ADMIN_TOKEN || "").trim();
+  console.log("[ENV] Runtime degiskenleri guncellendi. Model:", GOOGLE_MODEL);
 }
 
 function isValidFilename(name) {
@@ -2891,7 +2915,8 @@ app.put("/api/admin/env", requireAdminAccess, (req, res) => {
     }
 
     writeEnvFile(cleanUpdates);
-    return res.json({ ok: true, message: "Env guncellendi. Bazi degisiklikler restart gerektirebilir." });
+    reloadRuntimeEnv();
+    return res.json({ ok: true, message: "Env guncellendi ve aninda uyguland\u0131." });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
