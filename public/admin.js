@@ -391,16 +391,108 @@ async function refreshDashboard() {
     if (sourceFilter.value) {
       ticketUrl += "&source=" + encodeURIComponent(sourceFilter.value);
     }
-    const [summaryPayload, ticketsPayload] = await Promise.all([
+    const [summaryPayload, ticketsPayload, convsPayload] = await Promise.all([
       apiGet("admin/summary"),
-      apiGet(ticketUrl)
+      apiGet(ticketUrl),
+      apiGet("admin/conversations").catch(() => ({ conversations: [] }))
     ]);
     renderSummary(summaryPayload.summary || {});
     renderTicketRows(ticketsPayload.tickets || []);
+    renderConversations(convsPayload.conversations || []);
   } catch (error) {
     summaryGrid.innerHTML = "";
     ticketsTableBody.innerHTML = '<tr><td colspan="9" class="empty">Hata: ' + escapeHtml(error.message) + "</td></tr>";
   }
+}
+
+function renderConversations(convs) {
+  const tbody = $("convsTableBody");
+  const badge = $("convCount");
+  if (!tbody) return;
+
+  if (badge) badge.textContent = String(convs.length);
+
+  if (!convs.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">Aktif sohbet yok.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = "";
+  for (const c of convs) {
+    const statusClass = c.status === "active" ? "status-active" : "status-ticketed";
+    const statusLabel = c.status === "active" ? "Aktif" : "Ticket'li";
+    const branchCode = c.memory?.branchCode || "-";
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>" + escapeHtml((c.sessionId || "").slice(-8)) + "</td>" +
+      '<td><span class="conv-status ' + statusClass + '">' + statusLabel + "</span></td>" +
+      "<td>" + (c.messageCount || 0) + "</td>" +
+      '<td class="issue-cell">' + escapeHtml((c.lastUserMessage || "-").slice(0, 80)) + "</td>" +
+      "<td>" + escapeHtml(branchCode) + "</td>" +
+      "<td>" + escapeHtml(c.source || "web") + "</td>" +
+      "<td>" + fmtDate(c.createdAt) + "</td>" +
+      "<td>" + fmtDate(c.updatedAt) + "</td>" +
+      '<td><button class="open-button conv-detail-btn" type="button" data-session-id="' + escapeHtml(c.sessionId) + '">Ac</button></td>';
+    tbody.appendChild(tr);
+  }
+}
+
+// Conversation detail click handler
+document.addEventListener("click", (event) => {
+  const btn = event.target.closest("button[data-session-id]");
+  if (!btn) return;
+  const sessionId = btn.getAttribute("data-session-id");
+  showConversationDetail(sessionId);
+});
+
+function showConversationDetail(sessionId) {
+  apiGet("admin/conversations").then(payload => {
+    const conv = (payload.conversations || []).find(c => c.sessionId === sessionId);
+    if (!conv) return;
+
+    const detail = $("ticketDetail");
+    const chatEl = $("chatHistory");
+    const actions = $("ticketActions");
+    if (actions) actions.style.display = "none";
+    state.currentTicketId = null;
+
+    const lines = [
+      "Oturum: " + conv.sessionId,
+      "Durum: " + conv.status + (conv.ticketId ? " (Ticket: " + conv.ticketId + ")" : ""),
+      "Kaynak: " + (conv.source || "web"),
+      "Mesaj Sayisi: " + (conv.messageCount || 0),
+      "Baslangic: " + fmtDate(conv.createdAt),
+      "Son Guncelleme: " + fmtDate(conv.updatedAt),
+      "",
+      "Toplanan Bilgiler:",
+      "  Sube Kodu: " + (conv.memory?.branchCode || "-"),
+      "  Sorun: " + (conv.memory?.issueSummary || "-"),
+      "  Firma: " + (conv.memory?.companyName || "-"),
+      "  Ad Soyad: " + (conv.memory?.fullName || "-"),
+      "  Telefon: " + (conv.memory?.phone || "-")
+    ];
+    if (detail) detail.textContent = lines.join("\n");
+
+    if (!chatEl) return;
+    chatEl.innerHTML = "";
+    if (!Array.isArray(conv.chatHistory) || !conv.chatHistory.length) {
+      chatEl.textContent = "Sohbet gecmisi yok.";
+      return;
+    }
+    for (const msg of conv.chatHistory) {
+      const div = document.createElement("div");
+      div.className = msg.role === "user" ? "chat-msg chat-msg-user" : "chat-msg chat-msg-bot";
+      const label = document.createElement("span");
+      label.className = "chat-msg-label";
+      label.textContent = msg.role === "user" ? "Kullanici" : "Bot";
+      const content = document.createElement("span");
+      content.className = "chat-msg-content";
+      content.textContent = msg.content || "";
+      div.appendChild(label);
+      div.appendChild(content);
+      chatEl.appendChild(div);
+    }
+  }).catch(() => {});
 }
 
 function setAutoRefresh(enabled) {

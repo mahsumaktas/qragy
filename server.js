@@ -67,6 +67,7 @@ const PROMPT_VERSIONS_FILE = path.join(DATA_DIR, "prompt-versions.json");
 const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 const CHAT_FLOW_CONFIG_FILE = path.join(DATA_DIR, "chat-flow-config.json");
 const SITE_CONFIG_FILE = path.join(DATA_DIR, "site-config.json");
+const CONVERSATIONS_FILE = path.join(DATA_DIR, "conversations.json");
 
 let knowledgeTable = null;
 
@@ -318,6 +319,67 @@ function saveSiteConfig(updates) {
 }
 
 loadSiteConfig();
+
+// ── Live Conversations ──────────────────────────────────────────────────
+function loadConversations() {
+  try {
+    if (fs.existsSync(CONVERSATIONS_FILE)) {
+      return JSON.parse(fs.readFileSync(CONVERSATIONS_FILE, "utf8"));
+    }
+  } catch (_e) { /* silent */ }
+  return { conversations: [] };
+}
+
+function saveConversations(data) {
+  fs.writeFileSync(CONVERSATIONS_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+function upsertConversation(sessionId, messages, memory, extra = {}) {
+  const data = loadConversations();
+  let conv = data.conversations.find(c => c.sessionId === sessionId);
+  const now = new Date().toISOString();
+
+  if (!conv) {
+    conv = {
+      sessionId,
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+      messageCount: 0,
+      lastUserMessage: "",
+      memory: {},
+      ticketId: "",
+      source: extra.source || "web",
+      chatHistory: [],
+      ip: extra.ip || ""
+    };
+    data.conversations.push(conv);
+  }
+
+  conv.updatedAt = now;
+  conv.memory = memory || conv.memory;
+  conv.chatHistory = (messages || []).slice(-50).map(m => ({
+    role: m.role,
+    content: String(m.content || "").slice(0, 500)
+  }));
+  conv.messageCount = conv.chatHistory.filter(m => m.role === "user").length;
+
+  const lastUser = [...conv.chatHistory].reverse().find(m => m.role === "user");
+  conv.lastUserMessage = lastUser ? lastUser.content.slice(0, 200) : "";
+
+  if (extra.ticketId) conv.ticketId = extra.ticketId;
+  if (extra.status) conv.status = extra.status;
+
+  // Prune old conversations (older than 7 days)
+  const cutoff = Date.now() - 7 * 86400000;
+  data.conversations = data.conversations.filter(c => {
+    const ts = Date.parse(c.updatedAt || c.createdAt || "");
+    return Number.isFinite(ts) && ts > cutoff;
+  });
+
+  saveConversations(data);
+  return conv;
+}
 
 // ── Gibberish Detection ─────────────────────────────────────────────────
 function isGibberishMessage(text) {
@@ -2035,6 +2097,47 @@ app.get("/api/admin/tickets/:ticketId", requireAdminAccess, (req, res) => {
   });
 });
 
+// Conversations (live chat sessions)
+app.get("/api/admin/conversations", requireAdminAccess, (_req, res) => {
+  const data = loadConversations();
+  const statusFilter = String(_req.query.status || "").trim();
+  let convs = [...data.conversations];
+  convs.sort((a, b) => Date.parse(b.updatedAt || "") - Date.parse(a.updatedAt || ""));
+
+  if (statusFilter) {
+    convs = convs.filter(c => c.status === statusFilter);
+  }
+
+  res.json({
+    ok: true,
+    total: convs.length,
+    conversations: convs.map(c => ({
+      sessionId: c.sessionId,
+      status: c.status,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      messageCount: c.messageCount || 0,
+      lastUserMessage: c.lastUserMessage || "",
+      memory: c.memory || {},
+      ticketId: c.ticketId || "",
+      source: c.source || "web",
+      chatHistory: c.chatHistory || []
+    }))
+  });
+});
+
+function updateConversationTicket(sessionId, ticketId) {
+  if (!sessionId || !ticketId) return;
+  const data = loadConversations();
+  const conv = data.conversations.find(c => c.sessionId === sessionId);
+  if (conv) {
+    conv.ticketId = ticketId;
+    conv.status = "ticketed";
+    conv.updatedAt = new Date().toISOString();
+    saveConversations(data);
+  }
+}
+
 app.post("/api/chat", async (req, res) => {
   const chatStartTime = Date.now();
   try {
@@ -2045,12 +2148,25 @@ app.post("/api/chat", async (req, res) => {
     }
 
     const rawMessages = Array.isArray(req.body?.messages) ? req.body.messages : [];
+    const sessionId = String(req.body?.sessionId || "").trim() || ("auto-" + clientIp + "-" + Date.now().toString(36));
 
     if (!rawMessages.length) {
       return res.status(400).json({ error: "messages alani bos olamaz." });
     }
 
+    const originalJson = res.json.bind(res);
+    res.json = (data) => {
+      if (data && typeof data === "object" && !data.sessionId) {
+        data.sessionId = sessionId;
+      }
+      return originalJson(data);
+    };
+
     const supportAvailability = getSupportAvailability();
+
+    // Track conversation
+    const earlyMemory = extractTicketMemory(rawMessages);
+    upsertConversation(sessionId, rawMessages, earlyMemory, { ip: clientIp, source: req.body?.source || "web" });
     const { activeMessages, hasClosedTicketHistory, lastClosedTicketMemory } =
       splitActiveTicketMessages(rawMessages);
     const activeUserMessages = getUserMessages(activeMessages);
@@ -2197,6 +2313,7 @@ app.post("/api/chat", async (req, res) => {
         chatHistory: chatHistorySnapshot
       });
       const ticket = ticketResult.ticket;
+      updateConversationTicket(sessionId, ticket.id);
       const handoffReady = Boolean(supportAvailability.isOpen);
 
       // Queue position: aktif bekleyen ticket sayisi
@@ -2240,6 +2357,7 @@ app.post("/api/chat", async (req, res) => {
         model: GOOGLE_MODEL,
         chatHistory: chatHistorySnapshot
       });
+      updateConversationTicket(sessionId, ticketResult.ticket.id);
       const handoffReady = Boolean(supportAvailability.isOpen);
       recordAnalyticsEvent({ source: "escalation-trigger", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null });
       if (ticketResult.created) {
@@ -2401,6 +2519,7 @@ app.post("/api/chat", async (req, res) => {
         chatHistory: chatHistorySnapshot
       });
       ticketId = ticketResult.ticket.id;
+      updateConversationTicket(sessionId, ticketId);
       ticketStatus = ticketResult.ticket.status;
       ticketCreated = ticketResult.created;
       // Guncel ozeti memory'ye de yansit

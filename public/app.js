@@ -33,6 +33,7 @@ const isEmbedMode = urlParams.get("embed") === "1";
 const USER_BUFFER_WINDOW_MS = 4000;
 const TIMESTAMP_GAP_MS = 3 * 60 * 1000;
 const STORAGE_KEY = "qragy_chat";
+const SESSION_ID_KEY = "qragy_session_id";
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const NUDGE_DELAY_MS = 30000;
 
@@ -659,6 +660,7 @@ function endSession() {
 function performEndSession() {
   messages.length = 0;
   clearSession();
+  resetSessionId();
   chatMessages.innerHTML = "";
   clearQuickReplies();
   clearComposeStatus();
@@ -1390,14 +1392,31 @@ async function handoffToZendesk(payload) {
 
 /* ---- Backend communication ---- */
 
+function getSessionId() {
+  let id = localStorage.getItem(SESSION_ID_KEY);
+  if (!id) {
+    id = "s-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem(SESSION_ID_KEY, id);
+  }
+  return id;
+}
+
+function resetSessionId() {
+  localStorage.removeItem(SESSION_ID_KEY);
+}
+
 async function sendToBackend() {
   const response = await fetch("api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Bypass-Tunnel-Reminder": "true" },
-    body: JSON.stringify({ messages })
+    body: JSON.stringify({ messages, sessionId: getSessionId() })
   });
 
   const payload = await response.json();
+  // Update sessionId if server returns one
+  if (payload?.sessionId) {
+    localStorage.setItem(SESSION_ID_KEY, payload.sessionId);
+  }
   if (!response.ok) {
     if (response.status === 429) {
       throw new Error(payload?.error || "Cok fazla istek gonderdiniz. Lutfen biraz bekleyin.");
