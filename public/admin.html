@@ -61,6 +61,7 @@
               <option value="">Tumu</option>
               <option value="web">Web</option>
               <option value="telegram">Telegram</option>
+              <option value="sunshine">Sunshine</option>
             </select>
           </label>
 
@@ -206,6 +207,7 @@
           <button id="subTabSiteConfig" class="sub-tab-btn" data-subtab="subContentSiteConfig">Site Ayarlari</button>
           <button id="subTabWebhooks" class="sub-tab-btn" data-subtab="subContentWebhooks">Webhooks</button>
           <button id="subTabPromptVersions" class="sub-tab-btn" data-subtab="subContentPromptVersions">Prompt Gecmisi</button>
+          <button id="subTabSunshine" class="sub-tab-btn" data-subtab="subContentSunshine">CRM Entegrasyonu</button>
         </nav>
 
         <!-- Sub-tab: Agent Files - Split layout -->
@@ -540,6 +542,72 @@
                 <tr><td colspan="4" class="empty">Yukleniyor...</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Sub-tab: Sunshine / CRM Entegrasyonu -->
+        <div id="subContentSunshine" class="sub-tab-content">
+          <div class="chat-flow-config">
+            <h3>CRM Entegrasyonu (Zendesk Sunshine Conversations)</h3>
+            <p class="section-desc">Zendesk Sunshine Conversations entegrasyonu ile Zendesk chat widget uzerinden gelen mesajlari Qragy ile karsilayin. Eskalasyonda canli temsilciye otomatik aktarim yapilir.</p>
+
+            <div class="cf-group">
+              <h4>Baglanti Ayarlari</h4>
+              <div class="cf-field">
+                <label for="sunEnabled">Entegrasyon Durumu</label>
+                <select id="sunEnabled" class="cf-textarea" style="height:auto">
+                  <option value="false">Kapali</option>
+                  <option value="true">Acik</option>
+                </select>
+              </div>
+              <div class="cf-field">
+                <label for="sunSubdomain">Zendesk Subdomain</label>
+                <input id="sunSubdomain" type="text" class="cf-textarea" style="height:auto" placeholder="firmaadiniz (firmaadiniz.zendesk.com)" />
+              </div>
+              <div class="cf-field">
+                <label for="sunAppId">App ID</label>
+                <input id="sunAppId" type="text" class="cf-textarea" style="height:auto" placeholder="Sunshine Conversations App ID" />
+              </div>
+              <div class="cf-field">
+                <label for="sunKeyId">API Key ID</label>
+                <input id="sunKeyId" type="text" class="cf-textarea" style="height:auto" placeholder="API Key ID" />
+              </div>
+              <div class="cf-field">
+                <label for="sunKeySecret">API Key Secret</label>
+                <input id="sunKeySecret" type="password" class="cf-textarea" style="height:auto" placeholder="API Key Secret" />
+              </div>
+              <div class="cf-field">
+                <label for="sunWebhookSecret">Webhook Secret (X-API-Key)</label>
+                <input id="sunWebhookSecret" type="password" class="cf-textarea" style="height:auto" placeholder="Webhook dogrulama anahtari" />
+              </div>
+              <div class="cf-field">
+                <label for="sunFarewellMessage">Eskalasyon Veda Mesaji</label>
+                <textarea id="sunFarewellMessage" rows="2" class="cf-textarea" placeholder="Canli temsilciye aktarilirken gonderilecek mesaj"></textarea>
+              </div>
+            </div>
+
+            <div class="cf-group">
+              <h4>Webhook URL</h4>
+              <p class="section-desc">Zendesk Sunshine Conversations ayarlarindan asagidaki URL'yi webhook olarak ekleyin. Trigger: <code>conversation:message</code></p>
+              <div class="cf-field">
+                <label>Webhook Endpoint</label>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <code id="sunWebhookUrl" style="background:var(--bg);padding:8px 12px;border-radius:6px;border:1px solid var(--line);flex:1;word-break:break-all;font-size:0.85rem"></code>
+                  <button id="sunCopyUrlBtn" class="btn btn-secondary" style="white-space:nowrap">Kopyala</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="cf-group">
+              <h4>Baglanti Durumu</h4>
+              <div id="sunTestResult" style="padding:8px 12px;border-radius:6px;font-size:0.9rem;display:none"></div>
+            </div>
+
+            <div class="cf-actions">
+              <button id="sunSaveBtn" class="btn btn-primary">Kaydet</button>
+              <button id="sunTestBtn" class="btn btn-secondary">Baglantiyi Test Et</button>
+              <span id="sunSaveStatus" class="status-text"></span>
+            </div>
           </div>
         </div>
       </section>

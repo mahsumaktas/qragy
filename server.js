@@ -51,6 +51,14 @@ let TELEGRAM_ENABLED = /^(1|true|yes)$/i.test(process.env.TELEGRAM_ENABLED || "f
 let TELEGRAM_BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || "").trim();
 let TELEGRAM_POLLING_INTERVAL_MS = Number(process.env.TELEGRAM_POLLING_INTERVAL_MS || 2000);
 
+// Zendesk Sunshine Conversations
+let ZENDESK_SC_ENABLED = /^(1|true|yes)$/i.test(process.env.ZENDESK_SC_ENABLED || "false");
+let ZENDESK_SC_APP_ID = (process.env.ZENDESK_SC_APP_ID || "").trim();
+let ZENDESK_SC_KEY_ID = (process.env.ZENDESK_SC_KEY_ID || "").trim();
+let ZENDESK_SC_KEY_SECRET = (process.env.ZENDESK_SC_KEY_SECRET || "").trim();
+let ZENDESK_SC_WEBHOOK_SECRET = (process.env.ZENDESK_SC_WEBHOOK_SECRET || "").trim();
+let ZENDESK_SC_SUBDOMAIN = (process.env.ZENDESK_SC_SUBDOMAIN || "").trim();
+
 // Auto-deploy webhook
 let DEPLOY_WEBHOOK_SECRET = (process.env.DEPLOY_WEBHOOK_SECRET || "").trim();
 
@@ -68,6 +76,8 @@ const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 const CHAT_FLOW_CONFIG_FILE = path.join(DATA_DIR, "chat-flow-config.json");
 const SITE_CONFIG_FILE = path.join(DATA_DIR, "site-config.json");
 const CONVERSATIONS_FILE = path.join(DATA_DIR, "conversations.json");
+const SUNSHINE_SESSIONS_FILE = path.join(DATA_DIR, "sunshine-sessions.json");
+const SUNSHINE_CONFIG_FILE = path.join(DATA_DIR, "sunshine-config.json");
 
 let knowledgeTable = null;
 
@@ -319,6 +329,51 @@ function saveSiteConfig(updates) {
 }
 
 loadSiteConfig();
+
+// ── Sunshine Conversations Configuration ────────────────────────────────
+const DEFAULT_SUNSHINE_CONFIG = {
+  enabled: false,
+  subdomain: "",
+  appId: "",
+  keyId: "",
+  keySecret: "",
+  webhookSecret: "",
+  farewellMessage: "Sizi canli destek temsilcisine aktariyorum. Iyi gunler!"
+};
+
+let sunshineConfig = { ...DEFAULT_SUNSHINE_CONFIG };
+
+function loadSunshineConfig() {
+  try {
+    if (fs.existsSync(SUNSHINE_CONFIG_FILE)) {
+      const saved = JSON.parse(fs.readFileSync(SUNSHINE_CONFIG_FILE, "utf8"));
+      sunshineConfig = { ...DEFAULT_SUNSHINE_CONFIG, ...saved };
+    }
+  } catch (_e) {
+    sunshineConfig = { ...DEFAULT_SUNSHINE_CONFIG };
+  }
+}
+
+function saveSunshineConfig(updates) {
+  sunshineConfig = { ...sunshineConfig, ...updates };
+  fs.writeFileSync(SUNSHINE_CONFIG_FILE, JSON.stringify(sunshineConfig, null, 2), "utf8");
+}
+
+loadSunshineConfig();
+
+// ── Sunshine Sessions ───────────────────────────────────────────────────
+function loadSunshineSessions() {
+  try {
+    if (fs.existsSync(SUNSHINE_SESSIONS_FILE)) {
+      return JSON.parse(fs.readFileSync(SUNSHINE_SESSIONS_FILE, "utf8"));
+    }
+  } catch (_e) { /* silent */ }
+  return {};
+}
+
+function saveSunshineSessions(sessions) {
+  fs.writeFileSync(SUNSHINE_SESSIONS_FILE, JSON.stringify(sessions, null, 2), "utf8");
+}
 
 // ── Live Conversations ──────────────────────────────────────────────────
 function loadConversations() {
@@ -941,6 +996,12 @@ function reloadRuntimeEnv() {
   if (env.SUPPORT_CLOSE_HOUR !== undefined) SUPPORT_CLOSE_HOUR = Number(env.SUPPORT_CLOSE_HOUR);
   if (env.SUPPORT_OPEN_DAYS) SUPPORT_OPEN_DAYS = env.SUPPORT_OPEN_DAYS.split(",").map(d => Number(d.trim())).filter(d => d >= 1 && d <= 7);
   if (env.ADMIN_TOKEN !== undefined) ADMIN_TOKEN = (env.ADMIN_TOKEN || "").trim();
+  if (env.ZENDESK_SC_ENABLED !== undefined) ZENDESK_SC_ENABLED = /^(1|true|yes)$/i.test(env.ZENDESK_SC_ENABLED);
+  if (env.ZENDESK_SC_APP_ID !== undefined) ZENDESK_SC_APP_ID = (env.ZENDESK_SC_APP_ID || "").trim();
+  if (env.ZENDESK_SC_KEY_ID !== undefined) ZENDESK_SC_KEY_ID = (env.ZENDESK_SC_KEY_ID || "").trim();
+  if (env.ZENDESK_SC_KEY_SECRET !== undefined) ZENDESK_SC_KEY_SECRET = (env.ZENDESK_SC_KEY_SECRET || "").trim();
+  if (env.ZENDESK_SC_WEBHOOK_SECRET !== undefined) ZENDESK_SC_WEBHOOK_SECRET = (env.ZENDESK_SC_WEBHOOK_SECRET || "").trim();
+  if (env.ZENDESK_SC_SUBDOMAIN !== undefined) ZENDESK_SC_SUBDOMAIN = (env.ZENDESK_SC_SUBDOMAIN || "").trim();
   console.log("[ENV] Runtime degiskenleri guncellendi. Model:", GOOGLE_MODEL);
 }
 
@@ -1953,6 +2014,8 @@ app.get("/api/health", (_req, res) => {
     memoryTemplateLoaded: Boolean(MEMORY_TEMPLATE?.confirmationTemplate),
     zendeskEnabled: ZENDESK_ENABLED,
     zendeskSnippetConfigured: Boolean(ZENDESK_SNIPPET_KEY),
+    sunshineEnabled: ZENDESK_SC_ENABLED || sunshineConfig.enabled,
+    sunshineConfigured: Boolean((sunshineConfig.appId || ZENDESK_SC_APP_ID) && (sunshineConfig.keyId || ZENDESK_SC_KEY_ID)),
     supportAvailability,
     knowledgeBaseLoaded: Boolean(knowledgeTable),
     adminTokenRequired: Boolean(ADMIN_TOKEN),
@@ -2885,7 +2948,7 @@ app.get("/api/admin/env", requireAdminAccess, (_req, res) => {
   try {
     const env = readEnvFile();
     // Mask sensitive values
-    const SENSITIVE_KEYS = ["GOOGLE_API_KEY", "ADMIN_TOKEN", "ZENDESK_SNIPPET_KEY"];
+    const SENSITIVE_KEYS = ["GOOGLE_API_KEY", "ADMIN_TOKEN", "ZENDESK_SNIPPET_KEY", "ZENDESK_SC_KEY_SECRET", "ZENDESK_SC_WEBHOOK_SECRET"];
     const masked = {};
     for (const [key, value] of Object.entries(env)) {
       if (SENSITIVE_KEYS.includes(key) && value) {
@@ -2998,6 +3061,66 @@ app.post("/api/admin/site-logo", requireAdminAccess, express.raw({ type: ["image
   }
 });
 
+// Sunshine Config
+app.get("/api/admin/sunshine-config", requireAdminAccess, (_req, res) => {
+  const masked = { ...sunshineConfig };
+  if (masked.keySecret) masked.keySecret = masked.keySecret.slice(0, 4) + "****" + masked.keySecret.slice(-4);
+  if (masked.webhookSecret) masked.webhookSecret = masked.webhookSecret.slice(0, 4) + "****" + masked.webhookSecret.slice(-4);
+  res.json({ ok: true, config: masked, defaults: DEFAULT_SUNSHINE_CONFIG });
+});
+
+app.put("/api/admin/sunshine-config", requireAdminAccess, (req, res) => {
+  try {
+    const updates = req.body?.config;
+    if (!updates || typeof updates !== "object") {
+      return res.status(400).json({ error: "config objesi zorunludur." });
+    }
+    const allowed = Object.keys(DEFAULT_SUNSHINE_CONFIG);
+    const clean = {};
+    for (const key of allowed) {
+      if (updates[key] !== undefined) {
+        // Don't overwrite with masked values
+        if (typeof updates[key] === "string" && updates[key].includes("****")) continue;
+        clean[key] = updates[key];
+      }
+    }
+    saveSunshineConfig(clean);
+    // Sync env vars
+    if (clean.enabled !== undefined) ZENDESK_SC_ENABLED = Boolean(clean.enabled);
+    res.json({ ok: true, config: sunshineConfig });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/admin/sunshine-config/test", requireAdminAccess, async (_req, res) => {
+  try {
+    const appId = sunshineConfig.appId || ZENDESK_SC_APP_ID;
+    const keyId = sunshineConfig.keyId || ZENDESK_SC_KEY_ID;
+    const keySecret = sunshineConfig.keySecret || ZENDESK_SC_KEY_SECRET;
+    const subdomain = sunshineConfig.subdomain || ZENDESK_SC_SUBDOMAIN;
+
+    if (!appId || !keyId || !keySecret || !subdomain) {
+      return res.json({ ok: false, error: "Eksik ayarlar: appId, keyId, keySecret ve subdomain zorunludur." });
+    }
+
+    const url = "https://" + subdomain + ".zendesk.com/sc/v2/apps/" + appId;
+    const resp = await fetch(url, {
+      method: "GET",
+      headers: { "Authorization": "Basic " + Buffer.from(keyId + ":" + keySecret).toString("base64") }
+    });
+
+    if (resp.ok) {
+      res.json({ ok: true, message: "Baglanti basarili! Sunshine Conversations API erisimi dogrulandi." });
+    } else {
+      const errText = await resp.text().catch(() => "");
+      res.json({ ok: false, error: "API hatasi: " + resp.status + " " + errText.slice(0, 200) });
+    }
+  } catch (err) {
+    res.json({ ok: false, error: "Baglanti hatasi: " + err.message });
+  }
+});
+
 // System: Status
 app.get("/api/admin/system", requireAdminAccess, async (_req, res) => {
   try {
@@ -3038,6 +3161,7 @@ app.post("/api/admin/agent/reload", requireAdminAccess, (_req, res) => {
     loadAllAgentConfig();
     loadChatFlowConfig();
     loadSiteConfig();
+    loadSunshineConfig();
     return res.json({ ok: true, message: "Agent config yeniden yuklendi." });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -3377,7 +3501,7 @@ async function processChatMessage(messagesArray, source = "web") {
     const aiSummary = await generateEscalationSummary(contents, memory, conversationContext);
     memory.issueSummary = aiSummary;
     const ticketResult = createOrReuseTicket(memory, supportAvailability, {
-      source: source === "telegram" ? "telegram" : "chat-api",
+      source: ["telegram", "sunshine"].includes(source) ? source : "chat-api",
       model: GOOGLE_MODEL,
       chatHistory: chatHistorySnapshot
     });
@@ -3391,7 +3515,7 @@ async function processChatMessage(messagesArray, source = "web") {
     const aiSummary = await generateEscalationSummary(contents, memory, conversationContext);
     const escalationMemory = { ...memory, issueSummary: aiSummary };
     const ticketResult = createOrReuseTicket(escalationMemory, supportAvailability, {
-      source: source === "telegram" ? "telegram" : "escalation-trigger",
+      source: ["telegram", "sunshine"].includes(source) ? source : "escalation-trigger",
       model: GOOGLE_MODEL,
       chatHistory: chatHistorySnapshot
     });
@@ -3416,6 +3540,140 @@ async function processChatMessage(messagesArray, source = "web") {
   recordAnalyticsEvent({ source: conversationContext.currentTopic ? "topic-guided" : "gemini", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null });
   return { reply, source: conversationContext.currentTopic ? "topic-guided" : "gemini", memory };
 }
+
+// ── Sunshine Conversations API Client ───────────────────────────────────
+function getSunshineAuthHeader() {
+  const keyId = sunshineConfig.keyId || ZENDESK_SC_KEY_ID;
+  const keySecret = sunshineConfig.keySecret || ZENDESK_SC_KEY_SECRET;
+  return "Basic " + Buffer.from(keyId + ":" + keySecret).toString("base64");
+}
+
+function getSunshineBaseUrl() {
+  const subdomain = sunshineConfig.subdomain || ZENDESK_SC_SUBDOMAIN;
+  return "https://" + subdomain + ".zendesk.com/sc/v2";
+}
+
+async function sunshineSendMessage(appId, conversationId, text) {
+  const baseUrl = getSunshineBaseUrl();
+  const url = baseUrl + "/apps/" + appId + "/conversations/" + conversationId + "/messages";
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": getSunshineAuthHeader()
+    },
+    body: JSON.stringify({
+      author: { type: "business" },
+      content: { type: "text", text }
+    })
+  });
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => "");
+    console.warn("[Sunshine] Mesaj gonderilemedi:", resp.status, errText);
+  }
+  return resp.ok;
+}
+
+async function sunshinePassControl(appId, conversationId) {
+  const baseUrl = getSunshineBaseUrl();
+  const url = baseUrl + "/apps/" + appId + "/conversations/" + conversationId + "/passControl";
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": getSunshineAuthHeader()
+    },
+    body: JSON.stringify({
+      switchboardIntegration: { next: true },
+      metadata: { reason: "escalation" }
+    })
+  });
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => "");
+    console.warn("[Sunshine] passControl hatasi:", resp.status, errText);
+  }
+  return resp.ok;
+}
+
+// ── Sunshine Conversations Webhook ──────────────────────────────────────
+app.post("/api/sunshine/webhook", express.json(), (req, res) => {
+  // Validate webhook secret
+  const secret = sunshineConfig.webhookSecret || ZENDESK_SC_WEBHOOK_SECRET;
+  if (secret) {
+    const provided = (req.headers["x-api-key"] || "").trim();
+    if (provided !== secret) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+  }
+
+  // Respond immediately (Zendesk has 20s timeout)
+  res.status(200).json({ ok: true });
+
+  // Process async
+  const events = req.body?.events || [];
+  for (const event of events) {
+    if (event.type !== "conversation:message") continue;
+    const payload = event.payload || {};
+    const message = payload.message || {};
+    const conversation = payload.conversation || {};
+
+    // Skip non-user messages
+    if (message.author?.type !== "user") continue;
+    if (message.content?.type !== "text") continue;
+
+    const conversationId = conversation._id || conversation.id || "";
+    const appId = sunshineConfig.appId || ZENDESK_SC_APP_ID || req.body?.app?.id || "";
+    if (!conversationId || !appId) continue;
+
+    // Process in background
+    (async () => {
+      try {
+        const sessionKey = "zd-" + conversationId;
+        const sessions = loadSunshineSessions();
+        if (!sessions[sessionKey]) {
+          sessions[sessionKey] = {
+            messages: [],
+            appId,
+            userId: message.author?.userId || "",
+            lastActivity: Date.now()
+          };
+        }
+
+        const session = sessions[sessionKey];
+        session.messages.push({ role: "user", content: message.content.text });
+        session.lastActivity = Date.now();
+
+        // Keep last 30 messages
+        if (session.messages.length > 30) {
+          session.messages = session.messages.slice(-30);
+        }
+
+        const result = await processChatMessage(session.messages, "sunshine");
+        session.messages.push({ role: "assistant", content: result.reply });
+        saveSunshineSessions(sessions);
+
+        // Track conversation
+        const memory = result.memory || {};
+        upsertConversation(sessionKey, session.messages, memory, { source: "sunshine" });
+
+        // Check for escalation
+        const isEscalation = ESCALATION_MESSAGE_REGEX.test(result.reply);
+        if (isEscalation) {
+          // Send farewell message first
+          const farewell = sunshineConfig.farewellMessage || DEFAULT_SUNSHINE_CONFIG.farewellMessage;
+          await sunshineSendMessage(appId, conversationId, farewell);
+          // Pass control to agent workspace
+          await sunshinePassControl(appId, conversationId);
+        } else {
+          // Send bot reply
+          await sunshineSendMessage(appId, conversationId, result.reply);
+        }
+      } catch (err) {
+        console.warn("[Sunshine] Webhook isleme hatasi:", err.message);
+      }
+    })();
+  }
+});
 
 async function handleTelegramUpdate(update) {
   const msg = update.message;
@@ -3483,6 +3741,19 @@ app.get("*", (_req, res) => {
 
 (async () => {
   loadAnalyticsData();
+  // Cleanup stale Sunshine sessions (older than 7 days)
+  try {
+    const sessions = loadSunshineSessions();
+    const cutoff = Date.now() - 7 * 86400000;
+    let changed = false;
+    for (const key of Object.keys(sessions)) {
+      if ((sessions[key].lastActivity || 0) < cutoff) {
+        delete sessions[key];
+        changed = true;
+      }
+    }
+    if (changed) saveSunshineSessions(sessions);
+  } catch (_e) { /* silent */ }
   // Ensure uploads directory
   if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   await initKnowledgeBase();

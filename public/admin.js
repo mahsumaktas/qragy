@@ -217,6 +217,7 @@ function switchSubTab(subTabId) {
   else if (subTabId === "subContentSiteConfig") loadSiteConfig();
   else if (subTabId === "subContentWebhooks") loadWebhooks();
   else if (subTabId === "subContentPromptVersions") loadPromptVersions();
+  else if (subTabId === "subContentSunshine") loadSunshineConfig();
 }
 
 tabBtns.forEach((btn) => {
@@ -904,6 +905,7 @@ const ENV_GROUPS = {
   "Zendesk": ["ZENDESK_ENABLED", "ZENDESK_SNIPPET_KEY", "ZENDESK_DEFAULT_TAGS"],
   "Rate Limiting": ["RATE_LIMIT_ENABLED", "RATE_LIMIT_MAX", "RATE_LIMIT_WINDOW_MS"],
   "Telegram": ["TELEGRAM_ENABLED", "TELEGRAM_BOT_TOKEN", "TELEGRAM_POLLING_INTERVAL_MS"],
+  "Sunshine Conversations": ["ZENDESK_SC_ENABLED", "ZENDESK_SC_APP_ID", "ZENDESK_SC_KEY_ID", "ZENDESK_SC_KEY_SECRET", "ZENDESK_SC_WEBHOOK_SECRET", "ZENDESK_SC_SUBDOMAIN"],
   "Diger": ["PORT", "ADMIN_TOKEN", "DETERMINISTIC_COLLECTION_MODE", "BOT_NAME", "COMPANY_NAME"]
 };
 
@@ -1682,6 +1684,116 @@ function renderTopTopics(topics) {
 }
 
 $("analyticsRange").addEventListener("change", () => { void loadAnalytics(); });
+
+// ══════════════════════════════════════════════════════════════════════════
+// SUNSHINE CONVERSATIONS CONFIG
+// ══════════════════════════════════════════════════════════════════════════
+
+async function loadSunshineConfig() {
+  try {
+    const payload = await apiGet("admin/sunshine-config");
+    renderSunshineConfig(payload.config || {});
+  } catch (error) {
+    showToast("Sunshine config yuklenemedi: " + error.message, "error");
+  }
+}
+
+function renderSunshineConfig(config) {
+  const fields = {
+    sunSubdomain: "subdomain",
+    sunAppId: "appId",
+    sunKeyId: "keyId",
+    sunKeySecret: "keySecret",
+    sunWebhookSecret: "webhookSecret",
+    sunFarewellMessage: "farewellMessage"
+  };
+
+  for (const [id, key] of Object.entries(fields)) {
+    const el = $(id);
+    if (el) el.value = config[key] || "";
+  }
+
+  const enabledEl = $("sunEnabled");
+  if (enabledEl) enabledEl.value = config.enabled ? "true" : "false";
+
+  // Show webhook URL
+  const urlEl = $("sunWebhookUrl");
+  if (urlEl) {
+    urlEl.textContent = window.location.origin + "/api/sunshine/webhook";
+  }
+}
+
+async function saveSunshineConfig() {
+  const config = {
+    enabled: ($("sunEnabled") || {}).value === "true",
+    subdomain: ($("sunSubdomain") || {}).value || "",
+    appId: ($("sunAppId") || {}).value || "",
+    keyId: ($("sunKeyId") || {}).value || "",
+    keySecret: ($("sunKeySecret") || {}).value || "",
+    webhookSecret: ($("sunWebhookSecret") || {}).value || "",
+    farewellMessage: ($("sunFarewellMessage") || {}).value || ""
+  };
+
+  const status = $("sunSaveStatus");
+  const btn = $("sunSaveBtn");
+  if (status) status.textContent = "Kaydediliyor...";
+  if (btn) btn.disabled = true;
+
+  try {
+    await apiPut("admin/sunshine-config", { config });
+    if (status) status.textContent = "Kaydedildi";
+    showToast("Sunshine ayarlari kaydedildi.", "success");
+    setTimeout(() => { if (status) status.textContent = ""; }, 3000);
+  } catch (error) {
+    if (status) status.textContent = "Hata!";
+    showToast("Kaydetme hatasi: " + error.message, "error");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function testSunshineConnection() {
+  const resultEl = $("sunTestResult");
+  const btn = $("sunTestBtn");
+  if (!resultEl) return;
+
+  resultEl.style.display = "block";
+  resultEl.style.background = "var(--bg)";
+  resultEl.style.color = "var(--text)";
+  resultEl.textContent = "Test ediliyor...";
+  if (btn) btn.disabled = true;
+
+  try {
+    const payload = await apiPost("admin/sunshine-config/test", {});
+    if (payload.ok) {
+      resultEl.style.background = "#d4edda";
+      resultEl.style.color = "#155724";
+      resultEl.textContent = payload.message;
+    } else {
+      resultEl.style.background = "#f8d7da";
+      resultEl.style.color = "#721c24";
+      resultEl.textContent = payload.error || "Bilinmeyen hata";
+    }
+  } catch (error) {
+    resultEl.style.background = "#f8d7da";
+    resultEl.style.color = "#721c24";
+    resultEl.textContent = "Test hatasi: " + error.message;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// Sunshine event listeners
+if ($("sunSaveBtn")) $("sunSaveBtn").addEventListener("click", () => { void saveSunshineConfig(); });
+if ($("sunTestBtn")) $("sunTestBtn").addEventListener("click", () => { void testSunshineConnection(); });
+if ($("sunCopyUrlBtn")) {
+  $("sunCopyUrlBtn").addEventListener("click", () => {
+    const url = ($("sunWebhookUrl") || {}).textContent || "";
+    if (url && navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => showToast("Kopyalandi!", "success"));
+    }
+  });
+}
 
 // ── Initialization ─────────────────────────────────────────────────────────
 setAutoRefresh(true);
