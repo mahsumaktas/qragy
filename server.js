@@ -1102,7 +1102,7 @@ function reloadRuntimeEnv() {
   if (env.DEPLOY_WEBHOOK_SECRET !== undefined) DEPLOY_WEBHOOK_SECRET = (env.DEPLOY_WEBHOOK_SECRET || "").trim();
   // LLM/Embedding provider vars are read directly from process.env by lib/providers.js
   // Sync new vars to process.env so getProviderConfig() picks them up
-  const providerKeys = ["LLM_PROVIDER", "LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL", "LLM_FALLBACK_MODEL", "LLM_MAX_OUTPUT_TOKENS", "LLM_REQUEST_TIMEOUT_MS", "ENABLE_THINKING", "EMBEDDING_PROVIDER", "EMBEDDING_MODEL", "EMBEDDING_API_KEY", "EMBEDDING_BASE_URL", "EMBEDDING_DIMENSIONS"];
+  const providerKeys = ["LLM_PROVIDER", "LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL", "LLM_FALLBACK_MODELS", "LLM_FALLBACK_MODEL", "LLM_MAX_OUTPUT_TOKENS", "LLM_REQUEST_TIMEOUT_MS", "ENABLE_THINKING", "EMBEDDING_PROVIDER", "EMBEDDING_MODEL", "EMBEDDING_API_KEY", "EMBEDDING_BASE_URL", "EMBEDDING_DIMENSIONS"];
   for (const key of providerKeys) {
     if (env[key] !== undefined) process.env[key] = env[key];
   }

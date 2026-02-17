@@ -963,7 +963,7 @@ memorySchemaSaveBtn.addEventListener("click", () => { void saveMemoryFile("conve
 
 // ── Environment Variables ──────────────────────────────────────────────────
 const ENV_GROUPS = {
-  "LLM Provider": ["LLM_PROVIDER", "LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL", "LLM_FALLBACK_MODEL", "LLM_MAX_OUTPUT_TOKENS", "LLM_REQUEST_TIMEOUT_MS", "ENABLE_THINKING"],
+  "LLM Provider": ["LLM_PROVIDER", "LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL", "LLM_FALLBACK_MODELS", "LLM_MAX_OUTPUT_TOKENS", "LLM_REQUEST_TIMEOUT_MS", "ENABLE_THINKING"],
   "Embedding Provider": ["EMBEDDING_PROVIDER", "EMBEDDING_MODEL", "EMBEDDING_API_KEY", "EMBEDDING_BASE_URL", "EMBEDDING_DIMENSIONS"],
   "Legacy Gemini": ["GOOGLE_API_KEY", "GOOGLE_MODEL", "GOOGLE_MAX_OUTPUT_TOKENS", "GOOGLE_THINKING_BUDGET", "GOOGLE_REQUEST_TIMEOUT_MS", "GOOGLE_FALLBACK_MODEL"],
   "Destek Saatleri": ["SUPPORT_HOURS_ENABLED", "SUPPORT_TIMEZONE", "SUPPORT_OPEN_HOUR", "SUPPORT_CLOSE_HOUR", "SUPPORT_OPEN_DAYS"],
@@ -1027,7 +1027,7 @@ const ENV_HINTS = {
   LLM_API_KEY: "Provider API anahtari",
   LLM_MODEL: "orn: gemini-2.5-flash, gpt-4o, llama3",
   LLM_BASE_URL: "Ollama icin: http://localhost:11434",
-  LLM_FALLBACK_MODEL: "Birincil model hatada kullanilacak model",
+  LLM_FALLBACK_MODELS: "Virgullu yedek zincir, orn: gemini-2.5-flash-lite-001,gemini-2.0-flash",
   LLM_MAX_OUTPUT_TOKENS: "Maks cikti token (varsayilan: 1024)",
   LLM_REQUEST_TIMEOUT_MS: "Istek zaman asimi ms (varsayilan: 15000)",
   EMBEDDING_PROVIDER: "gemini, openai veya ollama",
