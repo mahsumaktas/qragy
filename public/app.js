@@ -710,16 +710,11 @@ function initFileAttach() {
       try {
         const formData = new FormData();
         formData.append("file", file);
-        const resp = await fetch("api/chat/upload", {
+        const { payload: data } = await fetchJSON("api/chat/upload", {
           method: "POST",
           headers: { "Bypass-Tunnel-Reminder": "true" },
           body: formData
         });
-        const ct = resp.headers.get("content-type") || "";
-        if (!ct.includes("application/json")) {
-          throw new Error("Sunucuya ulasilamiyor.");
-        }
-        const data = await resp.json();
         if (data.ok) {
           // Show image preview or file link in chat
           if (file.type.startsWith("image/")) {
@@ -1572,31 +1567,70 @@ function resetSessionId() {
   localStorage.removeItem(SESSION_ID_KEY);
 }
 
+async function fetchJSON(url, options) {
+  const response = await fetch(url, options);
+  const ct = response.headers.get("content-type") || "";
+  if (!ct.includes("application/json")) {
+    const err = new Error("NON_JSON_RESPONSE");
+    err.nonJson = true;
+    err.httpStatus = response.status;
+    throw err;
+  }
+  const payload = await response.json();
+  return { response, payload };
+}
+
+async function diagnoseError() {
+  try {
+    const { payload } = await fetchJSON("api/health", {
+      headers: { "Bypass-Tunnel-Reminder": "true" }
+    });
+    if (!payload.hasApiKey) return "API anahtari tanimli degil. Lutfen admin panelden API anahtarini girin.";
+    if (!payload.llmStatus?.ok) return "LLM servisi su an calismıyor. Lutfen biraz sonra tekrar deneyin.";
+    return "Gecici bir sorun olustu. Lutfen tekrar deneyin.";
+  } catch {
+    return "Sunucuya ulasilamiyor. Lutfen biraz sonra tekrar deneyin.";
+  }
+}
+
 async function sendToBackend() {
-  const response = await fetch("api/chat", {
+  const reqOptions = {
     method: "POST",
     headers: { "Content-Type": "application/json", "Bypass-Tunnel-Reminder": "true" },
     body: JSON.stringify({ messages, sessionId: getSessionId() })
-  });
+  };
 
-  // HTML dönerse (Nginx 502, Cloudflare hata sayfasi vb.) json() patlar — önce kontrol et
-  const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    throw new Error("Sunucuya ulasilamiyor. Lutfen biraz sonra tekrar deneyin.");
-  }
-
-  const payload = await response.json();
-  // Update sessionId if server returns one
-  if (payload?.sessionId) {
-    localStorage.setItem(SESSION_ID_KEY, payload.sessionId);
-  }
-  if (!response.ok) {
-    if (response.status === 429) {
-      throw new Error(payload?.error || "Cok fazla istek gonderdiniz. Lutfen biraz bekleyin.");
+  async function attemptRequest() {
+    const { response, payload } = await fetchJSON("api/chat", reqOptions);
+    if (payload?.sessionId) {
+      localStorage.setItem(SESSION_ID_KEY, payload.sessionId);
     }
-    throw new Error(payload?.error || "Sunucu hatasi.");
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error(payload?.error || "Cok fazla istek gonderdiniz. Lutfen biraz bekleyin.");
+      }
+      throw new Error(payload?.error || "Sunucu hatasi.");
+    }
+    return payload;
   }
-  return payload;
+
+  // 1. ilk deneme
+  try {
+    return await attemptRequest();
+  } catch (firstError) {
+    // 429 (rate limit) ve normal API hatalari icin tekrar deneme
+    if (!firstError.nonJson && firstError.message !== "Failed to fetch") throw firstError;
+  }
+
+  // 2. 1.5sn bekle, tekrar dene
+  await sleep(1500);
+  try {
+    return await attemptRequest();
+  } catch {
+    // 3. ikisi de basarisiz — teshis et
+    const message = await diagnoseError();
+    throw new Error(message);
+  }
 }
 
 function scheduleUserFlush() {
