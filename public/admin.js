@@ -1035,7 +1035,7 @@ const ENV_HINTS = {
   EMBEDDING_API_KEY: "Embedding API anahtari (bossa LLM key kullanilir)",
   EMBEDDING_BASE_URL: "Ollama icin: http://localhost:11434",
   EMBEDDING_DIMENSIONS: "Embedding boyutu (0 = varsayilan)",
-  ENABLE_THINKING: "auto, true veya false (auto: desteklenmezse otomatik kapatir)"
+  ENABLE_THINKING: "false (varsayilan), auto veya true"
 };
 
 function createEnvField(key, value) {
