@@ -543,7 +543,10 @@ const FAREWELL_WORDS = new Set([
   "iyi gunler", "iyi aksamlar", "iyi geceler", "iyi calismalar",
   "bye", "goodbye", "gorusuruz", "kendine iyi bak",
   "hoscakalin", "bay bay", "bb", "hayirli gunler",
-  "sagolun", "sag olun", "eyvallah"
+  "sagolun", "sag olun", "eyvallah",
+  "tesekkurler", "tesekkur ederim", "tesekkur ediyorum",
+  "sagol", "sagolasin", "cok tesekkurler", "cok sagol",
+  "cok tesekkur ederim", "tamam tesekkurler", "anladim tesekkurler"
 ]);
 
 function isFarewellMessage(text) {
@@ -1264,7 +1267,9 @@ function detectTopicFromMessages(userMessages) {
     return { topicId: null, confidence: 0, method: "none" };
   }
 
-  const allText = userMessages.join(" ");
+  // Sadece son 2 mesaja bak — eski mesajlardaki keyword'ler surekli topic tetiklemesin
+  const recentMessages = userMessages.slice(-2);
+  const allText = recentMessages.join(" ");
   const normalized = normalizeForMatching(allText);
 
   let bestMatch = null;
