@@ -7,6 +7,7 @@ const { callLLM, callLLMWithFallback, embedText, getProviderConfig } = require("
 const { chunkText } = require("./lib/chunker");
 const lancedb = require("@lancedb/lancedb");
 const Papa = require("papaparse");
+const multer = require("multer");
 const CSV_EXAMPLE_FILE = path.join(__dirname, "knowledge_base.example.csv");
 const CSV_FILE = path.join(__dirname, "data", "knowledge_base.csv");
 
@@ -3971,7 +3972,7 @@ app.post("/api/admin/webhooks/:id/test", requireAdminAccess, async (req, res) =>
 // KB: FILE UPLOAD (PDF/DOCX/TXT)
 // ══════════════════════════════════════════════════════════════════════════
 
-const multer = require("multer");
+// multer already required at top for chat upload
 const upload = multer({ dest: UPLOADS_DIR, limits: { fileSize: 10 * 1024 * 1024 } });
 
 // chunkText — moved to lib/chunker.js
