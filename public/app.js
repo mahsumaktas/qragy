@@ -1801,7 +1801,7 @@ async function flushPendingUserSegments() {
       }
     } else {
       showConnectionBanner();
-      pushMessage("assistant", `İşlem sırasında hata oluştu: ${error.message}`);
+      pushMessage("assistant", `İşlem sırasında hata oluştu: ${error.message}`, false);
     }
   } finally {
     clearTimeout(longWaitTimer);
