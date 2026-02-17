@@ -715,6 +715,10 @@ function initFileAttach() {
           headers: { "Bypass-Tunnel-Reminder": "true" },
           body: formData
         });
+        const ct = resp.headers.get("content-type") || "";
+        if (!ct.includes("application/json")) {
+          throw new Error("Sunucuya ulasilamiyor.");
+        }
         const data = await resp.json();
         if (data.ok) {
           // Show image preview or file link in chat
@@ -1575,6 +1579,12 @@ async function sendToBackend() {
     body: JSON.stringify({ messages, sessionId: getSessionId() })
   });
 
+  // HTML dönerse (Nginx 502, Cloudflare hata sayfasi vb.) json() patlar — önce kontrol et
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new Error("Sunucuya ulasilamiyor. Lutfen biraz sonra tekrar deneyin.");
+  }
+
   const payload = await response.json();
   // Update sessionId if server returns one
   if (payload?.sessionId) {
@@ -1584,7 +1594,7 @@ async function sendToBackend() {
     if (response.status === 429) {
       throw new Error(payload?.error || "Cok fazla istek gonderdiniz. Lutfen biraz bekleyin.");
     }
-    throw new Error(payload?.error || "Sunucu hatası.");
+    throw new Error(payload?.error || "Sunucu hatasi.");
   }
   return payload;
 }
