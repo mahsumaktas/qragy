@@ -2288,6 +2288,16 @@ app.post("/api/tickets/:ticketId/handoff", (req, res) => {
   });
 });
 
+// ── Session Status Check (client validates if session is still active) ───
+app.get("/api/conversations/status/:sessionId", (req, res) => {
+  const sessionId = String(req.params.sessionId || "").trim();
+  if (!sessionId) return res.status(400).json({ error: "sessionId zorunludur." });
+  const data = loadConversations();
+  const conv = data.conversations.find(c => c.sessionId === sessionId);
+  if (!conv) return res.json({ active: false });
+  return res.json({ active: conv.status === "active" || conv.status === "ticketed" });
+});
+
 // ── Conversation Close (inactivity / user / farewell) ────────────────────
 app.post("/api/conversations/close", (req, res) => {
   const sessionId = String(req.body?.sessionId || "").trim();
@@ -2511,6 +2521,22 @@ app.get("/api/admin/conversations", requireAdminAccess, (_req, res) => {
       chatHistory: c.chatHistory || []
     }))
   });
+});
+
+// ── Admin: Close All Active Conversations ────────────────────────────────
+app.post("/api/admin/conversations/close-all", requireAdminAccess, (_req, res) => {
+  const data = loadConversations();
+  let closedCount = 0;
+  for (const conv of data.conversations) {
+    if (conv.status === "active" || conv.status === "ticketed") {
+      conv.status = "closed";
+      conv.updatedAt = new Date().toISOString();
+      closedCount++;
+    }
+  }
+  saveConversations(data);
+  recordAnalyticsEvent({ source: "chat-closed", reason: "admin-bulk-close", count: closedCount });
+  return res.json({ ok: true, closedCount });
 });
 
 function updateConversationTicket(sessionId, ticketId) {
@@ -4582,6 +4608,29 @@ function checkSunshineInactivity() {
   if (changed) saveSunshineSessions(sessions);
 }
 
+// ── Web Conversation Stale Cleanup (server-side 30-min timeout) ──────────
+function checkWebConversationInactivity() {
+  const data = loadConversations();
+  const STALE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+  const now = Date.now();
+  let changed = false;
+
+  for (const conv of data.conversations) {
+    if (conv.status !== "active" && conv.status !== "ticketed") continue;
+    const lastUpdate = Date.parse(conv.updatedAt || conv.createdAt || "");
+    if (!Number.isFinite(lastUpdate)) continue;
+
+    if (now - lastUpdate >= STALE_TIMEOUT_MS) {
+      conv.status = "closed";
+      conv.updatedAt = new Date().toISOString();
+      changed = true;
+      recordAnalyticsEvent({ source: "chat-closed", reason: "server-stale-timeout" });
+    }
+  }
+
+  if (changed) saveConversations(data);
+}
+
 app.get("/admin", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
@@ -4629,9 +4678,10 @@ app.get("*", (_req, res) => {
   runDataRetention();
   setInterval(runDataRetention, 24 * 60 * 60 * 1000);
 
-  // Start inactivity checks every 60s (Telegram + Sunshine)
+  // Start inactivity checks every 60s (Telegram + Sunshine + Web)
   setInterval(checkTelegramInactivity, 60000);
   setInterval(checkSunshineInactivity, 60000);
+  setInterval(checkWebConversationInactivity, 5 * 60 * 1000); // every 5 min
 
   app.listen(PORT, () => {
     console.log(`${BOT_NAME} ${PORT} portunda hazir.`);

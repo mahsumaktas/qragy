@@ -440,6 +440,21 @@ function renderConversations(convs) {
   }
 }
 
+// Close All Conversations button
+const closeAllBtn = $("closeAllConvsBtn");
+if (closeAllBtn) {
+  closeAllBtn.addEventListener("click", async () => {
+    if (!confirm("Tum aktif sohbetler kapatilacak. Emin misiniz?")) return;
+    try {
+      const result = await apiPost("admin/conversations/close-all", {});
+      alert((result.closedCount || 0) + " sohbet kapatildi.");
+      void loadDashboard();
+    } catch (e) {
+      alert("Hata: " + e.message);
+    }
+  });
+}
+
 // Conversation detail click handler
 document.addEventListener("click", (event) => {
   const btn = event.target.closest("button[data-session-id]");

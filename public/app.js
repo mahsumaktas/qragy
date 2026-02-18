@@ -896,6 +896,13 @@ function showWidget() {
     const sessionRestored = loadSession();
 
     if (sessionRestored) {
+      // Server-side session validation: kapaliysa sifirdan basla
+      validateSessionWithServer().then(isActive => {
+        if (!isActive) {
+          performEndSession();
+          showWidget();
+        }
+      }).catch(() => { /* silent — offline durumda mevcut session ile devam */ });
       // Oturum basariyla yuklendi, mevcut mesajlar gosterildi
       removeSkeleton();
     } else {
@@ -1565,6 +1572,21 @@ function getSessionId() {
 
 function resetSessionId() {
   localStorage.removeItem(SESSION_ID_KEY);
+}
+
+async function validateSessionWithServer() {
+  const id = localStorage.getItem(SESSION_ID_KEY);
+  if (!id) return false;
+  try {
+    const resp = await fetch("api/conversations/status/" + encodeURIComponent(id), {
+      headers: { "Bypass-Tunnel-Reminder": "true" }
+    });
+    if (!resp.ok) return false;
+    const data = await resp.json();
+    return data.active === true;
+  } catch (_e) {
+    return true; // offline durumda mevcut session ile devam
+  }
 }
 
 async function fetchJSON(url, options) {
