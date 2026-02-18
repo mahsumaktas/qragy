@@ -4677,13 +4677,13 @@ async function checkLLMHealth() {
   try {
     const result = await callLLM(
       [{ role: "user", parts: [{ text: "ping" }] }],
-      "Respond with pong.",
-      8
+      "Respond with pong. Only say pong, nothing else.",
+      128
     );
     const latencyMs = Date.now() - start;
-    const reply = (result?.reply || "").toLowerCase();
-    // Yanit dogrulamasi — API cevap donmeli
-    if (!reply) {
+    const reply = (result?.reply || "").trim().toLowerCase();
+    // Yanit dogrulamasi — API cevap donmeli (MAX_TOKENS da kabul, onemli olan yanit donmesi)
+    if (!reply && result?.finishReason !== "MAX_TOKENS") {
       throw new Error("API yanit donmedi (bos response)");
     }
     const errorSummary = getLLMErrorSummary();
