@@ -23,11 +23,11 @@ const $ = (id) => document.getElementById(id);
 // Header
 const adminTokenInput = $("adminToken");
 
-// Tabs
-const tabBtns = document.querySelectorAll(".tab-btn");
-const tabContents = document.querySelectorAll(".tab-content");
+// Sidebar navigation
+const navItems = document.querySelectorAll(".nav-item[data-panel]");
+const panels = document.querySelectorAll(".panel");
 
-// Tab 1: Tickets
+// Panel: Summary (Tickets)
 const searchFilter = $("searchFilter");
 const statusFilter = $("statusFilter");
 const sourceFilter = $("sourceFilter");
@@ -39,7 +39,7 @@ const ticketsTableBody = $("ticketsTableBody");
 const ticketDetail = $("ticketDetail");
 const chatHistoryEl = $("chatHistory");
 
-// Tab 2: Knowledge Base
+// Panel: Knowledge Base
 const kbRecordCount = $("kbRecordCount");
 const kbTableBody = $("kbTableBody");
 const kbAddBtn = $("kbAddBtn");
@@ -51,10 +51,6 @@ const kbModalSaveBtn = $("kbModalSaveBtn");
 const kbModalCancelBtn = $("kbModalCancelBtn");
 const kbReingestBtn = $("kbReingestBtn");
 const kbReingestStatus = $("kbReingestStatus");
-
-// Tab 3: Bot Config - Sub-tabs
-const subTabBtns = document.querySelectorAll(".sub-tab-btn");
-const subTabContents = document.querySelectorAll(".sub-tab-content");
 
 // Agent Editor
 const agentFileList = $("agentFileList");
@@ -192,40 +188,40 @@ async function apiDelete(path) {
   return fetchJson("api/" + path, { method: "DELETE" });
 }
 
-// ── Tab Navigation ─────────────────────────────────────────────────────────
-function switchTab(tabId) {
-  tabBtns.forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tabId));
-  tabContents.forEach((content) => content.classList.toggle("active", content.id === tabId));
+// ── Sidebar Panel Navigation ──────────────────────────────────────────────
+const panelLoaders = {
+  panelSummary: () => refreshDashboard(),
+  panelLiveChats: () => loadLiveConversations(),
+  panelClosedChats: () => loadClosedConversations(),
+  panelSearch: () => loadSearchTickets(),
+  panelKB: () => loadKnowledgeBase(),
+  panelAutoFAQ: () => loadAutoFAQs(),
+  panelAgentFiles: () => loadAgentFiles(),
+  panelTopics: () => loadTopics(),
+  panelMemory: () => loadMemoryFiles(),
+  panelEnv: () => loadEnvConfig(),
+  panelChatFlow: () => loadChatFlowConfig(),
+  panelSiteConfig: () => loadSiteConfig(),
+  panelWebhooks: () => loadWebhooks(),
+  panelPromptVersions: () => loadPromptVersions(),
+  panelSunshine: () => loadSunshineConfig(),
+  panelAnalytics: () => loadAnalytics(),
+  panelContentGaps: () => loadContentGaps(),
+  panelSystem: () => loadSystemInfo()
+};
 
-  // Load data on tab switch
-  if (tabId === "tabTickets") refreshDashboard();
-  else if (tabId === "tabKnowledge") loadKnowledgeBase();
-  else if (tabId === "tabBotConfig") loadBotConfigTab();
-  else if (tabId === "tabAnalytics") loadAnalytics();
-  else if (tabId === "tabSystem") loadSystemInfo();
+function switchPanel(panelId) {
+  navItems.forEach(item => item.classList.toggle("active", item.dataset.panel === panelId));
+  panels.forEach(p => p.classList.toggle("active", p.id === panelId));
+  const loader = panelLoaders[panelId];
+  if (loader) loader();
 }
 
-function switchSubTab(subTabId) {
-  subTabBtns.forEach((btn) => btn.classList.toggle("active", btn.dataset.subtab === subTabId));
-  subTabContents.forEach((content) => content.classList.toggle("active", content.id === subTabId));
-
-  if (subTabId === "subContentAgentFiles") loadAgentFiles();
-  else if (subTabId === "subContentTopics") loadTopics();
-  else if (subTabId === "subContentMemory") loadMemoryFiles();
-  else if (subTabId === "subContentEnv") loadEnvConfig();
-  else if (subTabId === "subContentChatFlow") loadChatFlowConfig();
-  else if (subTabId === "subContentSiteConfig") loadSiteConfig();
-  else if (subTabId === "subContentWebhooks") loadWebhooks();
-  else if (subTabId === "subContentPromptVersions") loadPromptVersions();
-  else if (subTabId === "subContentSunshine") loadSunshineConfig();
-}
-
-tabBtns.forEach((btn) => {
-  btn.addEventListener("click", () => switchTab(btn.dataset.tab));
-});
-
-subTabBtns.forEach((btn) => {
-  btn.addEventListener("click", () => switchSubTab(btn.dataset.subtab));
+navItems.forEach(item => {
+  item.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchPanel(item.dataset.panel);
+  });
 });
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -266,7 +262,7 @@ function renderSummary(summary) {
 
 function renderTicketRows(tickets) {
   if (!Array.isArray(tickets) || !tickets.length) {
-    ticketsTableBody.innerHTML = '<tr><td colspan="10" class="empty">Kayit yok.</td></tr>';
+    ticketsTableBody.innerHTML = '<tr><td colspan="9" class="empty">Kayit yok.</td></tr>';
     return;
   }
   ticketsTableBody.innerHTML = "";
@@ -274,7 +270,6 @@ function renderTicketRows(tickets) {
     const priorityClass = ticket.priority === "high" ? "priority-high" : ticket.priority === "low" ? "priority-low" : "";
     const tr = document.createElement("tr");
     tr.innerHTML =
-      '<td><input type="checkbox" class="bulk-check" data-id="' + escapeHtml(ticket.id) + '" /></td>' +
       "<td>" + escapeHtml(ticket.id || "-") + "</td>" +
       '<td><span class="status-pill ' + escapeHtml(ticket.status || "") + '">' + escapeHtml(ticket.status || "-") + "</span></td>" +
       '<td><span class="priority-badge ' + priorityClass + '">' + escapeHtml(ticket.priority || "normal") + "</span></td>" +
@@ -286,7 +281,6 @@ function renderTicketRows(tickets) {
       '<td><button class="open-button" type="button" data-ticket-id="' + escapeHtml(ticket.id) + '">Ac</button></td>';
     ticketsTableBody.appendChild(tr);
   }
-  updateBulkToolbar();
 }
 
 function renderTicketDetail(ticket) {
@@ -394,36 +388,61 @@ async function refreshDashboard() {
     if (sourceFilter.value) {
       ticketUrl += "&source=" + encodeURIComponent(sourceFilter.value);
     }
-    const [summaryPayload, ticketsPayload, convsPayload] = await Promise.all([
+    const [summaryPayload, ticketsPayload] = await Promise.all([
       apiGet("admin/summary"),
-      apiGet(ticketUrl),
-      apiGet("admin/conversations").catch(() => ({ conversations: [] }))
+      apiGet(ticketUrl)
     ]);
     renderSummary(summaryPayload.summary || {});
     renderTicketRows(ticketsPayload.tickets || []);
-    renderConversations(convsPayload.conversations || []);
   } catch (error) {
     summaryGrid.innerHTML = "";
     ticketsTableBody.innerHTML = '<tr><td colspan="9" class="empty">Hata: ' + escapeHtml(error.message) + "</td></tr>";
   }
 }
 
-function renderConversations(convs) {
-  const tbody = $("convsTableBody");
+// ── Live & Closed Conversations ─────────────────────────────────────────
+
+async function loadLiveConversations() {
+  const tbody = $("liveConvsTableBody");
   const badge = $("convCount");
+  const panelBadge = document.querySelector("#panelLiveChats .badge");
   if (!tbody) return;
+  try {
+    const payload = await apiGet("admin/conversations");
+    const allConvs = payload.conversations || [];
+    const live = allConvs.filter(c => c.status === "active" || c.status === "ticketed");
+    if (badge) badge.textContent = String(live.length);
+    if (panelBadge) panelBadge.textContent = String(live.length);
+    renderConversationRows(tbody, live, "Aktif sohbet yok.");
+  } catch (error) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">Hata: ' + escapeHtml(error.message) + '</td></tr>';
+  }
+}
 
-  if (badge) badge.textContent = String(convs.length);
+async function loadClosedConversations() {
+  const tbody = $("closedConvsTableBody");
+  const badge = $("closedConvCount");
+  if (!tbody) return;
+  try {
+    const payload = await apiGet("admin/conversations");
+    const allConvs = payload.conversations || [];
+    const closed = allConvs.filter(c => c.status === "closed");
+    if (badge) badge.textContent = String(closed.length);
+    renderConversationRows(tbody, closed, "Kapali sohbet yok.");
+  } catch (error) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">Hata: ' + escapeHtml(error.message) + '</td></tr>';
+  }
+}
 
+function renderConversationRows(tbody, convs, emptyMsg) {
   if (!convs.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="empty">Aktif sohbet yok.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">' + escapeHtml(emptyMsg) + '</td></tr>';
     return;
   }
-
   tbody.innerHTML = "";
   for (const c of convs) {
-    const statusClass = c.status === "active" ? "status-active" : "status-ticketed";
-    const statusLabel = c.status === "active" ? "Aktif" : "Ticket'li";
+    const statusClass = c.status === "active" ? "status-active" : c.status === "ticketed" ? "status-ticketed" : "status-closed";
+    const statusLabel = c.status === "active" ? "Aktif" : c.status === "ticketed" ? "Ticket'li" : "Kapali";
     const branchCode = c.memory?.branchCode || "-";
     const tr = document.createElement("tr");
     tr.innerHTML =
@@ -447,10 +466,10 @@ if (closeAllBtn) {
     if (!confirm("Tum aktif sohbetler kapatilacak. Emin misiniz?")) return;
     try {
       const result = await apiPost("admin/conversations/close-all", {});
-      alert((result.closedCount || 0) + " sohbet kapatildi.");
-      void loadDashboard();
+      showToast((result.closedCount || 0) + " sohbet kapatildi.", "success");
+      void loadLiveConversations();
     } catch (e) {
-      alert("Hata: " + e.message);
+      showToast("Hata: " + e.message, "error");
     }
   });
 }
@@ -468,11 +487,10 @@ function showConversationDetail(sessionId) {
     const conv = (payload.conversations || []).find(c => c.sessionId === sessionId);
     if (!conv) return;
 
-    const detail = $("ticketDetail");
-    const chatEl = $("chatHistory");
-    const actions = $("ticketActions");
-    if (actions) actions.style.display = "none";
-    state.currentTicketId = null;
+    // Determine which detail area to use based on conversation status
+    const isLive = conv.status === "active" || conv.status === "ticketed";
+    const detailEl = $(isLive ? "liveChatDetail" : "closedChatDetail");
+    if (!detailEl) return;
 
     const lines = [
       "Oturum: " + conv.sessionId,
@@ -489,28 +507,66 @@ function showConversationDetail(sessionId) {
       "  Ad Soyad: " + (conv.memory?.fullName || "-"),
       "  Telefon: " + (conv.memory?.phone || "-")
     ];
-    if (detail) detail.textContent = lines.join("\n");
 
-    if (!chatEl) return;
-    chatEl.innerHTML = "";
-    if (!Array.isArray(conv.chatHistory) || !conv.chatHistory.length) {
-      chatEl.textContent = "Sohbet gecmisi yok.";
+    let html = '<div class="detail-box"><pre>' + escapeHtml(lines.join("\n")) + '</pre></div>';
+
+    if (Array.isArray(conv.chatHistory) && conv.chatHistory.length) {
+      html += '<h3 style="margin:12px 0 8px">Sohbet Gecmisi</h3>';
+      html += '<div class="chat-history-container">';
+      for (const msg of conv.chatHistory) {
+        const cls = msg.role === "user" ? "chat-msg chat-msg-user" : "chat-msg chat-msg-bot";
+        const lbl = msg.role === "user" ? "Kullanici" : "Bot";
+        html += '<div class="' + cls + '"><span class="chat-msg-label">' + escapeHtml(lbl) + '</span><span class="chat-msg-content">' + escapeHtml(msg.content || "") + '</span></div>';
+      }
+      html += '</div>';
+    } else {
+      html += '<p class="empty">Sohbet gecmisi yok.</p>';
+    }
+
+    detailEl.innerHTML = html;
+    detailEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }).catch(() => {});
+}
+
+// ── Search Panel: Ticket Search ─────────────────────────────────────────
+
+async function loadSearchTickets() {
+  const tbody = $("searchTicketsTableBody");
+  if (!tbody) return;
+  try {
+    let url = "admin/tickets?status=" + encodeURIComponent(statusFilter.value) +
+      "&limit=" + encodeURIComponent(limitFilter.value);
+    if (searchFilter.value.trim()) {
+      url += "&q=" + encodeURIComponent(searchFilter.value.trim());
+    }
+    if (sourceFilter.value) {
+      url += "&source=" + encodeURIComponent(sourceFilter.value);
+    }
+    const payload = await apiGet(url);
+    const tickets = payload.tickets || [];
+    if (!tickets.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty">Kayit yok.</td></tr>';
       return;
     }
-    for (const msg of conv.chatHistory) {
-      const div = document.createElement("div");
-      div.className = msg.role === "user" ? "chat-msg chat-msg-user" : "chat-msg chat-msg-bot";
-      const label = document.createElement("span");
-      label.className = "chat-msg-label";
-      label.textContent = msg.role === "user" ? "Kullanici" : "Bot";
-      const content = document.createElement("span");
-      content.className = "chat-msg-content";
-      content.textContent = msg.content || "";
-      div.appendChild(label);
-      div.appendChild(content);
-      chatEl.appendChild(div);
+    tbody.innerHTML = "";
+    for (const ticket of tickets) {
+      const priorityClass = ticket.priority === "high" ? "priority-high" : ticket.priority === "low" ? "priority-low" : "";
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td>" + escapeHtml(ticket.id || "-") + "</td>" +
+        '<td><span class="status-pill ' + escapeHtml(ticket.status || "") + '">' + escapeHtml(ticket.status || "-") + "</span></td>" +
+        '<td><span class="priority-badge ' + priorityClass + '">' + escapeHtml(ticket.priority || "normal") + "</span></td>" +
+        "<td>" + escapeHtml(ticket.branchCode || "-") + "</td>" +
+        '<td class="issue-cell">' + escapeHtml(ticket.issueSummary || "-") + "</td>" +
+        "<td>" + escapeHtml(ticket.assignedTo || "-") + "</td>" +
+        "<td>" + escapeHtml(ticket.source || "web") + "</td>" +
+        "<td>" + fmtDate(ticket.createdAt) + "</td>" +
+        '<td><button class="open-button" type="button" data-ticket-id="' + escapeHtml(ticket.id) + '">Ac</button></td>';
+      tbody.appendChild(tr);
     }
-  }).catch(() => {});
+  } catch (error) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">Hata: ' + escapeHtml(error.message) + '</td></tr>';
+  }
 }
 
 function setAutoRefresh(enabled) {
@@ -522,25 +578,77 @@ function setAutoRefresh(enabled) {
     state.autoTimer = null;
   }
   if (enabled) {
-    state.autoTimer = setInterval(() => { void refreshDashboard(); }, 15000);
+    state.autoTimer = setInterval(() => { void loadSearchTickets(); }, 15000);
   }
 }
 
-// Ticket event listeners
+// Ticket event listeners — Summary panel
 ticketsTableBody.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-ticket-id]");
   if (!button) return;
   void loadTicketDetail(button.getAttribute("data-ticket-id"));
 });
 
-refreshButton.addEventListener("click", () => { void refreshDashboard(); });
+// Search panel ticket detail click
+const searchTicketsTbody = $("searchTicketsTableBody");
+if (searchTicketsTbody) {
+  searchTicketsTbody.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-ticket-id]");
+    if (!button) return;
+    loadSearchTicketDetail(button.getAttribute("data-ticket-id"));
+  });
+}
+
+async function loadSearchTicketDetail(ticketId) {
+  const detailEl = $("searchTicketDetail");
+  if (!detailEl) return;
+  try {
+    const payload = await apiGet("admin/tickets/" + encodeURIComponent(ticketId));
+    const ticket = payload.ticket;
+    if (!ticket) { detailEl.innerHTML = '<p class="empty">Ticket bulunamadi.</p>'; return; }
+
+    const lines = [
+      "ID: " + ticket.id,
+      "Durum: " + ticket.status,
+      "Oncelik: " + (ticket.priority || "normal"),
+      "Atanan: " + (ticket.assignedTo || "-"),
+      "Kaynak: " + (ticket.source || "web"),
+      "Sube: " + (ticket.branchCode || "-"),
+      "Sorun: " + (ticket.issueSummary || "-"),
+      "Firma: " + (ticket.companyName || "-"),
+      "Olusturma: " + fmtDate(ticket.createdAt),
+      "Guncelleme: " + fmtDate(ticket.updatedAt)
+    ];
+
+    let html = '<div class="detail-box"><pre>' + escapeHtml(lines.join("\n")) + '</pre></div>';
+
+    if (Array.isArray(ticket.chatHistory) && ticket.chatHistory.length) {
+      html += '<h3 style="margin:12px 0 8px">Sohbet Gecmisi</h3>';
+      html += '<div class="chat-history-container">';
+      for (const msg of ticket.chatHistory) {
+        const cls = msg.role === "user" ? "chat-msg chat-msg-user" : "chat-msg chat-msg-bot";
+        const lbl = msg.role === "user" ? "Kullanici" : "Bot";
+        html += '<div class="' + cls + '"><span class="chat-msg-label">' + escapeHtml(lbl) + '</span><span class="chat-msg-content">' + escapeHtml(msg.content || "") + '</span></div>';
+      }
+      html += '</div>';
+    }
+
+    detailEl.innerHTML = html;
+    detailEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (error) {
+    detailEl.innerHTML = '<p class="empty">Hata: ' + escapeHtml(error.message) + '</p>';
+  }
+}
+
+// Search panel filter event listeners
+refreshButton.addEventListener("click", () => { void loadSearchTickets(); });
 autoButton.addEventListener("click", () => { setAutoRefresh(!state.autoRefresh); });
-statusFilter.addEventListener("change", () => { void refreshDashboard(); });
-sourceFilter.addEventListener("change", () => { void refreshDashboard(); });
-limitFilter.addEventListener("change", () => { void refreshDashboard(); });
+statusFilter.addEventListener("change", () => { void loadSearchTickets(); });
+sourceFilter.addEventListener("change", () => { void loadSearchTickets(); });
+limitFilter.addEventListener("change", () => { void loadSearchTickets(); });
 searchFilter.addEventListener("input", () => {
   if (state.searchDebounceTimer) clearTimeout(state.searchDebounceTimer);
-  state.searchDebounceTimer = setTimeout(() => { void refreshDashboard(); }, 400);
+  state.searchDebounceTimer = setTimeout(() => { void loadSearchTickets(); }, 400);
 });
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -553,7 +661,6 @@ async function loadKnowledgeBase() {
     const records = payload.records || [];
     kbRecordCount.textContent = records.length;
     renderKBTable(records);
-    loadAutoFAQs();
   } catch (error) {
     kbTableBody.innerHTML = '<tr><td colspan="4" class="empty">Hata: ' + escapeHtml(error.message) + "</td></tr>";
   }
@@ -733,12 +840,6 @@ kbTableBody.addEventListener("click", async (event) => {
 // ══════════════════════════════════════════════════════════════════════════
 // TAB 3: BOT CONFIG
 // ══════════════════════════════════════════════════════════════════════════
-
-function loadBotConfigTab() {
-  // Load whichever sub-tab is active
-  const activeSubTab = document.querySelector(".sub-tab-btn.active");
-  if (activeSubTab) switchSubTab(activeSubTab.dataset.subtab);
-}
 
 // ── Agent Files ────────────────────────────────────────────────────────────
 async function loadAgentFiles() {
@@ -1740,7 +1841,7 @@ async function loadAnalytics() {
     renderAnalyticsSummary(payload.summary || {});
     renderAnalyticsChart(payload.daily || []);
     renderTopTopics(payload.topTopics || []);
-    renderContentGaps();
+    loadContentGaps();
   } catch (err) {
     $("analyticsSummary").innerHTML = '<article class="summary-card"><div class="label">Hata</div><div class="value">' + escapeHtml(err.message) + "</div></article>";
   }
@@ -1815,7 +1916,7 @@ function renderTopTopics(topics) {
   });
 }
 
-async function renderContentGaps() {
+async function loadContentGaps() {
   const container = $("contentGapsSection");
   if (!container) return;
   try {
@@ -1856,9 +1957,9 @@ function updateBulkToolbar() {
   }
 }
 
-// Delegate checkbox change events
-if (ticketsTableBody) {
-  ticketsTableBody.addEventListener("change", (e) => {
+// Delegate checkbox change events (search panel)
+if (searchTicketsTbody) {
+  searchTicketsTbody.addEventListener("change", (e) => {
     if (e.target.classList.contains("bulk-check")) updateBulkToolbar();
   });
 }
@@ -1869,7 +1970,7 @@ async function executeBulkAction(action, value) {
   try {
     await apiPost("admin/tickets/bulk", { ticketIds: ids, action, value });
     showToast(ids.length + " ticket guncellendi.", "success");
-    refreshDashboard();
+    loadSearchTickets();
   } catch (err) {
     showToast("Hata: " + err.message, "error");
   }
@@ -2076,5 +2177,4 @@ if ($("sunCopyUrlBtn")) {
 }
 
 // ── Initialization ─────────────────────────────────────────────────────────
-setAutoRefresh(true);
-void refreshDashboard();
+switchPanel("panelSummary");

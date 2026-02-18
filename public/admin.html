@@ -5,720 +5,811 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Qragy Admin</title>
     <link rel="icon" type="image/jpeg" href="qragy_logo.jpg" />
-    <link rel="stylesheet" href="admin.css?v=20260216" />
+    <link rel="stylesheet" href="admin.css?v=20260218b" />
   </head>
   <body>
     <main class="admin-shell">
+
       <!-- Header -->
       <header class="admin-header">
         <div style="display:flex;align-items:center;gap:12px">
           <img src="qragy_logo.jpg" alt="Qragy" style="width:36px;height:36px;object-fit:contain;border-radius:8px" />
           <h1>Qragy Admin</h1>
         </div>
-        <p>Bot yapilandirmasi, bilgi tabani, talepler ve sistem durumu</p>
-        <!-- Admin token input -->
-        <div class="header-controls">
-          <label>
-            <span>Admin Token</span>
-            <input id="adminToken" type="password" placeholder="x-admin-token" />
-          </label>
-        </div>
       </header>
 
-      <!-- Tab Navigation -->
-      <nav class="tab-nav">
-        <button id="tabBtnTickets" class="tab-btn active" data-tab="tabTickets">Talepler</button>
-        <button id="tabBtnKnowledge" class="tab-btn" data-tab="tabKnowledge">Bilgi Tabani</button>
-        <button id="tabBtnBotConfig" class="tab-btn" data-tab="tabBotConfig">Bot Yapilandirma</button>
-        <button id="tabBtnAnalytics" class="tab-btn" data-tab="tabAnalytics">Analitik</button>
-        <button id="tabBtnSystem" class="tab-btn" data-tab="tabSystem">Sistem</button>
-      </nav>
+      <!-- Sidebar + Content Layout -->
+      <div class="admin-layout">
 
-      <!-- TAB 1: Talepler -->
-      <section id="tabTickets" class="tab-content active">
-        <section class="admin-controls">
-          <label class="control">
-            <span>Arama</span>
-            <input id="searchFilter" type="text" placeholder="Ticket, sube, sorun ara..." />
-          </label>
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
 
-          <label class="control">
-            <span>Durum</span>
-            <select id="statusFilter">
-              <option value="">Tum durumlar</option>
-              <option value="handoff_pending">handoff_pending</option>
-              <option value="queued_after_hours">queued_after_hours</option>
-              <option value="handoff_success">handoff_success</option>
-              <option value="handoff_failed">handoff_failed</option>
-              <option value="handoff_parent_posted">handoff_parent_posted</option>
-              <option value="handoff_opened_no_summary">handoff_opened_no_summary</option>
-            </select>
-          </label>
-
-          <label class="control">
-            <span>Kaynak</span>
-            <select id="sourceFilter">
-              <option value="">Tumu</option>
-              <option value="web">Web</option>
-              <option value="telegram">Telegram</option>
-              <option value="sunshine">Sunshine</option>
-            </select>
-          </label>
-
-          <label class="control">
-            <span>Kayit limiti</span>
-            <select id="limitFilter">
-              <option value="50">50</option>
-              <option value="100" selected>100</option>
-              <option value="250">250</option>
-            </select>
-          </label>
-
-          <div class="control-buttons">
-            <button id="refreshButton" type="button">Yenile</button>
-            <button id="autoButton" type="button" data-active="1">Oto Yenile: Acik</button>
-            <button id="exportTicketsBtn" type="button">Disari Aktar (CSV)</button>
+          <!-- Admin Token (moved into sidebar) -->
+          <div class="sidebar-token">
+            <label>
+              <span>Admin Token</span>
+              <input id="adminToken" type="password" placeholder="x-admin-token" />
+            </label>
           </div>
-        </section>
 
-        <!-- Bulk Actions Toolbar -->
-        <section id="bulkToolbar" class="bulk-toolbar" hidden>
-          <span id="bulkSelectedCount">0 secili</span>
-          <button id="bulkCloseBtn" type="button" class="btn btn-secondary">Kapat</button>
-          <select id="bulkPrioritySelect"><option value="">Oncelik Sec</option><option value="low">Dusuk</option><option value="normal">Normal</option><option value="high">Yuksek</option></select>
-          <button id="bulkPriorityBtn" type="button" class="btn btn-secondary">Oncelik Degistir</button>
-          <input id="bulkAssignInput" type="text" placeholder="Atama..." style="width:120px" />
-          <button id="bulkAssignBtn" type="button" class="btn btn-secondary">Ata</button>
-        </section>
+          <!-- TALEPLER group -->
+          <nav class="sidebar-nav">
+            <div class="nav-group-label">TALEPLER</div>
+            <a class="nav-item active" data-panel="panelSummary">Ozet</a>
+            <a class="nav-item" data-panel="panelLiveChats">Canli Sohbetler <span id="convCount" class="nav-badge">0</span></a>
+            <a class="nav-item" data-panel="panelClosedChats">Kapali Sohbetler</a>
+            <a class="nav-item" data-panel="panelSearch">Arama</a>
 
-        <section class="summary-grid" id="summaryGrid"></section>
+            <!-- BILGI TABANI group -->
+            <div class="nav-group-label">BILGI TABANI</div>
+            <a class="nav-item" data-panel="panelKB">Kayitlar</a>
+            <a class="nav-item" data-panel="panelAutoFAQ">FAQ Onerileri</a>
 
-        <!-- Live Conversations -->
-        <section class="conversations-section" id="conversationsSection">
-          <div class="section-header" style="margin-bottom:8px;display:flex;align-items:center;gap:12px">
-            <h3>Canli Sohbetler <span id="convCount" class="badge">0</span></h3>
-            <button type="button" id="closeAllConvsBtn" class="open-button" style="font-size:12px;padding:4px 10px">Tumunu Kapat</button>
+            <!-- BOT YAPILANDIRMA group -->
+            <div class="nav-group-label">BOT YAPILANDIRMA</div>
+            <a class="nav-item" data-panel="panelAgentFiles">Agent Dosyalari</a>
+            <a class="nav-item" data-panel="panelTopics">Konular</a>
+            <a class="nav-item" data-panel="panelMemory">Bellek Sablonlari</a>
+            <a class="nav-item" data-panel="panelEnv">Ortam Degiskenleri</a>
+            <a class="nav-item" data-panel="panelChatFlow">Sohbet Akisi</a>
+            <a class="nav-item" data-panel="panelSiteConfig">Site Ayarlari</a>
+            <a class="nav-item" data-panel="panelWebhooks">Webhooks</a>
+            <a class="nav-item" data-panel="panelPromptVersions">Prompt Gecmisi</a>
+            <a class="nav-item" data-panel="panelSunshine">CRM Entegrasyonu</a>
+
+            <!-- ANALITIK group -->
+            <div class="nav-group-label">ANALITIK</div>
+            <a class="nav-item" data-panel="panelAnalytics">Dashboard</a>
+            <a class="nav-item" data-panel="panelContentGaps">Content Gaps</a>
+
+            <!-- SISTEM group -->
+            <div class="nav-group-label">SISTEM</div>
+            <a class="nav-item" data-panel="panelSystem">Sistem Durumu</a>
+          </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="admin-main">
+
+          <!-- PANEL: Ozet -->
+          <div id="panelSummary" class="panel active">
+            <section class="summary-grid" id="summaryGrid"></section>
+
+            <div class="panel-split">
+              <div class="panel-split-left">
+                <section class="table-section">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Ticket</th>
+                        <th>Durum</th>
+                        <th>Oncelik</th>
+                        <th>Sube</th>
+                        <th>Sorun</th>
+                        <th>Atanan</th>
+                        <th>Kaynak</th>
+                        <th>Olusturma</th>
+                        <th>Detay</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ticketsTableBody">
+                      <tr>
+                        <td colspan="9" class="empty">Yukleniyor...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </section>
+              </div>
+
+              <div class="panel-split-right">
+                <section class="detail-section">
+                  <h2>Ticket Detayi</h2>
+                  <div id="ticketDetail" class="detail-box">Bir ticket seciniz.</div>
+
+                  <!-- Team features: assign, priority, notes -->
+                  <div id="ticketActions" class="ticket-actions" style="display:none">
+                    <div class="action-row">
+                      <label>Atama: <input id="ticketAssignInput" type="text" placeholder="Kullanici adi" /></label>
+                      <button id="ticketAssignBtn" class="btn btn-sm btn-primary">Ata</button>
+                      <label>Oncelik:
+                        <select id="ticketPrioritySelect">
+                          <option value="low">Dusuk</option>
+                          <option value="normal" selected>Normal</option>
+                          <option value="high">Yuksek</option>
+                        </select>
+                      </label>
+                      <button id="ticketPriorityBtn" class="btn btn-sm btn-primary">Degistir</button>
+                    </div>
+                    <div class="action-row">
+                      <textarea id="ticketNoteInput" rows="2" placeholder="Dahili not ekle..."></textarea>
+                      <button id="ticketNoteBtn" class="btn btn-sm btn-primary">Not Ekle</button>
+                    </div>
+                    <div id="ticketNotesList" class="notes-list"></div>
+                  </div>
+
+                  <h3 style="margin-top:14px">Sohbet Gecmisi</h3>
+                  <div id="chatHistory" class="chat-history-container">Ticket seciniz.</div>
+                </section>
+              </div>
+            </div>
           </div>
-          <div class="table-section">
-            <table>
-              <thead>
-                <tr>
-                  <th>Oturum</th>
-                  <th>Durum</th>
-                  <th>Mesaj</th>
-                  <th>Son Mesaj</th>
-                  <th>Sube</th>
-                  <th>Kaynak</th>
-                  <th>Baslangic</th>
-                  <th>Guncelleme</th>
-                  <th>Detay</th>
-                </tr>
-              </thead>
-              <tbody id="convsTableBody">
-                <tr><td colspan="9" class="empty">Yukleniyor...</td></tr>
-              </tbody>
-            </table>
+
+          <!-- PANEL: Canli Sohbetler -->
+          <div id="panelLiveChats" class="panel">
+            <div class="section-header" style="margin-bottom:8px;display:flex;align-items:center;gap:12px">
+              <h3>Canli Sohbetler <span class="badge">0</span></h3>
+              <button type="button" id="closeAllConvsBtn" class="open-button" style="font-size:12px;padding:4px 10px">Tumunu Kapat</button>
+            </div>
+            <div class="table-section">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Oturum</th>
+                    <th>Durum</th>
+                    <th>Mesaj</th>
+                    <th>Son Mesaj</th>
+                    <th>Sube</th>
+                    <th>Kaynak</th>
+                    <th>Baslangic</th>
+                    <th>Guncelleme</th>
+                    <th>Detay</th>
+                  </tr>
+                </thead>
+                <tbody id="liveConvsTableBody">
+                  <tr><td colspan="9" class="empty">Yukleniyor...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="liveChatDetail" class="chat-detail-inline"></div>
           </div>
-        </section>
 
-        <section class="table-section">
-          <table>
-            <thead>
-              <tr>
-                <th>Ticket</th>
-                <th>Durum</th>
-                <th>Oncelik</th>
-                <th>Sube</th>
-                <th>Sorun</th>
-                <th>Atanan</th>
-                <th>Kaynak</th>
-                <th>Olusturma</th>
-                <th>Detay</th>
-              </tr>
-            </thead>
-            <tbody id="ticketsTableBody">
-              <tr>
-                <td colspan="9" class="empty">Yukleniyor...</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
+          <!-- PANEL: Kapali Sohbetler -->
+          <div id="panelClosedChats" class="panel">
+            <div class="section-header" style="margin-bottom:8px;display:flex;align-items:center;gap:12px">
+              <h3>Kapali Sohbetler <span id="closedConvCount" class="badge">0</span></h3>
+            </div>
+            <div class="table-section">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Oturum</th>
+                    <th>Durum</th>
+                    <th>Mesaj</th>
+                    <th>Son Mesaj</th>
+                    <th>Sube</th>
+                    <th>Kaynak</th>
+                    <th>Baslangic</th>
+                    <th>Guncelleme</th>
+                    <th>Detay</th>
+                  </tr>
+                </thead>
+                <tbody id="closedConvsTableBody">
+                  <tr><td colspan="9" class="empty">Yukleniyor...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="closedChatDetail" class="chat-detail-inline"></div>
+          </div>
 
-        <section class="detail-section">
-          <h2>Ticket Detayi</h2>
-          <div id="ticketDetail" class="detail-box">Bir ticket seciniz.</div>
+          <!-- PANEL: Arama -->
+          <div id="panelSearch" class="panel">
+            <section class="admin-controls">
+              <label class="control">
+                <span>Arama</span>
+                <input id="searchFilter" type="text" placeholder="Ticket, sube, sorun ara..." />
+              </label>
 
-          <!-- Team features: assign, priority, notes -->
-          <div id="ticketActions" class="ticket-actions" style="display:none">
-            <div class="action-row">
-              <label>Atama: <input id="ticketAssignInput" type="text" placeholder="Kullanici adi" /></label>
-              <button id="ticketAssignBtn" class="btn btn-sm btn-primary">Ata</button>
-              <label>Oncelik:
-                <select id="ticketPrioritySelect">
-                  <option value="low">Dusuk</option>
-                  <option value="normal" selected>Normal</option>
-                  <option value="high">Yuksek</option>
+              <label class="control">
+                <span>Durum</span>
+                <select id="statusFilter">
+                  <option value="">Tum durumlar</option>
+                  <option value="handoff_pending">handoff_pending</option>
+                  <option value="queued_after_hours">queued_after_hours</option>
+                  <option value="handoff_success">handoff_success</option>
+                  <option value="handoff_failed">handoff_failed</option>
+                  <option value="handoff_parent_posted">handoff_parent_posted</option>
+                  <option value="handoff_opened_no_summary">handoff_opened_no_summary</option>
                 </select>
               </label>
-              <button id="ticketPriorityBtn" class="btn btn-sm btn-primary">Degistir</button>
-            </div>
-            <div class="action-row">
-              <textarea id="ticketNoteInput" rows="2" placeholder="Dahili not ekle..."></textarea>
-              <button id="ticketNoteBtn" class="btn btn-sm btn-primary">Not Ekle</button>
-            </div>
-            <div id="ticketNotesList" class="notes-list"></div>
+
+              <label class="control">
+                <span>Kaynak</span>
+                <select id="sourceFilter">
+                  <option value="">Tumu</option>
+                  <option value="web">Web</option>
+                  <option value="telegram">Telegram</option>
+                  <option value="sunshine">Sunshine</option>
+                </select>
+              </label>
+
+              <label class="control">
+                <span>Kayit limiti</span>
+                <select id="limitFilter">
+                  <option value="50">50</option>
+                  <option value="100" selected>100</option>
+                  <option value="250">250</option>
+                </select>
+              </label>
+
+              <div class="control-buttons">
+                <button id="refreshButton" type="button">Yenile</button>
+                <button id="autoButton" type="button" data-active="1">Oto Yenile: Acik</button>
+                <button id="exportTicketsBtn" type="button">Disari Aktar (CSV)</button>
+              </div>
+            </section>
+
+            <!-- Bulk Actions Toolbar -->
+            <section id="bulkToolbar" class="bulk-toolbar" hidden>
+              <span id="bulkSelectedCount">0 secili</span>
+              <button id="bulkCloseBtn" type="button" class="btn btn-secondary">Kapat</button>
+              <select id="bulkPrioritySelect"><option value="">Oncelik Sec</option><option value="low">Dusuk</option><option value="normal">Normal</option><option value="high">Yuksek</option></select>
+              <button id="bulkPriorityBtn" type="button" class="btn btn-secondary">Oncelik Degistir</button>
+              <input id="bulkAssignInput" type="text" placeholder="Atama..." style="width:120px" />
+              <button id="bulkAssignBtn" type="button" class="btn btn-secondary">Ata</button>
+            </section>
+
+            <section class="table-section">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ticket</th>
+                    <th>Durum</th>
+                    <th>Oncelik</th>
+                    <th>Sube</th>
+                    <th>Sorun</th>
+                    <th>Atanan</th>
+                    <th>Kaynak</th>
+                    <th>Olusturma</th>
+                    <th>Detay</th>
+                  </tr>
+                </thead>
+                <tbody id="searchTicketsTableBody">
+                  <tr>
+                    <td colspan="9" class="empty">Yukleniyor...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <div id="searchTicketDetail" class="chat-detail-inline"></div>
           </div>
 
-          <h3 style="margin-top:14px">Sohbet Gecmisi</h3>
-          <div id="chatHistory" class="chat-history-container">Ticket seciniz.</div>
-        </section>
-      </section>
-
-      <!-- TAB 2: Bilgi Tabani -->
-      <section id="tabKnowledge" class="tab-content">
-        <div class="section-header">
-          <h2>Bilgi Tabani <span id="kbRecordCount" class="badge">0</span></h2>
-          <div class="section-actions">
-            <button id="kbAddBtn" class="btn btn-primary">+ Yeni Kayit</button>
-            <label class="btn btn-secondary file-upload-label">
-              Dosya Yukle (PDF/DOCX/TXT)
-              <input id="kbFileUpload" type="file" accept=".pdf,.docx,.txt" style="display:none" />
-            </label>
-            <button id="kbReingestBtn" class="btn btn-secondary">Yeniden Yukle</button>
-            <span id="kbReingestStatus" class="status-text"></span>
-            <span id="kbUploadStatus" class="status-text"></span>
-          </div>
-        </div>
-        <div class="table-section">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Soru</th>
-                <th>Cevap</th>
-                <th>Islemler</th>
-              </tr>
-            </thead>
-            <tbody id="kbTableBody">
-              <tr>
-                <td colspan="4" class="empty">Yukleniyor...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Auto-FAQ Section -->
-        <div class="analytics-topics-section" style="margin-top:24px">
-          <div class="section-header">
-            <h3>Onerilen FAQ'lar (Otomatik)</h3>
-            <button id="autoFaqGenerateBtn" class="btn btn-secondary">FAQ Olustur</button>
-          </div>
-          <div id="autoFaqSection" class="table-section">
-            <p class="empty">Henuz oneri yok.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 3: Bot Yapilandirma -->
-      <section id="tabBotConfig" class="tab-content">
-        <nav class="sub-tab-nav">
-          <button id="subTabAgentFiles" class="sub-tab-btn active" data-subtab="subContentAgentFiles">Agent Dosyalari</button>
-          <button id="subTabTopics" class="sub-tab-btn" data-subtab="subContentTopics">Konular</button>
-          <button id="subTabMemory" class="sub-tab-btn" data-subtab="subContentMemory">Bellek Sablonlari</button>
-          <button id="subTabEnv" class="sub-tab-btn" data-subtab="subContentEnv">Ortam Degiskenleri</button>
-          <button id="subTabChatFlow" class="sub-tab-btn" data-subtab="subContentChatFlow">Sohbet Akisi</button>
-          <button id="subTabSiteConfig" class="sub-tab-btn" data-subtab="subContentSiteConfig">Site Ayarlari</button>
-          <button id="subTabWebhooks" class="sub-tab-btn" data-subtab="subContentWebhooks">Webhooks</button>
-          <button id="subTabPromptVersions" class="sub-tab-btn" data-subtab="subContentPromptVersions">Prompt Gecmisi</button>
-          <button id="subTabSunshine" class="sub-tab-btn" data-subtab="subContentSunshine">CRM Entegrasyonu</button>
-        </nav>
-
-        <!-- Sub-tab: Agent Files - Split layout -->
-        <div id="subContentAgentFiles" class="sub-tab-content active">
-          <div class="editor-layout">
-            <div class="file-list-panel">
-              <h3>Dosyalar</h3>
-              <ul id="agentFileList"></ul>
-            </div>
-            <div class="editor-panel">
-              <div class="editor-header">
-                <span id="agentEditorFilename" class="editor-filename">Dosya seciniz</span>
-                <div class="editor-actions">
-                  <button id="agentEditorRevertBtn" class="btn btn-secondary" disabled>Geri Al</button>
-                  <button id="agentEditorSaveBtn" class="btn btn-primary" disabled>Kaydet</button>
-                </div>
-              </div>
-              <textarea id="agentEditorTextarea" class="code-editor" placeholder="Dosya seciniz..." disabled></textarea>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sub-tab: Topics -->
-        <div id="subContentTopics" class="sub-tab-content">
-          <div class="section-header">
-            <h3>Konular</h3>
-            <button id="topicAddBtn" class="btn btn-primary">+ Yeni Konu</button>
-          </div>
-          <div class="table-section">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Baslik</th>
-                  <th>Anahtar Kelimeler</th>
-                  <th>Eskalasyon</th>
-                  <th>Dogrudan Cozum</th>
-                  <th>Islemler</th>
-                </tr>
-              </thead>
-              <tbody id="topicsTableBody">
-                <tr>
-                  <td colspan="6" class="empty">Yukleniyor...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Sub-tab: Memory Templates -->
-        <div id="subContentMemory" class="sub-tab-content">
-          <div class="memory-grid">
-            <div class="memory-card">
-              <div class="memory-card-header">
-                <h3>ticket-template.json</h3>
-                <div>
-                  <span id="memoryTicketValidation" class="validation-badge"></span>
-                  <button id="memoryTicketSaveBtn" class="btn btn-primary btn-sm">Kaydet</button>
-                </div>
-              </div>
-              <textarea id="memoryTicketTemplate" class="code-editor json-editor"></textarea>
-            </div>
-            <div class="memory-card">
-              <div class="memory-card-header">
-                <h3>conversation-schema.json</h3>
-                <div>
-                  <span id="memorySchemaValidation" class="validation-badge"></span>
-                  <button id="memorySchemaSaveBtn" class="btn btn-primary btn-sm">Kaydet</button>
-                </div>
-              </div>
-              <textarea id="memoryConversationSchema" class="code-editor json-editor"></textarea>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sub-tab: Environment Variables -->
-        <div id="subContentEnv" class="sub-tab-content">
-          <form id="envForm">
-            <!-- Groups will be built by JS -->
-          </form>
-          <div class="env-actions">
-            <button id="envSaveBtn" class="btn btn-primary">Kaydet</button>
-            <span id="envSaveStatus" class="status-text"></span>
-          </div>
-        </div>
-
-        <!-- Sub-tab: Chat Flow -->
-        <div id="subContentChatFlow" class="sub-tab-content">
-          <div class="chat-flow-config">
-            <h3>Sohbet Akis Ayarlari</h3>
-            <p class="section-desc">Chatbot davranis ve zamanlama ayarlarini buradan yapilandirabilirsiniz.</p>
-
-            <div class="cf-group">
-              <h4>Karsilama</h4>
-              <div class="cf-field">
-                <label for="cfWelcomeMessage">Karsilama Mesaji</label>
-                <textarea id="cfWelcomeMessage" rows="2" class="cf-textarea"></textarea>
-              </div>
-            </div>
-
-            <div class="cf-group">
-              <h4>Zamanlama</h4>
-              <div class="cf-field">
-                <label for="cfAggregationMs">Mesaj Birlestirme Penceresi (ms)</label>
-                <div class="cf-range-row">
-                  <input id="cfAggregationMs" type="range" min="1000" max="10000" step="500" />
-                  <span id="cfAggregationMsVal" class="cf-range-val"></span>
-                </div>
-                <small>Kullanici art arda mesaj yazarken birlestirme bekleme suresi</small>
-              </div>
-              <div class="cf-field">
-                <label for="cfBotDelayMs">Bot Yanit Gecikmesi (ms)</label>
-                <div class="cf-range-row">
-                  <input id="cfBotDelayMs" type="range" min="0" max="5000" step="250" />
-                  <span id="cfBotDelayMsVal" class="cf-range-val"></span>
-                </div>
-                <small>Yaziyor animasyonu suresi (dogal hissettirmek icin)</small>
-              </div>
-              <div class="cf-field cf-toggle-field">
-                <label for="cfTypingEnabled">Yaziyor Gostergesi</label>
-                <input id="cfTypingEnabled" type="checkbox" class="cf-toggle" />
-              </div>
-            </div>
-
-            <div class="cf-group">
-              <h4>Hareketsizlik ve Uyari</h4>
-              <div class="cf-field">
-                <label for="cfInactivityMs">Hareketsizlik Zamanlayici (dakika)</label>
-                <div class="cf-range-row">
-                  <input id="cfInactivityMs" type="range" min="1" max="30" step="1" />
-                  <span id="cfInactivityMsVal" class="cf-range-val"></span>
-                </div>
-              </div>
-              <div class="cf-field cf-toggle-field">
-                <label for="cfNudgeEnabled">Uyari Mesajlari Aktif</label>
-                <input id="cfNudgeEnabled" type="checkbox" class="cf-toggle" />
-              </div>
-              <div class="cf-field">
-                <label for="cfNudge75">%75 Uyari Mesaji</label>
-                <textarea id="cfNudge75" rows="2" class="cf-textarea"></textarea>
-              </div>
-              <div class="cf-field">
-                <label for="cfNudge90">%90 Uyari Mesaji</label>
-                <textarea id="cfNudge90" rows="2" class="cf-textarea"></textarea>
-              </div>
-              <div class="cf-field">
-                <label for="cfInactivityClose">Zaman Asimi Mesaji</label>
-                <textarea id="cfInactivityClose" rows="2" class="cf-textarea"></textarea>
-              </div>
-            </div>
-
-            <div class="cf-group">
-              <h4>Akilli Algilama</h4>
-              <div class="cf-field cf-toggle-field">
-                <label for="cfGibberishEnabled">Anlamsiz Mesaj Algilama</label>
-                <input id="cfGibberishEnabled" type="checkbox" class="cf-toggle" />
-              </div>
-              <div class="cf-field">
-                <label for="cfGibberishMsg">Anlamsiz Mesaj Yaniti</label>
-                <textarea id="cfGibberishMsg" rows="2" class="cf-textarea"></textarea>
-              </div>
-              <div class="cf-field">
-                <label for="cfMaxRetries">Maks. Aydinlatma Tekrari</label>
-                <div class="cf-range-row">
-                  <input id="cfMaxRetries" type="range" min="1" max="10" step="1" />
-                  <span id="cfMaxRetriesVal" class="cf-range-val"></span>
-                </div>
-                <small>Bu sayida tekrardan sonra canli destek'e aktarilir</small>
-              </div>
-            </div>
-
-            <div class="cf-group">
-              <h4>Kapanis Akisi</h4>
-              <div class="cf-field cf-toggle-field">
-                <label for="cfClosingEnabled">Kapanis Akisi Aktif</label>
-                <input id="cfClosingEnabled" type="checkbox" class="cf-toggle" />
-              </div>
-              <div class="cf-field">
-                <label for="cfAnythingElse">Baska Bir Sey Var Mi Mesaji</label>
-                <textarea id="cfAnythingElse" rows="2" class="cf-textarea"></textarea>
-              </div>
-              <div class="cf-field">
-                <label for="cfFarewell">Veda Mesaji</label>
-                <textarea id="cfFarewell" rows="2" class="cf-textarea"></textarea>
-              </div>
-              <div class="cf-field cf-toggle-field">
-                <label for="cfCsatEnabled">CSAT Degerlendirme</label>
-                <input id="cfCsatEnabled" type="checkbox" class="cf-toggle" />
-              </div>
-              <div class="cf-field">
-                <label for="cfCsatMsg">CSAT Mesaji</label>
-                <textarea id="cfCsatMsg" rows="2" class="cf-textarea"></textarea>
-              </div>
-            </div>
-
-            <div class="cf-actions">
-              <button id="cfSaveBtn" class="btn btn-primary">Kaydet</button>
-              <button id="cfResetBtn" class="btn btn-secondary">Varsayilana Don</button>
-              <span id="cfSaveStatus" class="status-text"></span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sub-tab: Site Config -->
-        <div id="subContentSiteConfig" class="sub-tab-content">
-          <div class="chat-flow-config">
-            <h3>Site Ayarlari</h3>
-            <p class="section-desc">Chatbot sayfasinin gorunumunu ve markasini buradan ozellestirin. Degisiklikler sunucuda saklanir, GitHub reposunu etkilemez.</p>
-
-            <div class="cf-group">
-              <h4>Logo</h4>
-              <div class="cf-field">
-                <label>Mevcut Logo</label>
-                <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-                  <img id="scLogoPreview" src="qragy_logo.jpg" alt="Logo" style="width:48px;height:48px;object-fit:contain;border-radius:8px;border:1px solid var(--line)" />
-                  <span id="scLogoName" style="color:var(--muted);font-size:0.85rem">Varsayilan logo</span>
-                </div>
-                <label class="btn btn-secondary file-upload-label" style="display:inline-block">
-                  Logo Yukle (max 2MB)
-                  <input type="file" id="scLogoInput" accept="image/jpeg,image/png,image/svg+xml,image/webp,image/gif" hidden />
+          <!-- PANEL: Bilgi Tabani Kayitlar -->
+          <div id="panelKB" class="panel">
+            <div class="section-header">
+              <h2>Bilgi Tabani <span id="kbRecordCount" class="badge">0</span></h2>
+              <div class="section-actions">
+                <button id="kbAddBtn" class="btn btn-primary">+ Yeni Kayit</button>
+                <label class="btn btn-secondary file-upload-label">
+                  Dosya Yukle (PDF/DOCX/TXT)
+                  <input id="kbFileUpload" type="file" accept=".pdf,.docx,.txt" style="display:none" />
                 </label>
-                <span id="scLogoStatus" class="status-text" style="margin-left:8px"></span>
+                <button id="kbReingestBtn" class="btn btn-secondary">Yeniden Yukle</button>
+                <span id="kbReingestStatus" class="status-text"></span>
+                <span id="kbUploadStatus" class="status-text"></span>
               </div>
             </div>
+            <div class="table-section">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Soru</th>
+                    <th>Cevap</th>
+                    <th>Islemler</th>
+                  </tr>
+                </thead>
+                <tbody id="kbTableBody">
+                  <tr>
+                    <td colspan="4" class="empty">Yukleniyor...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-            <div class="cf-group">
-              <h4>Sayfa Metinleri</h4>
-              <div class="cf-field">
-                <label for="scPageTitle">Sayfa Basligi (browser tab)</label>
-                <input id="scPageTitle" type="text" class="cf-textarea" style="height:auto" />
+          <!-- PANEL: FAQ Onerileri -->
+          <div id="panelAutoFAQ" class="panel">
+            <div class="section-header">
+              <h3>Onerilen FAQ'lar (Otomatik)</h3>
+              <button id="autoFaqGenerateBtn" class="btn btn-secondary">FAQ Olustur</button>
+            </div>
+            <div id="autoFaqSection" class="table-section">
+              <p class="empty">Henuz oneri yok.</p>
+            </div>
+          </div>
+
+          <!-- PANEL: Agent Dosyalari -->
+          <div id="panelAgentFiles" class="panel">
+            <div class="editor-layout">
+              <div class="file-list-panel">
+                <h3>Dosyalar</h3>
+                <ul id="agentFileList"></ul>
               </div>
-              <div class="cf-field">
-                <label for="scHeroTitle">Ana Baslik</label>
-                <input id="scHeroTitle" type="text" class="cf-textarea" style="height:auto" />
-              </div>
-              <div class="cf-field">
-                <label for="scHeroDescription">Aciklama Metni</label>
-                <textarea id="scHeroDescription" rows="2" class="cf-textarea"></textarea>
-              </div>
-              <div class="cf-field">
-                <label for="scHeroButtonText">Baslat Butonu Metni</label>
-                <input id="scHeroButtonText" type="text" class="cf-textarea" style="height:auto" />
-              </div>
-              <div class="cf-field">
-                <label for="scHeroHint">Alt Aciklama</label>
-                <textarea id="scHeroHint" rows="2" class="cf-textarea"></textarea>
+              <div class="editor-panel">
+                <div class="editor-header">
+                  <span id="agentEditorFilename" class="editor-filename">Dosya seciniz</span>
+                  <div class="editor-actions">
+                    <button id="agentEditorRevertBtn" class="btn btn-secondary" disabled>Geri Al</button>
+                    <button id="agentEditorSaveBtn" class="btn btn-primary" disabled>Kaydet</button>
+                  </div>
+                </div>
+                <textarea id="agentEditorTextarea" class="code-editor" placeholder="Dosya seciniz..." disabled></textarea>
               </div>
             </div>
+          </div>
 
-            <div class="cf-group">
-              <h4>Sohbet Penceresi</h4>
-              <div class="cf-field">
-                <label for="scHeaderTitle">Header Basligi</label>
-                <input id="scHeaderTitle" type="text" class="cf-textarea" style="height:auto" />
+          <!-- PANEL: Konular -->
+          <div id="panelTopics" class="panel">
+            <div class="section-header">
+              <h3>Konular</h3>
+              <button id="topicAddBtn" class="btn btn-primary">+ Yeni Konu</button>
+            </div>
+            <div class="table-section">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Baslik</th>
+                    <th>Anahtar Kelimeler</th>
+                    <th>Eskalasyon</th>
+                    <th>Dogrudan Cozum</th>
+                    <th>Islemler</th>
+                  </tr>
+                </thead>
+                <tbody id="topicsTableBody">
+                  <tr>
+                    <td colspan="6" class="empty">Yukleniyor...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- PANEL: Bellek Sablonlari -->
+          <div id="panelMemory" class="panel">
+            <div class="memory-grid">
+              <div class="memory-card">
+                <div class="memory-card-header">
+                  <h3>ticket-template.json</h3>
+                  <div>
+                    <span id="memoryTicketValidation" class="validation-badge"></span>
+                    <button id="memoryTicketSaveBtn" class="btn btn-primary btn-sm">Kaydet</button>
+                  </div>
+                </div>
+                <textarea id="memoryTicketTemplate" class="code-editor json-editor"></textarea>
               </div>
-              <div class="cf-field">
-                <label for="scInputPlaceholder">Mesaj Alani Placeholder</label>
-                <input id="scInputPlaceholder" type="text" class="cf-textarea" style="height:auto" />
-              </div>
-              <div class="cf-field">
-                <label for="scSendButtonText">Gonder Butonu Metni</label>
-                <input id="scSendButtonText" type="text" class="cf-textarea" style="height:auto" />
+              <div class="memory-card">
+                <div class="memory-card-header">
+                  <h3>conversation-schema.json</h3>
+                  <div>
+                    <span id="memorySchemaValidation" class="validation-badge"></span>
+                    <button id="memorySchemaSaveBtn" class="btn btn-primary btn-sm">Kaydet</button>
+                  </div>
+                </div>
+                <textarea id="memoryConversationSchema" class="code-editor json-editor"></textarea>
               </div>
             </div>
+          </div>
 
-            <div class="cf-group">
-              <h4>Renkler</h4>
-              <div class="cf-field">
-                <label for="scThemeColor">Tema Rengi (browser)</label>
-                <div style="display:flex;align-items:center;gap:8px">
-                  <input id="scThemeColor" type="color" style="width:40px;height:32px;border:1px solid var(--line);border-radius:4px;cursor:pointer" />
-                  <span id="scThemeColorHex" style="font-size:0.85rem;color:var(--muted)"></span>
+          <!-- PANEL: Ortam Degiskenleri -->
+          <div id="panelEnv" class="panel">
+            <form id="envForm">
+              <!-- Groups will be built by JS -->
+            </form>
+            <div class="env-actions">
+              <button id="envSaveBtn" class="btn btn-primary">Kaydet</button>
+              <span id="envSaveStatus" class="status-text"></span>
+            </div>
+          </div>
+
+          <!-- PANEL: Sohbet Akisi -->
+          <div id="panelChatFlow" class="panel">
+            <div class="chat-flow-config">
+              <h3>Sohbet Akis Ayarlari</h3>
+              <p class="section-desc">Chatbot davranis ve zamanlama ayarlarini buradan yapilandirabilirsiniz.</p>
+
+              <div class="cf-group">
+                <h4>Karsilama</h4>
+                <div class="cf-field">
+                  <label for="cfWelcomeMessage">Karsilama Mesaji</label>
+                  <textarea id="cfWelcomeMessage" rows="2" class="cf-textarea"></textarea>
                 </div>
               </div>
-              <div class="cf-field">
-                <label for="scPrimaryColor">Ana Renk (butonlar, vurgular)</label>
-                <div style="display:flex;align-items:center;gap:8px">
-                  <input id="scPrimaryColor" type="color" style="width:40px;height:32px;border:1px solid var(--line);border-radius:4px;cursor:pointer" />
-                  <span id="scPrimaryColorHex" style="font-size:0.85rem;color:var(--muted)"></span>
+
+              <div class="cf-group">
+                <h4>Zamanlama</h4>
+                <div class="cf-field">
+                  <label for="cfAggregationMs">Mesaj Birlestirme Penceresi (ms)</label>
+                  <div class="cf-range-row">
+                    <input id="cfAggregationMs" type="range" min="1000" max="10000" step="500" />
+                    <span id="cfAggregationMsVal" class="cf-range-val"></span>
+                  </div>
+                  <small>Kullanici art arda mesaj yazarken birlestirme bekleme suresi</small>
                 </div>
-                <small>Bos birakirsaniz varsayilan tema rengi kullanilir</small>
+                <div class="cf-field">
+                  <label for="cfBotDelayMs">Bot Yanit Gecikmesi (ms)</label>
+                  <div class="cf-range-row">
+                    <input id="cfBotDelayMs" type="range" min="0" max="5000" step="250" />
+                    <span id="cfBotDelayMsVal" class="cf-range-val"></span>
+                  </div>
+                  <small>Yaziyor animasyonu suresi (dogal hissettirmek icin)</small>
+                </div>
+                <div class="cf-field cf-toggle-field">
+                  <label for="cfTypingEnabled">Yaziyor Gostergesi</label>
+                  <input id="cfTypingEnabled" type="checkbox" class="cf-toggle" />
+                </div>
+              </div>
+
+              <div class="cf-group">
+                <h4>Hareketsizlik ve Uyari</h4>
+                <div class="cf-field">
+                  <label for="cfInactivityMs">Hareketsizlik Zamanlayici (dakika)</label>
+                  <div class="cf-range-row">
+                    <input id="cfInactivityMs" type="range" min="1" max="30" step="1" />
+                    <span id="cfInactivityMsVal" class="cf-range-val"></span>
+                  </div>
+                </div>
+                <div class="cf-field cf-toggle-field">
+                  <label for="cfNudgeEnabled">Uyari Mesajlari Aktif</label>
+                  <input id="cfNudgeEnabled" type="checkbox" class="cf-toggle" />
+                </div>
+                <div class="cf-field">
+                  <label for="cfNudge75">%75 Uyari Mesaji</label>
+                  <textarea id="cfNudge75" rows="2" class="cf-textarea"></textarea>
+                </div>
+                <div class="cf-field">
+                  <label for="cfNudge90">%90 Uyari Mesaji</label>
+                  <textarea id="cfNudge90" rows="2" class="cf-textarea"></textarea>
+                </div>
+                <div class="cf-field">
+                  <label for="cfInactivityClose">Zaman Asimi Mesaji</label>
+                  <textarea id="cfInactivityClose" rows="2" class="cf-textarea"></textarea>
+                </div>
+              </div>
+
+              <div class="cf-group">
+                <h4>Akilli Algilama</h4>
+                <div class="cf-field cf-toggle-field">
+                  <label for="cfGibberishEnabled">Anlamsiz Mesaj Algilama</label>
+                  <input id="cfGibberishEnabled" type="checkbox" class="cf-toggle" />
+                </div>
+                <div class="cf-field">
+                  <label for="cfGibberishMsg">Anlamsiz Mesaj Yaniti</label>
+                  <textarea id="cfGibberishMsg" rows="2" class="cf-textarea"></textarea>
+                </div>
+                <div class="cf-field">
+                  <label for="cfMaxRetries">Maks. Aydinlatma Tekrari</label>
+                  <div class="cf-range-row">
+                    <input id="cfMaxRetries" type="range" min="1" max="10" step="1" />
+                    <span id="cfMaxRetriesVal" class="cf-range-val"></span>
+                  </div>
+                  <small>Bu sayida tekrardan sonra canli destek'e aktarilir</small>
+                </div>
+              </div>
+
+              <div class="cf-group">
+                <h4>Kapanis Akisi</h4>
+                <div class="cf-field cf-toggle-field">
+                  <label for="cfClosingEnabled">Kapanis Akisi Aktif</label>
+                  <input id="cfClosingEnabled" type="checkbox" class="cf-toggle" />
+                </div>
+                <div class="cf-field">
+                  <label for="cfAnythingElse">Baska Bir Sey Var Mi Mesaji</label>
+                  <textarea id="cfAnythingElse" rows="2" class="cf-textarea"></textarea>
+                </div>
+                <div class="cf-field">
+                  <label for="cfFarewell">Veda Mesaji</label>
+                  <textarea id="cfFarewell" rows="2" class="cf-textarea"></textarea>
+                </div>
+                <div class="cf-field cf-toggle-field">
+                  <label for="cfCsatEnabled">CSAT Degerlendirme</label>
+                  <input id="cfCsatEnabled" type="checkbox" class="cf-toggle" />
+                </div>
+                <div class="cf-field">
+                  <label for="cfCsatMsg">CSAT Mesaji</label>
+                  <textarea id="cfCsatMsg" rows="2" class="cf-textarea"></textarea>
+                </div>
+              </div>
+
+              <div class="cf-actions">
+                <button id="cfSaveBtn" class="btn btn-primary">Kaydet</button>
+                <button id="cfResetBtn" class="btn btn-secondary">Varsayilana Don</button>
+                <span id="cfSaveStatus" class="status-text"></span>
               </div>
             </div>
+          </div>
 
-            <div class="cf-actions">
-              <button id="scSaveBtn" class="btn btn-primary">Kaydet</button>
-              <button id="scResetBtn" class="btn btn-secondary">Varsayilana Don</button>
-              <span id="scSaveStatus" class="status-text"></span>
+          <!-- PANEL: Site Ayarlari -->
+          <div id="panelSiteConfig" class="panel">
+            <div class="chat-flow-config">
+              <h3>Site Ayarlari</h3>
+              <p class="section-desc">Chatbot sayfasinin gorunumunu ve markasini buradan ozellestirin. Degisiklikler sunucuda saklanir, GitHub reposunu etkilemez.</p>
+
+              <div class="cf-group">
+                <h4>Logo</h4>
+                <div class="cf-field">
+                  <label>Mevcut Logo</label>
+                  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+                    <img id="scLogoPreview" src="qragy_logo.jpg" alt="Logo" style="width:48px;height:48px;object-fit:contain;border-radius:8px;border:1px solid var(--line)" />
+                    <span id="scLogoName" style="color:var(--muted);font-size:0.85rem">Varsayilan logo</span>
+                  </div>
+                  <label class="btn btn-secondary file-upload-label" style="display:inline-block">
+                    Logo Yukle (max 2MB)
+                    <input type="file" id="scLogoInput" accept="image/jpeg,image/png,image/svg+xml,image/webp,image/gif" hidden />
+                  </label>
+                  <span id="scLogoStatus" class="status-text" style="margin-left:8px"></span>
+                </div>
+              </div>
+
+              <div class="cf-group">
+                <h4>Sayfa Metinleri</h4>
+                <div class="cf-field">
+                  <label for="scPageTitle">Sayfa Basligi (browser tab)</label>
+                  <input id="scPageTitle" type="text" class="cf-textarea" style="height:auto" />
+                </div>
+                <div class="cf-field">
+                  <label for="scHeroTitle">Ana Baslik</label>
+                  <input id="scHeroTitle" type="text" class="cf-textarea" style="height:auto" />
+                </div>
+                <div class="cf-field">
+                  <label for="scHeroDescription">Aciklama Metni</label>
+                  <textarea id="scHeroDescription" rows="2" class="cf-textarea"></textarea>
+                </div>
+                <div class="cf-field">
+                  <label for="scHeroButtonText">Baslat Butonu Metni</label>
+                  <input id="scHeroButtonText" type="text" class="cf-textarea" style="height:auto" />
+                </div>
+                <div class="cf-field">
+                  <label for="scHeroHint">Alt Aciklama</label>
+                  <textarea id="scHeroHint" rows="2" class="cf-textarea"></textarea>
+                </div>
+              </div>
+
+              <div class="cf-group">
+                <h4>Sohbet Penceresi</h4>
+                <div class="cf-field">
+                  <label for="scHeaderTitle">Header Basligi</label>
+                  <input id="scHeaderTitle" type="text" class="cf-textarea" style="height:auto" />
+                </div>
+                <div class="cf-field">
+                  <label for="scInputPlaceholder">Mesaj Alani Placeholder</label>
+                  <input id="scInputPlaceholder" type="text" class="cf-textarea" style="height:auto" />
+                </div>
+                <div class="cf-field">
+                  <label for="scSendButtonText">Gonder Butonu Metni</label>
+                  <input id="scSendButtonText" type="text" class="cf-textarea" style="height:auto" />
+                </div>
+              </div>
+
+              <div class="cf-group">
+                <h4>Renkler</h4>
+                <div class="cf-field">
+                  <label for="scThemeColor">Tema Rengi (browser)</label>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <input id="scThemeColor" type="color" style="width:40px;height:32px;border:1px solid var(--line);border-radius:4px;cursor:pointer" />
+                    <span id="scThemeColorHex" style="font-size:0.85rem;color:var(--muted)"></span>
+                  </div>
+                </div>
+                <div class="cf-field">
+                  <label for="scPrimaryColor">Ana Renk (butonlar, vurgular)</label>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <input id="scPrimaryColor" type="color" style="width:40px;height:32px;border:1px solid var(--line);border-radius:4px;cursor:pointer" />
+                    <span id="scPrimaryColorHex" style="font-size:0.85rem;color:var(--muted)"></span>
+                  </div>
+                  <small>Bos birakirsaniz varsayilan tema rengi kullanilir</small>
+                </div>
+              </div>
+
+              <div class="cf-actions">
+                <button id="scSaveBtn" class="btn btn-primary">Kaydet</button>
+                <button id="scResetBtn" class="btn btn-secondary">Varsayilana Don</button>
+                <span id="scSaveStatus" class="status-text"></span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Sub-tab: Webhooks -->
-        <div id="subContentWebhooks" class="sub-tab-content">
-          <div class="section-header">
-            <h3>Webhook Bildirimleri</h3>
-            <button id="webhookAddBtn" class="btn btn-primary">+ Yeni Webhook</button>
+          <!-- PANEL: Webhooks -->
+          <div id="panelWebhooks" class="panel">
+            <div class="section-header">
+              <h3>Webhook Bildirimleri</h3>
+              <button id="webhookAddBtn" class="btn btn-primary">+ Yeni Webhook</button>
+            </div>
+            <div class="table-section">
+              <table>
+                <thead>
+                  <tr>
+                    <th>URL</th>
+                    <th>Olaylar</th>
+                    <th>Durum</th>
+                    <th>Islemler</th>
+                  </tr>
+                </thead>
+                <tbody id="webhooksTableBody">
+                  <tr><td colspan="4" class="empty">Yukleniyor...</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div class="table-section">
-            <table>
-              <thead>
-                <tr>
-                  <th>URL</th>
-                  <th>Olaylar</th>
-                  <th>Durum</th>
-                  <th>Islemler</th>
-                </tr>
-              </thead>
-              <tbody id="webhooksTableBody">
-                <tr><td colspan="4" class="empty">Yukleniyor...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
 
-        <!-- Sub-tab: Prompt Versions -->
-        <div id="subContentPromptVersions" class="sub-tab-content">
-          <div class="section-header">
-            <h3>Prompt Versiyon Gecmisi</h3>
+          <!-- PANEL: Prompt Gecmisi -->
+          <div id="panelPromptVersions" class="panel">
+            <div class="section-header">
+              <h3>Prompt Versiyon Gecmisi</h3>
+            </div>
+            <div class="table-section">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Dosya</th>
+                    <th>Tarih</th>
+                    <th>Boyut</th>
+                    <th>Islemler</th>
+                  </tr>
+                </thead>
+                <tbody id="promptVersionsTableBody">
+                  <tr><td colspan="4" class="empty">Yukleniyor...</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div class="table-section">
-            <table>
-              <thead>
-                <tr>
-                  <th>Dosya</th>
-                  <th>Tarih</th>
-                  <th>Boyut</th>
-                  <th>Islemler</th>
-                </tr>
-              </thead>
-              <tbody id="promptVersionsTableBody">
-                <tr><td colspan="4" class="empty">Yukleniyor...</td></tr>
-              </tbody>
-            </table>
+
+          <!-- PANEL: CRM Entegrasyonu -->
+          <div id="panelSunshine" class="panel">
+            <div class="chat-flow-config">
+              <h3>CRM Entegrasyonu (Zendesk Sunshine Conversations)</h3>
+              <p class="section-desc">Zendesk Sunshine Conversations entegrasyonu ile Zendesk chat widget uzerinden gelen mesajlari Qragy ile karsilayin. Eskalasyonda canli temsilciye otomatik aktarim yapilir.</p>
+
+              <div class="cf-group">
+                <h4>Baglanti Ayarlari</h4>
+                <div class="cf-field">
+                  <label for="sunEnabled">Entegrasyon Durumu</label>
+                  <select id="sunEnabled" class="cf-textarea" style="height:auto">
+                    <option value="false">Kapali</option>
+                    <option value="true">Acik</option>
+                  </select>
+                </div>
+                <div class="cf-field">
+                  <label for="sunSubdomain">Zendesk Subdomain</label>
+                  <input id="sunSubdomain" type="text" class="cf-textarea" style="height:auto" placeholder="firmaadiniz (firmaadiniz.zendesk.com)" />
+                </div>
+                <div class="cf-field">
+                  <label for="sunAppId">App ID</label>
+                  <input id="sunAppId" type="text" class="cf-textarea" style="height:auto" placeholder="Sunshine Conversations App ID" />
+                </div>
+                <div class="cf-field">
+                  <label for="sunKeyId">API Key ID</label>
+                  <input id="sunKeyId" type="text" class="cf-textarea" style="height:auto" placeholder="API Key ID" />
+                </div>
+                <div class="cf-field">
+                  <label for="sunKeySecret">API Key Secret</label>
+                  <input id="sunKeySecret" type="password" class="cf-textarea" style="height:auto" placeholder="API Key Secret" />
+                </div>
+                <div class="cf-field">
+                  <label for="sunWebhookSecret">Webhook Secret (X-API-Key)</label>
+                  <input id="sunWebhookSecret" type="password" class="cf-textarea" style="height:auto" placeholder="Webhook dogrulama anahtari" />
+                </div>
+                <div class="cf-field">
+                  <label for="sunFarewellMessage">Eskalasyon Veda Mesaji</label>
+                  <textarea id="sunFarewellMessage" rows="2" class="cf-textarea" placeholder="Canli temsilciye aktarilirken gonderilecek mesaj"></textarea>
+                </div>
+              </div>
+
+              <div class="cf-group">
+                <h4>Webhook URL</h4>
+                <p class="section-desc">Zendesk Sunshine Conversations ayarlarindan asagidaki URL'yi webhook olarak ekleyin. Trigger: <code>conversation:message</code></p>
+                <div class="cf-field">
+                  <label>Webhook Endpoint</label>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <code id="sunWebhookUrl" style="background:var(--bg);padding:8px 12px;border-radius:6px;border:1px solid var(--line);flex:1;word-break:break-all;font-size:0.85rem"></code>
+                    <button id="sunCopyUrlBtn" class="btn btn-secondary" style="white-space:nowrap">Kopyala</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="cf-group">
+                <h4>Baglanti Durumu</h4>
+                <div id="sunTestResult" style="padding:8px 12px;border-radius:6px;font-size:0.9rem;display:none"></div>
+              </div>
+
+              <div class="cf-actions">
+                <button id="sunSaveBtn" class="btn btn-primary">Kaydet</button>
+                <button id="sunTestBtn" class="btn btn-secondary">Baglantiyi Test Et</button>
+                <span id="sunSaveStatus" class="status-text"></span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <!-- Sub-tab: Sunshine / CRM Entegrasyonu -->
-        <div id="subContentSunshine" class="sub-tab-content">
-          <div class="chat-flow-config">
-            <h3>CRM Entegrasyonu (Zendesk Sunshine Conversations)</h3>
-            <p class="section-desc">Zendesk Sunshine Conversations entegrasyonu ile Zendesk chat widget uzerinden gelen mesajlari Qragy ile karsilayin. Eskalasyonda canli temsilciye otomatik aktarim yapilir.</p>
-
-            <div class="cf-group">
-              <h4>Baglanti Ayarlari</h4>
-              <div class="cf-field">
-                <label for="sunEnabled">Entegrasyon Durumu</label>
-                <select id="sunEnabled" class="cf-textarea" style="height:auto">
-                  <option value="false">Kapali</option>
-                  <option value="true">Acik</option>
+          <!-- PANEL: Analitik Dashboard -->
+          <div id="panelAnalytics" class="panel">
+            <div class="section-header">
+              <h2>Analitik</h2>
+              <div class="section-actions">
+                <select id="analyticsRange">
+                  <option value="7d" selected>Son 7 Gun</option>
+                  <option value="30d">Son 30 Gun</option>
+                  <option value="90d">Son 90 Gun</option>
                 </select>
               </div>
-              <div class="cf-field">
-                <label for="sunSubdomain">Zendesk Subdomain</label>
-                <input id="sunSubdomain" type="text" class="cf-textarea" style="height:auto" placeholder="firmaadiniz (firmaadiniz.zendesk.com)" />
+            </div>
+
+            <div id="analyticsSummary" class="summary-grid"></div>
+
+            <div class="analytics-chart-section">
+              <h3>Gunluk Sohbet Sayisi</h3>
+              <div id="analyticsChart" class="analytics-chart"></div>
+            </div>
+
+            <div class="analytics-topics-section">
+              <h3>En Cok Konusulan Konular</h3>
+              <div class="table-section">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Konu</th>
+                      <th>Sayi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="topTopicsTableBody">
+                    <tr><td colspan="3" class="empty">Yukleniyor...</td></tr>
+                  </tbody>
+                </table>
               </div>
-              <div class="cf-field">
-                <label for="sunAppId">App ID</label>
-                <input id="sunAppId" type="text" class="cf-textarea" style="height:auto" placeholder="Sunshine Conversations App ID" />
-              </div>
-              <div class="cf-field">
-                <label for="sunKeyId">API Key ID</label>
-                <input id="sunKeyId" type="text" class="cf-textarea" style="height:auto" placeholder="API Key ID" />
-              </div>
-              <div class="cf-field">
-                <label for="sunKeySecret">API Key Secret</label>
-                <input id="sunKeySecret" type="password" class="cf-textarea" style="height:auto" placeholder="API Key Secret" />
-              </div>
-              <div class="cf-field">
-                <label for="sunWebhookSecret">Webhook Secret (X-API-Key)</label>
-                <input id="sunWebhookSecret" type="password" class="cf-textarea" style="height:auto" placeholder="Webhook dogrulama anahtari" />
-              </div>
-              <div class="cf-field">
-                <label for="sunFarewellMessage">Eskalasyon Veda Mesaji</label>
-                <textarea id="sunFarewellMessage" rows="2" class="cf-textarea" placeholder="Canli temsilciye aktarilirken gonderilecek mesaj"></textarea>
+            </div>
+          </div>
+
+          <!-- PANEL: Content Gaps -->
+          <div id="panelContentGaps" class="panel">
+            <div class="section-header">
+              <h2>Cevaplanamayan Sorular (Content Gaps)</h2>
+            </div>
+            <div id="contentGapsSection" class="table-section">
+              <p class="empty">Yukleniyor...</p>
+            </div>
+          </div>
+
+          <!-- PANEL: Sistem Durumu -->
+          <div id="panelSystem" class="panel">
+            <div class="section-header">
+              <h2>Sistem Durumu</h2>
+              <div class="section-actions">
+                <button id="sysRefreshBtn" class="btn btn-secondary">Yenile</button>
+                <button id="sysReloadBtn" class="btn btn-primary">Agent Config Yeniden Yukle</button>
               </div>
             </div>
 
-            <div class="cf-group">
-              <h4>Webhook URL</h4>
-              <p class="section-desc">Zendesk Sunshine Conversations ayarlarindan asagidaki URL'yi webhook olarak ekleyin. Trigger: <code>conversation:message</code></p>
-              <div class="cf-field">
-                <label>Webhook Endpoint</label>
-                <div style="display:flex;align-items:center;gap:8px">
-                  <code id="sunWebhookUrl" style="background:var(--bg);padding:8px 12px;border-radius:6px;border:1px solid var(--line);flex:1;word-break:break-all;font-size:0.85rem"></code>
-                  <button id="sunCopyUrlBtn" class="btn btn-secondary" style="white-space:nowrap">Kopyala</button>
-                </div>
+            <div id="sysHealthGrid" class="health-grid">
+              <!-- Health cards populated by JS -->
+            </div>
+
+            <!-- SLA Summary -->
+            <div class="analytics-topics-section" style="margin-bottom:20px">
+              <h3>SLA Durumu</h3>
+              <div id="slaSummary" class="summary-grid"></div>
+              <div id="slaBreaches" class="table-section" style="margin-top:8px"></div>
+            </div>
+
+            <!-- Audit Log -->
+            <div class="analytics-topics-section" style="margin-bottom:20px">
+              <h3>Degisiklik Gecmisi (Audit Log)</h3>
+              <div id="auditLogSection" class="table-section"></div>
+            </div>
+
+            <div class="status-sections">
+              <div class="status-section">
+                <h3>Agent Dosyalari</h3>
+                <div id="sysAgentStatus"></div>
+              </div>
+              <div class="status-section">
+                <h3>Bilgi Tabani</h3>
+                <div id="sysKBStatus"></div>
               </div>
             </div>
-
-            <div class="cf-group">
-              <h4>Baglanti Durumu</h4>
-              <div id="sunTestResult" style="padding:8px 12px;border-radius:6px;font-size:0.9rem;display:none"></div>
-            </div>
-
-            <div class="cf-actions">
-              <button id="sunSaveBtn" class="btn btn-primary">Kaydet</button>
-              <button id="sunTestBtn" class="btn btn-secondary">Baglantiyi Test Et</button>
-              <span id="sunSaveStatus" class="status-text"></span>
-            </div>
           </div>
-        </div>
-      </section>
 
-      <!-- TAB 4: Analitik -->
-      <section id="tabAnalytics" class="tab-content">
-        <div class="section-header">
-          <h2>Analitik</h2>
-          <div class="section-actions">
-            <select id="analyticsRange">
-              <option value="7d" selected>Son 7 Gun</option>
-              <option value="30d">Son 30 Gun</option>
-              <option value="90d">Son 90 Gun</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="analyticsSummary" class="summary-grid"></div>
-
-        <div class="analytics-chart-section">
-          <h3>Gunluk Sohbet Sayisi</h3>
-          <div id="analyticsChart" class="analytics-chart"></div>
-        </div>
-
-        <div class="analytics-topics-section">
-          <h3>En Cok Konusulan Konular</h3>
-          <div class="table-section">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Konu</th>
-                  <th>Sayi</th>
-                </tr>
-              </thead>
-              <tbody id="topTopicsTableBody">
-                <tr><td colspan="3" class="empty">Yukleniyor...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="analytics-topics-section" style="margin-top:24px">
-          <h3>Cevaplanamayan Sorular (Content Gaps)</h3>
-          <div id="contentGapsSection" class="table-section">
-            <p class="empty">Yukleniyor...</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 5: Sistem -->
-      <section id="tabSystem" class="tab-content">
-        <div class="section-header">
-          <h2>Sistem Durumu</h2>
-          <div class="section-actions">
-            <button id="sysRefreshBtn" class="btn btn-secondary">Yenile</button>
-            <button id="sysReloadBtn" class="btn btn-primary">Agent Config Yeniden Yukle</button>
-          </div>
-        </div>
-
-        <div id="sysHealthGrid" class="health-grid">
-          <!-- Health cards populated by JS -->
-        </div>
-
-        <!-- SLA Summary -->
-        <div class="analytics-topics-section" style="margin-bottom:20px">
-          <h3>SLA Durumu</h3>
-          <div id="slaSummary" class="summary-grid"></div>
-          <div id="slaBreaches" class="table-section" style="margin-top:8px"></div>
-        </div>
-
-        <!-- Audit Log -->
-        <div class="analytics-topics-section" style="margin-bottom:20px">
-          <h3>Degisiklik Gecmisi (Audit Log)</h3>
-          <div id="auditLogSection" class="table-section"></div>
-        </div>
-
-        <div class="status-sections">
-          <div class="status-section">
-            <h3>Agent Dosyalari</h3>
-            <div id="sysAgentStatus"></div>
-          </div>
-          <div class="status-section">
-            <h3>Bilgi Tabani</h3>
-            <div id="sysKBStatus"></div>
-          </div>
-        </div>
-      </section>
+        </div><!-- /.admin-main -->
+      </div><!-- /.admin-layout -->
 
       <!-- KB Modal -->
       <div id="kbModal" class="modal-overlay" style="display:none">
@@ -802,8 +893,9 @@
 
       <!-- Toast Container -->
       <div id="toastContainer" class="toast-container"></div>
+
     </main>
 
-    <script src="admin.js?v=20260216"></script>
+    <script src="admin.js?v=20260218b"></script>
   </body>
 </html>
