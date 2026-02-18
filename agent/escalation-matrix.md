@@ -23,6 +23,7 @@ Escalation mesajinda konusma ozetini dahil et. Bot, temsilciye aktarirken su bil
 - Denenen adimlar (varsa)
 
 ## Escalation Oncesi Kontrol Listesi
-1. Sube kodu / kullanici kodu toplanmis mi? Toplanmadiysa ONCE kodunu sor.
-2. Ilgili konu dosyasi denendi mi? Denenmeden escalation yapma.
+1. Ilgili konu dosyasi ve bilgi tabani kullanilarak bilgilendirme yapildi mi? Bilgilendirme YAPILMADAN escalation baslatma.
+2. Sube kodu / kullanici kodu toplanmis mi? Toplanmadiysa ONCE kodunu sor.
 3. Gerekli ek bilgiler toplanmis mi? Konu dosyasinda belirtilen zorunlu alanlar sorulmus mu?
+ONEMLI: Bilgi toplama (firma, sube, kullanici kodu) SADECE escalation akisinda yapilir. canResolveDirectly=true konularda bilgi toplama.

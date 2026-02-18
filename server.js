@@ -1821,13 +1821,13 @@ function buildSystemPrompt(memory, conversationContext, knowledgeResults) {
     if (topicContent) {
       parts.push(`## Tespit Edilen Konu Detayı\nKonu: ${topicMeta?.title || conversationContext.currentTopic}\n${topicContent}`);
       if (topicMeta?.requiredInfo?.length) {
-        parts.push(`## Bu Konu İçin Toplanması Gereken Bilgiler\n${topicMeta.requiredInfo.join(", ")}`);
+        parts.push(`## Escalation Gerekirse Toplanacak Bilgiler\nBu bilgiler SADECE escalation (canlı temsilciye aktarım) gerektiğinde toplanır. Bilgilendirme YAPILMADAN bu bilgileri SORMA.\n${topicMeta.requiredInfo.join(", ")}`);
       }
       if (topicMeta?.requiresEscalation) {
         parts.push("## Not: Bu konu sonunda canlı temsilciye aktarım gerektirir.");
       }
       if (topicMeta?.canResolveDirectly) {
-        parts.push("## Not: Bu konuda bilgilendirme yapıldıktan sonra uğurlama prosedürüne geçilmelidir.");
+        parts.push("## Not: Bu konu doğrudan çözülebilir. Bilgi tabanı ve konu dosyasındaki adımları kullanarak HEMEN bilgilendir. Firma/şube/kullanıcı kodu SORMA. Bilgilendirme sonrası uğurlama prosedürüne geç.");
       }
     }
   }
@@ -1839,14 +1839,15 @@ function buildSystemPrompt(memory, conversationContext, knowledgeResults) {
   parts.push(`Memory schema: ${JSON.stringify(MEMORY_TEMPLATE)}`);
   parts.push(`Current memory: ${JSON.stringify(memory)}`);
   parts.push(`Conversation state: ${JSON.stringify(conversationContext || {})}`);
-  parts.push("Onay metni (sadece ticket toplama için): Talebinizi aldım. Şube kodu: <KOD>. Kısa açıklama: <ÖZET>. Destek ekibi en kısa sürede dönüş yapacaktır.");
+  parts.push("Onay metni (SADECE escalation/ticket toplama sonrası kullan): Talebinizi aldım. Şube kodu: <KOD>. Kısa açıklama: <ÖZET>. Destek ekibi en kısa sürede dönüş yapacaktır.");
   parts.push("Uygun olduğunda yanıtının sonuna hızlı yanıt seçenekleri ekle: [QUICK_REPLIES: secenek1 | secenek2 | secenek3]. Maks 3 seçenek. Yalnızca kullanıcıyı yönlendirmek mantıklıysa ekle.");
 
   // RAG: Bilgi tabani sonuclarini ekle
   if (Array.isArray(knowledgeResults) && knowledgeResults.length > 0) {
     const kbLines = ["## Bilgi Tabanı Sonuçları",
       "Aşağıdaki soru-cevap çiftleri kullanıcının sorusuyla ilişkili olabilir.",
-      "Bu bilgileri kullanarak yanıt ver, ama kullanıcının sorusuna uygun değilse görmezden gel.", ""];
+      "Bu bilgileri kullanarak HEMEN yanıt ver. Firma/şube bilgisi sormadan ÖNCE bu cevapları paylaş.",
+      "Kullanıcının sorusuna uygun değilse görmezden gel.", ""];
     for (const item of knowledgeResults) {
       kbLines.push(`Soru: ${item.question}`);
       kbLines.push(`Cevap: ${item.answer}`);
