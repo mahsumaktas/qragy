@@ -530,8 +530,8 @@ function isGibberishMessage(text) {
   if (!stripped) return true;
   // Repeated single char: "aaaaaaa", "xxxxxxx"
   if (/^(.)\1{4,}$/i.test(trimmed)) return true;
-  // Random consonant strings (no vowels in 6+ chars)
-  if (trimmed.length >= 6 && !/[aeıioöuüAEIİOÖUÜ]/i.test(trimmed)) return true;
+  // Random consonant strings (no vowels in 6+ chars) — but exempt branch codes, phone numbers, order numbers
+  if (trimmed.length >= 6 && !/[aeıioöuüAEIİOÖUÜ]/i.test(trimmed) && !/\d/.test(trimmed)) return true;
   // Very short random text (2-3 chars, not a known word)
   if (trimmed.length <= 2 && !/^(ok|no|da|de|bi|bu|şu|ne|ve|ya|ki|ha|he|hi)$/i.test(trimmed)) return true;
   return false;
@@ -541,19 +541,25 @@ function isGibberishMessage(text) {
 const FAREWELL_WORDS = new Set([
   "hosca kal", "hoscakal", "gorusuruz", "gorusmek uzere",
   "iyi gunler", "iyi aksamlar", "iyi geceler", "iyi calismalar",
-  "bye", "goodbye", "gorusuruz", "kendine iyi bak",
-  "hoscakalin", "bay bay", "bb", "hayirli gunler",
-  "sagolun", "sag olun", "eyvallah",
-  "tesekkurler", "tesekkur ederim", "tesekkur ediyorum",
-  "sagol", "sagolasin", "cok tesekkurler", "cok sagol",
-  "cok tesekkur ederim", "tamam tesekkurler", "anladim tesekkurler"
+  "bye", "goodbye", "kendine iyi bak",
+  "hoscakalin", "hosca kalin", "bay bay", "bb",
+  "hayirli gunler", "hayirli isler", "hayirli aksamlar",
+  "sagolun", "sag olun", "sagolasin", "sagolasiniz", "eyvallah", "eyv",
+  "tesekkurler", "tesekkur ederim", "tesekkur ediyorum", "tsk", "tskler",
+  "sagol", "cok tesekkurler", "cok sagol",
+  "cok tesekkur ederim", "tamam tesekkurler", "anladim tesekkurler",
+  "tamamdir sagol", "tamamdir tesekkurler", "oldu tesekkurler",
+  "kolay gelsin", "hadi gorusuruz", "allaha ismarladik"
 ]);
 
-function isFarewellMessage(text) {
+function isFarewellMessage(text, turnCount) {
   if (!chatFlowConfig.closingFlowEnabled) return false;
-  const normalized = (text || "").trim().toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s]/g, "").trim();
+  // Konusmanin basinda (ilk 2 tur) tesekkur/sagol farewell degil, kibarliktir
+  if (turnCount !== undefined && turnCount < 3) return false;
+  const normalized = normalizeForMatching(text);
+  if (!normalized) return false;
+  // Uzun mesajlar farewell degildir — ek icerik var demektir
+  if (normalized.split(/\s+/).length > 8) return false;
   if (FAREWELL_WORDS.has(normalized)) return true;
   for (const word of FAREWELL_WORDS) {
     if (normalized.includes(word)) return true;
@@ -2007,14 +2013,12 @@ async function generateEscalationSummary(contents, memory, conversationContext) 
 }
 
 // ── Sentiment Analysis (keyword-based) ──────────────────────────────────
-const POSITIVE_WORDS = new Set(["tesekkurler", "tesekkur", "sagol", "sagolun", "harika", "super", "muhtesem", "guzel", "memnunum", "tatmin", "basarili", "cozuldu", "duzeldim", "halloldu", "cok iyi"]);
-const NEGATIVE_WORDS = new Set(["rezalet", "skandal", "berbat", "korkunç", "iğrenç", "kotu", "kizgin", "sinirli", "saçma", "aptal", "yetersiz", "beceriksiz", "cozumsuz", "hala bekliyorum", "maalesef", "hayal kirikligi", "sikayetci", "utanç"]);
+const POSITIVE_WORDS = new Set(["tesekkurler", "tesekkur", "sagol", "sagolun", "harika", "super", "muhtesem", "guzel", "memnunum", "tatmin", "basarili", "cozuldu", "duzeldim", "halloldu", "cok iyi", "mukemmel", "elinize saglik", "sorunsuz"]);
+const NEGATIVE_WORDS = new Set(["rezalet", "skandal", "berbat", "korkunc", "igrenc", "kotu", "kizgin", "sinirli", "sacma", "aptal", "yetersiz", "beceriksiz", "cozumsuz", "hala bekliyorum", "maalesef", "hayal kirikligi", "sikayetci", "utanc", "bozuk", "arizali", "ise yaramadi", "vakit kaybettim"]);
 
 function analyzeSentiment(text) {
   if (!text) return "neutral";
-  const normalized = (text || "").toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s]/g, "");
+  const normalized = normalizeForMatching(text);
   let posScore = 0, negScore = 0;
   for (const word of POSITIVE_WORDS) { if (normalized.includes(word)) posScore++; }
   for (const word of NEGATIVE_WORDS) { if (normalized.includes(word)) negScore++; }
@@ -2563,7 +2567,7 @@ app.post("/api/chat", async (req, res) => {
     }
 
     // Farewell/closing flow detection
-    if (isFarewellMessage(latestUserMessage)) {
+    if (isFarewellMessage(latestUserMessage, activeUserMessages.length)) {
       const hasTicket = hasRequiredFields(memory);
       if (hasTicket) {
         // Find existing ticket for CSAT
@@ -2849,7 +2853,9 @@ app.post("/api/chat", async (req, res) => {
       ].join("\n");
 
       try {
-        const classifyResult = await callLLM(contents, classifyPrompt, 64);
+        // Sadece son 2 kullanici mesajini gonder — tum gecmis gereksiz + yaniltici
+        const recentUserContents = contents.filter(c => c.role === "user").slice(-2);
+        const classifyResult = await callLLM(recentUserContents, classifyPrompt, 64);
         const detectedId = (classifyResult.reply || "").trim().toLowerCase().replace(/[^a-z0-9\-]/g, "");
         const matchedTopic = TOPIC_INDEX.topics.find((t) => t.id === detectedId);
 
