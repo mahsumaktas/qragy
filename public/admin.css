@@ -210,54 +210,6 @@ body {
   animation: fadeIn 0.2s ease;
 }
 
-/* ==========================================================================
-   Tab Navigation
-   ========================================================================== */
-.tab-nav {
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid var(--line);
-  margin-bottom: 16px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-}
-
-.tab-btn {
-  background: transparent;
-  border: none;
-  padding: 0.875rem 1.5rem;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--muted);
-  cursor: pointer;
-  border-bottom: 3px solid transparent;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  position: relative;
-  bottom: -2px;
-}
-
-.tab-btn:hover {
-  color: var(--text);
-  background: rgba(12, 93, 102, 0.05);
-}
-
-.tab-btn.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
-  font-weight: 600;
-}
-
-.tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
-  animation: fadeIn 0.2s ease;
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -267,54 +219,6 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* ==========================================================================
-   Sub-Tab Navigation
-   ========================================================================== */
-.sub-tab-nav {
-  display: flex;
-  gap: 0.25rem;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 1.5rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-}
-
-.sub-tab-btn {
-  background: transparent;
-  border: none;
-  padding: 0.625rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--muted);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  position: relative;
-  bottom: -1px;
-}
-
-.sub-tab-btn:hover {
-  color: var(--text);
-  background: rgba(12, 93, 102, 0.05);
-}
-
-.sub-tab-btn.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
-  font-weight: 600;
-}
-
-.sub-tab-content {
-  display: none;
-}
-
-.sub-tab-content.active {
-  display: block;
-  animation: fadeIn 0.2s ease;
 }
 
 /* ==========================================================================
@@ -532,6 +436,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 .summary-card .label {
@@ -572,14 +477,14 @@ td {
 }
 
 th {
-  background: #f6fbff;
+  background: #eef3f8;
   position: sticky;
   top: 0;
   z-index: 1;
 }
 
 tbody tr:hover {
-  background: #f8fcff;
+  background: #f0f6ff;
 }
 
 .issue-cell {
@@ -1031,6 +936,7 @@ tbody tr:hover {
   border-radius: 8px;
   padding: 1.5rem;
   border-left: 4px solid var(--primary);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 .health-card h3 {
@@ -1717,14 +1623,6 @@ tbody tr:hover {
 
   .admin-header input[type="password"] {
     width: 100%;
-  }
-
-  .admin-body {
-    padding: 1rem;
-  }
-
-  .tab-nav {
-    overflow-x: scroll;
   }
 
   .admin-controls {

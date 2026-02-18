@@ -248,12 +248,12 @@ function renderSummary(summary) {
   const cards = [
     ["Toplam", summary?.total || 0],
     ["Son 24 Saat", summary?.last24h || 0],
-    ["Aktarim Bekleyen", byStatus.handoff_pending || 0],
-    ["Mesai Disi Kuyruk", byStatus.queued_after_hours || 0],
-    ["Aktarim Basarili", byStatus.handoff_success || 0],
+    ["Aktarım Bekleyen", byStatus.handoff_pending || 0],
+    ["Mesai Dışı Kuyruk", byStatus.queued_after_hours || 0],
+    ["Aktarım Başarılı", byStatus.handoff_success || 0],
     ["Parent Aktarim", byStatus.handoff_parent_posted || 0],
-    ["Aktarim Basarisiz", byStatus.handoff_failed || 0],
-    ["Ozet Gonderilemedi", byStatus.handoff_opened_no_summary || 0]
+    ["Aktarım Başarısız", byStatus.handoff_failed || 0],
+    ["Özet Gönderilemedi", byStatus.handoff_opened_no_summary || 0]
   ];
   for (const [label, value] of cards) {
     summaryGrid.appendChild(createSummaryCard(label, value));
@@ -262,7 +262,7 @@ function renderSummary(summary) {
 
 function renderTicketRows(tickets) {
   if (!Array.isArray(tickets) || !tickets.length) {
-    ticketsTableBody.innerHTML = '<tr><td colspan="9" class="empty">Kayit yok.</td></tr>';
+    ticketsTableBody.innerHTML = '<tr><td colspan="9" class="empty">Kayıt yok.</td></tr>';
     return;
   }
   ticketsTableBody.innerHTML = "";
@@ -298,19 +298,19 @@ function renderTicketDetail(ticket) {
   const lines = [
     "ID: " + ticket.id,
     "Durum: " + ticket.status,
-    "Oncelik: " + (ticket.priority || "normal"),
+    "Öncelik: " + (ticket.priority || "normal"),
     "Atanan: " + (ticket.assignedTo || "-"),
     "Kaynak: " + (ticket.source || "web"),
     "CSAT: " + (ticket.csatRating ? ticket.csatRating + "/5" : "-"),
-    "Sube: " + (ticket.branchCode || "-"),
+    "Şube: " + (ticket.branchCode || "-"),
     "Sorun: " + (ticket.issueSummary || "-"),
     "Firma: " + (ticket.companyName || "-"),
     "Ad Soyad: " + (ticket.fullName || "-"),
     "Telefon: " + (ticket.phone || "-"),
-    "Olusturma: " + fmtDate(ticket.createdAt),
-    "Guncelleme: " + fmtDate(ticket.updatedAt),
-    "Aktarim denemesi: " + (ticket.handoffAttempts || 0),
-    "Son aktarim: " + fmtDate(ticket.lastHandoffAt)
+    "Oluşturma: " + fmtDate(ticket.createdAt),
+    "Güncelleme: " + fmtDate(ticket.updatedAt),
+    "Aktarım denemesi: " + (ticket.handoffAttempts || 0),
+    "Son aktarım: " + fmtDate(ticket.lastHandoffAt)
   ];
 
   if (ticket.supportSnapshot) {
@@ -350,7 +350,7 @@ function renderTicketDetail(ticket) {
   chatHistoryEl.innerHTML = "";
 
   if (!Array.isArray(ticket.chatHistory) || !ticket.chatHistory.length) {
-    chatHistoryEl.textContent = "Sohbet gecmisi yok.";
+    chatHistoryEl.textContent = "Sohbet geçmişi yok.";
     return;
   }
 
@@ -359,7 +359,7 @@ function renderTicketDetail(ticket) {
     div.className = msg.role === "user" ? "chat-msg chat-msg-user" : "chat-msg chat-msg-bot";
     const label = document.createElement("span");
     label.className = "chat-msg-label";
-    label.textContent = msg.role === "user" ? "Kullanici" : "Bot";
+    label.textContent = msg.role === "user" ? "Kullanıcı" : "Bot";
     const content = document.createElement("span");
     content.className = "chat-msg-content";
     content.textContent = msg.content || "";
@@ -428,7 +428,7 @@ async function loadClosedConversations() {
     const allConvs = payload.conversations || [];
     const closed = allConvs.filter(c => c.status === "closed");
     if (badge) badge.textContent = String(closed.length);
-    renderConversationRows(tbody, closed, "Kapali sohbet yok.");
+    renderConversationRows(tbody, closed, "Kapalı sohbet yok.");
   } catch (error) {
     tbody.innerHTML = '<tr><td colspan="9" class="empty">Hata: ' + escapeHtml(error.message) + '</td></tr>';
   }
@@ -442,7 +442,7 @@ function renderConversationRows(tbody, convs, emptyMsg) {
   tbody.innerHTML = "";
   for (const c of convs) {
     const statusClass = c.status === "active" ? "status-active" : c.status === "ticketed" ? "status-ticketed" : "status-closed";
-    const statusLabel = c.status === "active" ? "Aktif" : c.status === "ticketed" ? "Ticket'li" : "Kapali";
+    const statusLabel = c.status === "active" ? "Aktif" : c.status === "ticketed" ? "Ticket'li" : "Kapalı";
     const branchCode = c.memory?.branchCode || "-";
     const tr = document.createElement("tr");
     tr.innerHTML =
@@ -463,10 +463,10 @@ function renderConversationRows(tbody, convs, emptyMsg) {
 const closeAllBtn = $("closeAllConvsBtn");
 if (closeAllBtn) {
   closeAllBtn.addEventListener("click", async () => {
-    if (!confirm("Tum aktif sohbetler kapatilacak. Emin misiniz?")) return;
+    if (!confirm("Tüm aktif sohbetler kapatılacak. Emin misiniz?")) return;
     try {
       const result = await apiPost("admin/conversations/close-all", {});
-      showToast((result.closedCount || 0) + " sohbet kapatildi.", "success");
+      showToast((result.closedCount || 0) + " sohbet kapatıldı.", "success");
       void loadLiveConversations();
     } catch (e) {
       showToast("Hata: " + e.message, "error");
@@ -496,12 +496,12 @@ function showConversationDetail(sessionId) {
       "Oturum: " + conv.sessionId,
       "Durum: " + conv.status + (conv.ticketId ? " (Ticket: " + conv.ticketId + ")" : ""),
       "Kaynak: " + (conv.source || "web"),
-      "Mesaj Sayisi: " + (conv.messageCount || 0),
-      "Baslangic: " + fmtDate(conv.createdAt),
-      "Son Guncelleme: " + fmtDate(conv.updatedAt),
+      "Mesaj Sayısı: " + (conv.messageCount || 0),
+      "Başlangıç: " + fmtDate(conv.createdAt),
+      "Son Güncelleme: " + fmtDate(conv.updatedAt),
       "",
       "Toplanan Bilgiler:",
-      "  Sube Kodu: " + (conv.memory?.branchCode || "-"),
+      "  Şube Kodu: " + (conv.memory?.branchCode || "-"),
       "  Sorun: " + (conv.memory?.issueSummary || "-"),
       "  Firma: " + (conv.memory?.companyName || "-"),
       "  Ad Soyad: " + (conv.memory?.fullName || "-"),
@@ -511,16 +511,16 @@ function showConversationDetail(sessionId) {
     let html = '<div class="detail-box"><pre>' + escapeHtml(lines.join("\n")) + '</pre></div>';
 
     if (Array.isArray(conv.chatHistory) && conv.chatHistory.length) {
-      html += '<h3 style="margin:12px 0 8px">Sohbet Gecmisi</h3>';
+      html += '<h3 style="margin:12px 0 8px">Sohbet Geçmişi</h3>';
       html += '<div class="chat-history-container">';
       for (const msg of conv.chatHistory) {
         const cls = msg.role === "user" ? "chat-msg chat-msg-user" : "chat-msg chat-msg-bot";
-        const lbl = msg.role === "user" ? "Kullanici" : "Bot";
+        const lbl = msg.role === "user" ? "Kullanıcı" : "Bot";
         html += '<div class="' + cls + '"><span class="chat-msg-label">' + escapeHtml(lbl) + '</span><span class="chat-msg-content">' + escapeHtml(msg.content || "") + '</span></div>';
       }
       html += '</div>';
     } else {
-      html += '<p class="empty">Sohbet gecmisi yok.</p>';
+      html += '<p class="empty">Sohbet geçmişi yok.</p>';
     }
 
     detailEl.innerHTML = html;
@@ -546,7 +546,7 @@ async function loadSearchTickets() {
     const payload = await apiGet(url);
     const tickets = payload.tickets || [];
     if (!tickets.length) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty">Kayit yok.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="empty">Kayıt yok.</td></tr>';
       return;
     }
     tbody.innerHTML = "";
@@ -573,7 +573,7 @@ async function loadSearchTickets() {
 function setAutoRefresh(enabled) {
   state.autoRefresh = enabled;
   autoButton.dataset.active = enabled ? "1" : "0";
-  autoButton.textContent = enabled ? "Oto Yenile: Acik" : "Oto Yenile: Kapali";
+  autoButton.textContent = enabled ? "Oto Yenile: Açık" : "Oto Yenile: Kapalı";
   if (state.autoTimer) {
     clearInterval(state.autoTimer);
     state.autoTimer = null;
@@ -611,24 +611,24 @@ async function loadSearchTicketDetail(ticketId) {
     const lines = [
       "ID: " + ticket.id,
       "Durum: " + ticket.status,
-      "Oncelik: " + (ticket.priority || "normal"),
+      "Öncelik: " + (ticket.priority || "normal"),
       "Atanan: " + (ticket.assignedTo || "-"),
       "Kaynak: " + (ticket.source || "web"),
-      "Sube: " + (ticket.branchCode || "-"),
+      "Şube: " + (ticket.branchCode || "-"),
       "Sorun: " + (ticket.issueSummary || "-"),
       "Firma: " + (ticket.companyName || "-"),
-      "Olusturma: " + fmtDate(ticket.createdAt),
-      "Guncelleme: " + fmtDate(ticket.updatedAt)
+      "Oluşturma: " + fmtDate(ticket.createdAt),
+      "Güncelleme: " + fmtDate(ticket.updatedAt)
     ];
 
     let html = '<div class="detail-box"><pre>' + escapeHtml(lines.join("\n")) + '</pre></div>';
 
     if (Array.isArray(ticket.chatHistory) && ticket.chatHistory.length) {
-      html += '<h3 style="margin:12px 0 8px">Sohbet Gecmisi</h3>';
+      html += '<h3 style="margin:12px 0 8px">Sohbet Geçmişi</h3>';
       html += '<div class="chat-history-container">';
       for (const msg of ticket.chatHistory) {
         const cls = msg.role === "user" ? "chat-msg chat-msg-user" : "chat-msg chat-msg-bot";
-        const lbl = msg.role === "user" ? "Kullanici" : "Bot";
+        const lbl = msg.role === "user" ? "Kullanıcı" : "Bot";
         html += '<div class="' + cls + '"><span class="chat-msg-label">' + escapeHtml(lbl) + '</span><span class="chat-msg-content">' + escapeHtml(msg.content || "") + '</span></div>';
       }
       html += '</div>';
@@ -677,10 +677,10 @@ async function loadAutoFAQs() {
     const payload = await apiGet("admin/auto-faq");
     const faqs = payload.faqs || [];
     if (!faqs.length) {
-      container.innerHTML = "<p class='empty'>Henuz oneri yok. 'FAQ Olustur' ile olusturabilirsiniz.</p>";
+      container.innerHTML = "<p class='empty'>Henüz öneri yok. 'FAQ Oluştur' ile oluşturabilirsiniz.</p>";
       return;
     }
-    let html = '<table><thead><tr><th>Soru</th><th>Cevap</th><th>Ticket</th><th>Islemler</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>Soru</th><th>Cevap</th><th>Ticket</th><th>İşlemler</th></tr></thead><tbody>';
     for (const f of faqs) {
       html += "<tr><td>" + escapeHtml(f.question) + "</td><td>" + escapeHtml((f.answer || "").slice(0, 100)) + "</td><td>" + escapeHtml(f.ticketId || "-") + "</td>" +
         '<td><button class="btn btn-primary" onclick="approveAutoFaq(\'' + f.id + '\')">Onayla</button> <button class="btn btn-secondary" onclick="rejectAutoFaq(\'' + f.id + '\')">Reddet</button></td></tr>';
@@ -688,14 +688,14 @@ async function loadAutoFAQs() {
     html += "</tbody></table>";
     container.innerHTML = html;
   } catch (_e) {
-    container.innerHTML = "<p class='empty'>Yuklenemedi.</p>";
+    container.innerHTML = "<p class='empty'>Yüklenemedi.</p>";
   }
 }
 
 async function approveAutoFaq(id) {
   try {
     await apiPost("admin/auto-faq/" + id + "/approve");
-    showToast("FAQ onaylandi ve bilgi tabanina eklendi.", "success");
+    showToast("FAQ onaylandı ve bilgi tabanına eklendi.", "success");
     loadKnowledgeBase();
   } catch (err) {
     showToast("Hata: " + err.message, "error");
@@ -715,23 +715,23 @@ async function rejectAutoFaq(id) {
 if ($("autoFaqGenerateBtn")) {
   $("autoFaqGenerateBtn").addEventListener("click", async () => {
     $("autoFaqGenerateBtn").disabled = true;
-    $("autoFaqGenerateBtn").textContent = "Olusturuluyor...";
+    $("autoFaqGenerateBtn").textContent = "Oluşturuluyor...";
     try {
       const result = await apiPost("admin/auto-faq/generate");
-      showToast((result.generated || 0) + " FAQ onerisi olusturuldu.", "success");
+      showToast((result.generated || 0) + " FAQ önerisi oluşturuldu.", "success");
       loadAutoFAQs();
     } catch (err) {
       showToast("Hata: " + err.message, "error");
     } finally {
       $("autoFaqGenerateBtn").disabled = false;
-      $("autoFaqGenerateBtn").textContent = "FAQ Olustur";
+      $("autoFaqGenerateBtn").textContent = "FAQ Oluştur";
     }
   });
 }
 
 function renderKBTable(records) {
   if (!records.length) {
-    kbTableBody.innerHTML = '<tr><td colspan="4" class="empty">Kayit yok.</td></tr>';
+    kbTableBody.innerHTML = '<tr><td colspan="4" class="empty">Kayıt yok.</td></tr>';
     return;
   }
   kbTableBody.innerHTML = "";
@@ -749,7 +749,7 @@ function renderKBTable(records) {
 
 function openKBModal(id, question, answer) {
   state.editingKBId = id;
-  kbModalTitle.textContent = id ? "Kayit Duzenle (#" + id + ")" : "Yeni Kayit";
+  kbModalTitle.textContent = id ? "Kayıt Düzenle (#" + id + ")" : "Yeni Kayıt";
   kbModalQuestion.value = question || "";
   kbModalAnswer.value = answer || "";
   kbModal.style.display = "";
@@ -766,17 +766,17 @@ async function saveKBRecord() {
   const question = kbModalQuestion.value.trim();
   const answer = kbModalAnswer.value.trim();
   if (!question || !answer) {
-    showToast("Soru ve cevap alanlari zorunludur.", "error");
+    showToast("Soru ve cevap alanları zorunludur.", "error");
     return;
   }
 
   try {
     if (state.editingKBId) {
       await apiPut("admin/knowledge/" + state.editingKBId, { question, answer });
-      showToast("Kayit guncellendi.", "success");
+      showToast("Kayıt güncellendi.", "success");
     } else {
       await apiPost("admin/knowledge", { question, answer });
-      showToast("Yeni kayit eklendi.", "success");
+      showToast("Yeni kayıt eklendi.", "success");
     }
     closeKBModal();
     await loadKnowledgeBase();
@@ -786,12 +786,12 @@ async function saveKBRecord() {
 }
 
 async function deleteKBRecord(id) {
-  const ok = await confirmAction("Bu kaydi silmek istediginize emin misiniz? (#" + id + ")");
+  const ok = await confirmAction("Bu kaydı silmek istediğinize emin misiniz? (#" + id + ")");
   if (!ok) return;
 
   try {
     await apiDelete("admin/knowledge/" + id);
-    showToast("Kayit silindi.", "success");
+    showToast("Kayıt silindi.", "success");
     await loadKnowledgeBase();
   } catch (error) {
     showToast("Hata: " + error.message, "error");
@@ -799,12 +799,12 @@ async function deleteKBRecord(id) {
 }
 
 async function triggerReingest() {
-  kbReingestStatus.textContent = "Yukleniyor...";
+  kbReingestStatus.textContent = "Yükleniyor...";
   kbReingestBtn.disabled = true;
   try {
     const payload = await apiPost("admin/knowledge/reingest", {});
     kbReingestStatus.textContent = "Tamamlandi: " + (payload.recordCount || 0) + " kayit";
-    showToast("Bilgi tabani yeniden yuklendi.", "success");
+    showToast("Bilgi tabanı yeniden yüklendi.", "success");
     setTimeout(() => { kbReingestStatus.textContent = ""; }, 5000);
   } catch (error) {
     kbReingestStatus.textContent = "Hata!";
@@ -829,7 +829,7 @@ kbTableBody.addEventListener("click", async (event) => {
       const rec = (payload.records || []).find((r) => r.id === id);
       if (rec) openKBModal(id, rec.question, rec.answer);
     } catch (err) {
-      showToast("Kayit alinamadi: " + err.message, "error");
+      showToast("Kayıt alınamadı: " + err.message, "error");
     }
     return;
   }
@@ -898,7 +898,7 @@ async function saveAgentFile() {
 
 function revertAgentFile() {
   agentEditorTextarea.value = state.originalAgentContent;
-  showToast("Degisiklikler geri alindi.", "info");
+  showToast("Değişiklikler geri alındı.", "info");
 }
 
 agentEditorSaveBtn.addEventListener("click", () => { void saveAgentFile(); });
@@ -975,7 +975,7 @@ async function saveTopic() {
   const id = topicModalId.value.trim();
   const title = topicModalTitle.value.trim();
   if (!id || !title) {
-    showToast("ID ve Baslik zorunludur.", "error");
+    showToast("ID ve Başlık zorunludur.", "error");
     return;
   }
 
@@ -992,10 +992,10 @@ async function saveTopic() {
   try {
     if (state.editingTopicId) {
       await apiPut("admin/agent/topics/" + encodeURIComponent(state.editingTopicId), body);
-      showToast("Konu guncellendi.", "success");
+      showToast("Konu güncellendi.", "success");
     } else {
       await apiPost("admin/agent/topics", body);
-      showToast("Yeni konu olusturuldu.", "success");
+      showToast("Yeni konu oluşturuldu.", "success");
     }
     closeTopicModal();
     await loadTopics();
@@ -1005,7 +1005,7 @@ async function saveTopic() {
 }
 
 async function deleteTopic(topicId) {
-  const ok = await confirmAction("'" + topicId + "' konusunu silmek istediginize emin misiniz?");
+  const ok = await confirmAction("'" + topicId + "' konusunu silmek istediğinize emin misiniz?");
   if (!ok) return;
 
   try {
@@ -1050,11 +1050,11 @@ async function loadMemoryFiles() {
 function validateJsonField(textarea, badge) {
   try {
     JSON.parse(textarea.value);
-    badge.textContent = "Gecerli JSON";
+    badge.textContent = "Geçerli JSON";
     badge.className = "validation-badge valid";
     return true;
   } catch (err) {
-    badge.textContent = "Gecersiz JSON";
+    badge.textContent = "Geçersiz JSON";
     badge.className = "validation-badge invalid";
     return false;
   }
@@ -1132,7 +1132,7 @@ function renderEnvForm(env) {
     const group = document.createElement("div");
     group.className = "env-group";
     const title = document.createElement("h3");
-    title.textContent = "Diger Degiskenler";
+    title.textContent = "Diğer Değişkenler";
     group.appendChild(title);
     for (const key of unassigned) {
       group.appendChild(createEnvField(key, env[key]));
@@ -1146,9 +1146,9 @@ const ENV_HINTS = {
   LLM_API_KEY: "Provider API anahtari",
   LLM_MODEL: "orn: gemini-2.5-flash, gpt-4o, llama3",
   LLM_BASE_URL: "Ollama icin: http://localhost:11434",
-  LLM_FALLBACK_MODELS: "Virgullu yedek zincir, orn: gemini-2.5-flash-lite-001,gemini-2.0-flash",
-  LLM_MAX_OUTPUT_TOKENS: "Maks cikti token (varsayilan: 1024)",
-  LLM_REQUEST_TIMEOUT_MS: "Istek zaman asimi ms (varsayilan: 15000)",
+  LLM_FALLBACK_MODELS: "Virgüllü yedek zincir, orn: gemini-2.5-flash-lite-001,gemini-2.0-flash",
+  LLM_MAX_OUTPUT_TOKENS: "Maks çıktı token (varsayilan: 1024)",
+  LLM_REQUEST_TIMEOUT_MS: "İstek zaman aşımı ms (varsayilan: 15000)",
   EMBEDDING_PROVIDER: "gemini, openai veya ollama",
   EMBEDDING_MODEL: "orn: gemini-embedding-001, text-embedding-3-small",
   EMBEDDING_API_KEY: "Embedding API anahtari (bossa LLM key kullanilir)",
@@ -1214,7 +1214,7 @@ async function loadChatFlowConfig() {
     chatFlowDefaults = payload.defaults || {};
     renderChatFlowConfig(payload.config || {});
   } catch (error) {
-    showToast("Sohbet akis ayarlari yuklenemedi: " + error.message, "error");
+    showToast("Sohbet akış ayarları yüklenemedi: " + error.message, "error");
   }
 }
 
@@ -1299,7 +1299,7 @@ async function saveChatFlowConfig() {
 
   try {
     await apiPut("admin/chat-flow", { config });
-    showToast("Sohbet akis ayarlari kaydedildi.", "success");
+    showToast("Sohbet akış ayarları kaydedildi.", "success");
     if (status) status.textContent = "Kaydedildi";
     setTimeout(() => { if (status) status.textContent = ""; }, 3000);
     // Sistem durumunu yenile
@@ -1313,12 +1313,12 @@ async function saveChatFlowConfig() {
 }
 
 async function resetChatFlowConfig() {
-  const confirmed = await confirmAction("Tum sohbet akis ayarlarini varsayilana dondurmek istediginize emin misiniz?");
+  const confirmed = await confirmAction("Tüm sohbet akış ayarlarını varsayılana döndürmek istediğinize emin misiniz?");
   if (!confirmed) return;
 
   try {
     await apiPut("admin/chat-flow", { config: chatFlowDefaults });
-    showToast("Varsayilan ayarlar yuklendi.", "success");
+    showToast("Varsayılan ayarlar yüklendi.", "success");
     loadChatFlowConfig();
   } catch (error) {
     showToast("Sifirlama hatasi: " + error.message, "error");
@@ -1343,7 +1343,7 @@ async function loadSiteConfig() {
     siteConfigDefaults = payload.defaults || {};
     renderSiteConfig(payload.config || {});
   } catch (error) {
-    showToast("Site ayarlari yuklenemedi: " + error.message, "error");
+    showToast("Site ayarları yüklenemedi: " + error.message, "error");
   }
 }
 
@@ -1413,7 +1413,7 @@ async function saveSiteConfigAdmin() {
 
   try {
     await apiPut("admin/site-config", { config });
-    showToast("Site ayarlari kaydedildi.", "success");
+    showToast("Site ayarları kaydedildi.", "success");
     if (status) status.textContent = "Kaydedildi";
     setTimeout(() => { if (status) status.textContent = ""; }, 3000);
   } catch (error) {
@@ -1425,12 +1425,12 @@ async function saveSiteConfigAdmin() {
 }
 
 async function resetSiteConfigAdmin() {
-  const confirmed = await confirmAction("Tum site ayarlarini varsayilana dondurmek istediginize emin misiniz?");
+  const confirmed = await confirmAction("Tüm site ayarlarını varsayılana döndürmek istediğinize emin misiniz?");
   if (!confirmed) return;
 
   try {
     await apiPut("admin/site-config", { config: siteConfigDefaults });
-    showToast("Varsayilan ayarlar yuklendi.", "success");
+    showToast("Varsayılan ayarlar yüklendi.", "success");
     loadSiteConfig();
   } catch (error) {
     showToast("Sifirlama hatasi: " + error.message, "error");
@@ -1443,12 +1443,12 @@ async function uploadSiteLogo() {
 
   const file = input.files[0];
   if (file.size > 2 * 1024 * 1024) {
-    showToast("Logo dosyasi 2MB'dan buyuk olamaz.", "error");
+    showToast("Logo dosyası 2MB'dan büyük olamaz.", "error");
     return;
   }
 
   const status = $("scLogoStatus");
-  if (status) status.textContent = "Yukleniyor...";
+  if (status) status.textContent = "Yükleniyor...";
 
   try {
     const headers = { "Content-Type": file.type, "Bypass-Tunnel-Reminder": "true" };
@@ -1462,8 +1462,8 @@ async function uploadSiteLogo() {
     const payload = await response.json();
     if (!response.ok) throw new Error(payload?.error || "Yukleme hatasi");
 
-    showToast("Logo yuklendi.", "success");
-    if (status) status.textContent = "Yuklendi";
+    showToast("Logo yüklendi.", "success");
+    if (status) status.textContent = "Yüklendi";
     setTimeout(() => { if (status) status.textContent = ""; }, 3000);
 
     // Update preview
@@ -1472,7 +1472,7 @@ async function uploadSiteLogo() {
     if (preview && payload.logoUrl) preview.src = payload.logoUrl + "?t=" + Date.now();
     if (logoName && payload.logoUrl) logoName.textContent = payload.logoUrl;
   } catch (error) {
-    showToast("Logo yukleme hatasi: " + error.message, "error");
+    showToast("Logo yükleme hatası: " + error.message, "error");
     if (status) status.textContent = "Hata!";
   }
 
@@ -1534,9 +1534,9 @@ function renderSystemHealth(data) {
     ["Uptime", formatUptime(data.uptime || 0)],
     ["Node.js", data.nodeVersion || "-"],
     ["Bellek (RSS)", formatBytes(data.memory?.rss || 0)],
-    ["Heap Kullanimi", formatBytes(data.memory?.heapUsed || 0) + " / " + formatBytes(data.memory?.heapTotal || 0)],
+    ["Heap Kullanımı", formatBytes(data.memory?.heapUsed || 0) + " / " + formatBytes(data.memory?.heapTotal || 0)],
     ["Model", data.model || "-"],
-    ["Konu Sayisi", data.topicsCount || 0],
+    ["Konu Sayısı", data.topicsCount || 0],
     ["KB Kayit", (data.knowledgeBase?.recordCount || 0) + " kayit"],
     ["KB Durum", data.knowledgeBase?.loaded ? "Aktif" : "Pasif"]
   ];
@@ -1572,7 +1572,7 @@ async function reloadAgentConfig() {
   sysReloadBtn.disabled = true;
   try {
     const payload = await apiPost("admin/agent/reload", {});
-    showToast(payload.message || "Agent config yeniden yuklendi.", "success");
+    showToast(payload.message || "Agent config yeniden yüklendi.", "success");
     await loadSystemInfo();
   } catch (error) {
     showToast("Reload hatasi: " + error.message, "error");
@@ -1636,7 +1636,7 @@ $("ticketAssignBtn").addEventListener("click", async () => {
     await apiPut("admin/tickets/" + encodeURIComponent(state.currentTicketId) + "/assign", {
       assignedTo: $("ticketAssignInput").value.trim()
     });
-    showToast("Ticket atandi.", "success");
+    showToast("Ticket atandı.", "success");
     void loadTicketDetail(state.currentTicketId);
   } catch (err) { showToast("Hata: " + err.message, "error"); }
 });
@@ -1647,7 +1647,7 @@ $("ticketPriorityBtn").addEventListener("click", async () => {
     await apiPut("admin/tickets/" + encodeURIComponent(state.currentTicketId) + "/priority", {
       priority: $("ticketPrioritySelect").value
     });
-    showToast("Oncelik degistirildi.", "success");
+    showToast("Öncelik değiştirildi.", "success");
     void loadTicketDetail(state.currentTicketId);
   } catch (err) { showToast("Hata: " + err.message, "error"); }
 });
@@ -1673,7 +1673,7 @@ $("kbFileUpload").addEventListener("change", async (event) => {
   const file = event.target.files[0];
   if (!file) return;
   const uploadStatus = $("kbUploadStatus");
-  uploadStatus.textContent = "Yukleniyor...";
+  uploadStatus.textContent = "Yükleniyor...";
 
   const formData = new FormData();
   formData.append("file", file);
@@ -1685,7 +1685,7 @@ $("kbFileUpload").addEventListener("change", async (event) => {
     const payload = await resp.json();
     if (!resp.ok) throw new Error(payload.error || "Upload hatasi");
     uploadStatus.textContent = "Tamamlandi: " + (payload.chunksAdded || 0) + " parca eklendi";
-    showToast("Dosya yuklendi ve islendi.", "success");
+    showToast("Dosya yüklendi ve işlendi.", "success");
     setTimeout(() => { uploadStatus.textContent = ""; }, 5000);
     await loadKnowledgeBase();
   } catch (err) {
@@ -1804,7 +1804,7 @@ async function loadPromptVersions() {
 function renderPromptVersions(versions) {
   const tbody = $("promptVersionsTableBody");
   if (!versions.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="empty">Henuz versiyon yok.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">Henüz versiyon yok.</td></tr>';
     return;
   }
   tbody.innerHTML = "";
@@ -1857,14 +1857,14 @@ function renderAnalyticsSummary(summary) {
   const sentimentText = Object.entries(sentiments).map(([k, v]) => k + ": " + v).join(", ") || "-";
   const cards = [
     ["Toplam Sohbet", summary.totalChats || 0],
-    ["AI Cagri", summary.aiCalls || 0],
-    ["Ort. Yanit Suresi", (summary.avgResponseMs || 0) + "ms"],
-    ["Eskalasyon Orani", "%" + (summary.escalationRate || 0)],
+    ["AI Çağrı", summary.aiCalls || 0],
+    ["Ort. Yanıt Süresi", (summary.avgResponseMs || 0) + "ms"],
+    ["Eskalasyon Oranı", "%" + (summary.escalationRate || 0)],
     ["Deflection Rate", "%" + (summary.deflectionRate || 0)],
-    ["CSAT Ortalamasi", summary.csatAverage ? summary.csatAverage + "/5" : "-"],
+    ["CSAT Ortalaması", summary.csatAverage ? summary.csatAverage + "/5" : "-"],
     ["Model Fallback", summary.fallbackCount || 0],
     ["Feedback", (summary.feedbackUp || 0) + " / " + (summary.feedbackDown || 0)],
-    ["Duygu Dagilimi", sentimentText]
+    ["Duygu Dağılımı", sentimentText]
   ];
   for (const [label, value] of cards) {
     grid.appendChild(createSummaryCard(label, value));
@@ -1929,14 +1929,14 @@ async function loadContentGaps() {
       container.innerHTML = "<p class='empty'>Cevaplanamayan soru tespit edilmedi.</p>";
       return;
     }
-    let html = '<table><thead><tr><th>Soru</th><th>Tekrar</th><th>Son Gorulme</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>Soru</th><th>Tekrar</th><th>Son Görülme</th></tr></thead><tbody>';
     for (const g of gaps.slice(0, 30)) {
       html += "<tr><td>" + escapeHtml(g.query) + "</td><td>" + g.count + "</td><td>" + fmtDate(g.lastSeen) + "</td></tr>";
     }
     html += "</tbody></table>";
     container.innerHTML = html;
   } catch (_e) {
-    container.innerHTML = "<p class='empty'>Yuklenemedi.</p>";
+    container.innerHTML = "<p class='empty'>Yüklenemedi.</p>";
   }
 }
 
@@ -1956,7 +1956,7 @@ function updateBulkToolbar() {
   if (toolbar) {
     toolbar.hidden = ids.length === 0;
     const countEl = $("bulkSelectedCount");
-    if (countEl) countEl.textContent = ids.length + " secili";
+    if (countEl) countEl.textContent = ids.length + " seçili";
   }
 }
 
@@ -2012,17 +2012,17 @@ async function loadAuditLog() {
     const payload = await apiGet("admin/audit-log");
     const entries = payload.entries || [];
     if (!entries.length) {
-      container.innerHTML = "<p class='empty'>Henuz kayit yok.</p>";
+      container.innerHTML = "<p class='empty'>Henüz kayıt yok.</p>";
       return;
     }
-    let html = '<table><thead><tr><th>Tarih</th><th>Islem</th><th>Detay</th><th>IP</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>Tarih</th><th>İşlem</th><th>Detay</th><th>IP</th></tr></thead><tbody>';
     for (const e of entries.slice(0, 50)) {
       html += "<tr><td>" + fmtDate(e.timestamp) + "</td><td>" + escapeHtml(e.action) + "</td><td>" + escapeHtml(e.details) + "</td><td>" + escapeHtml(e.adminIp || "-") + "</td></tr>";
     }
     html += "</tbody></table>";
     container.innerHTML = html;
   } catch (_e) {
-    container.innerHTML = "<p class='empty'>Yuklenemedi.</p>";
+    container.innerHTML = "<p class='empty'>Yüklenemedi.</p>";
   }
 }
 
@@ -2040,10 +2040,10 @@ async function loadSLAData() {
     summaryEl.innerHTML = "";
     const cards = [
       ["Aktif Ticket", s.activeTickets || 0],
-      ["Ilk Yanit Ihlali", s.firstResponseBreaches || 0],
-      ["Cozum Ihlali", s.resolutionBreaches || 0],
+      ["İlk Yanıt İhlali", s.firstResponseBreaches || 0],
+      ["Çözüm İhlali", s.resolutionBreaches || 0],
       ["SLA Uyum", "%" + (s.slaComplianceRate || 100)],
-      ["Ort. Cozum", (s.avgResolutionMin || 0) + " dk"]
+      ["Ort. Çözüm", (s.avgResolutionMin || 0) + " dk"]
     ];
     for (const [label, value] of cards) {
       summaryEl.appendChild(createSummaryCard(label, value));
@@ -2052,11 +2052,11 @@ async function loadSLAData() {
     // Breached tickets
     const breaches = payload.breachedTickets || [];
     if (breaches.length && breachesEl) {
-      let html = '<table><thead><tr><th>Ticket</th><th>Sube</th><th>Sorun</th><th>Olusturulma</th><th>Ihlal</th></tr></thead><tbody>';
+      let html = '<table><thead><tr><th>Ticket</th><th>Sube</th><th>Sorun</th><th>Oluşturulma</th><th>İhlal</th></tr></thead><tbody>';
       for (const b of breaches) {
         const type = [];
-        if (b.firstResponseBreach) type.push("Ilk Yanit");
-        if (b.resolutionBreach) type.push("Cozum");
+        if (b.firstResponseBreach) type.push("İlk Yanıt");
+        if (b.resolutionBreach) type.push("Çözüm");
         html += "<tr><td>" + escapeHtml(b.id) + "</td><td>" + escapeHtml(b.branchCode || "-") + "</td><td>" + escapeHtml(b.issueSummary || "-") + "</td><td>" + fmtDate(b.createdAt) + "</td><td style='color:#ef4444;font-weight:600'>" + type.join(", ") + "</td></tr>";
       }
       html += "</tbody></table>";
@@ -2065,7 +2065,7 @@ async function loadSLAData() {
       breachesEl.innerHTML = "<p class='empty'>SLA ihlali yok.</p>";
     }
   } catch (_e) {
-    summaryEl.innerHTML = "<p class='empty'>SLA verisi yuklenemedi.</p>";
+    summaryEl.innerHTML = "<p class='empty'>SLA verisi yüklenemedi.</p>";
   }
 }
 
@@ -2078,7 +2078,7 @@ async function loadSunshineConfig() {
     const payload = await apiGet("admin/sunshine-config");
     renderSunshineConfig(payload.config || {});
   } catch (error) {
-    showToast("Sunshine config yuklenemedi: " + error.message, "error");
+    showToast("Sunshine config yüklenemedi: " + error.message, "error");
   }
 }
 
@@ -2126,7 +2126,7 @@ async function saveSunshineConfig() {
   try {
     await apiPut("admin/sunshine-config", { config });
     if (status) status.textContent = "Kaydedildi";
-    showToast("Sunshine ayarlari kaydedildi.", "success");
+    showToast("Sunshine ayarları kaydedildi.", "success");
     setTimeout(() => { if (status) status.textContent = ""; }, 3000);
   } catch (error) {
     if (status) status.textContent = "Hata!";
@@ -2174,7 +2174,7 @@ if ($("sunCopyUrlBtn")) {
   $("sunCopyUrlBtn").addEventListener("click", () => {
     const url = ($("sunWebhookUrl") || {}).textContent || "";
     if (url && navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(() => showToast("Kopyalandi!", "success"));
+      navigator.clipboard.writeText(url).then(() => showToast("Kopyalandı!", "success"));
     }
   });
 }
