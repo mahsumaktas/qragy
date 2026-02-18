@@ -3,7 +3,7 @@
     {
       "id": "giris-yapamiyorum",
       "title": "Sisteme Giris Yapamiyorum",
-      "keywords": ["giris yapamiyorum", "login olamiyorum", "sisteme giremiyorum", "giris hatasi", "login hatasi"],
+      "keywords": ["giris yapamiyorum", "login olamiyorum", "sisteme giremiyorum", "giris hatasi", "login hatasi", "sifre kabul etmiyor", "giris ekrani", "oturum acamiyorum", "hesaba giremiyorum", "login sorunu", "giris sayfasi acilmiyor", "kullanici adi kabul etmiyor", "authentication error", "erisim engellendi", "hesap kilitlendi"],
       "file": "giris-yapamiyorum.md",
       "requiresEscalation": true,
       "requiredInfo": ["kullanici_adi", "ip_adresi"],
@@ -12,7 +12,7 @@
     {
       "id": "sifremi-unuttum",
       "title": "Sifremi Unuttum",
-      "keywords": ["sifremi unuttum", "sifre sifirlama", "sifre degistirme", "sifre hatasi"],
+      "keywords": ["sifremi unuttum", "sifre sifirlama", "sifre degistirme", "sifre hatasi", "sifre resetleme", "yeni sifre", "sifre yenileme", "sifre guncellemek", "parola unuttum", "parola degistirme", "sifre maili gelmiyor", "sifre baglantisi", "password reset"],
       "file": "sifremi-unuttum.md",
       "requiresEscalation": true,
       "requiredInfo": ["kullanici_adi"],
@@ -21,7 +21,7 @@
     {
       "id": "yazici-sorunu",
       "title": "Yazici Sorunu",
-      "keywords": ["yazici", "printer", "yazici calismiyor", "cikti alamiyorum", "yazici sorunu"],
+      "keywords": ["yazici", "printer", "yazici calismiyor", "cikti alamiyorum", "yazici sorunu", "yazdiramiyorum", "bilet kesemiyorum", "fiş cikmiyor", "yazici baglanti", "print hatasi", "yazici gozukmuyor", "yazici bulunamiyor", "cikti hatasi", "kagit sikismasi", "murekkep bitti"],
       "file": "yazici-sorunu.md",
       "requiresEscalation": false,
       "requiredInfo": [],
@@ -30,7 +30,7 @@
     {
       "id": "rapor-alma",
       "title": "Rapor Alma",
-      "keywords": ["rapor", "rapor alma", "rapor olusturma", "rapor indirme", "rapor hatasi"],
+      "keywords": ["rapor", "rapor alma", "rapor olusturma", "rapor indirme", "rapor hatasi", "rapor acilmiyor", "excel rapor", "pdf rapor", "rapor bos geliyor", "rapor uzun suruyor", "raporlama", "istatistik", "veri cekme", "donemsel rapor", "rapor filtreleme"],
       "file": "rapor-alma.md",
       "requiresEscalation": false,
       "requiredInfo": [],
@@ -39,8 +39,71 @@
     {
       "id": "iletisim-bilgileri",
       "title": "Iletisim Bilgileri",
-      "keywords": ["iletisim", "telefon", "destek hatti", "email", "nasil ulasabilirim"],
+      "keywords": ["iletisim", "telefon", "destek hatti", "email", "nasil ulasabilirim", "telefon numarasi", "mail adresi", "calisma saatleri", "mesai saatleri", "destek ekibi", "bize ulasin", "iletisim bilgileri", "musteri hizmetleri", "canli destek saatleri"],
       "file": "iletisim-bilgileri.md",
+      "requiresEscalation": false,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "baglanti-sorunu",
+      "title": "Baglanti Sorunu",
+      "keywords": ["baglanti sorunu", "baglanamiyorum", "site acilmiyor", "sayfa yuklenmiyor", "erisim yok", "timeout", "zaman asimi", "sunucu hatasi", "500 hatasi", "404 hatasi", "server error", "sayfa bulunamadi", "internet baglantisi", "vpn sorunu", "sistem cevrimdisi"],
+      "file": "baglanti-sorunu.md",
+      "requiresEscalation": false,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "guncelleme-yapma",
+      "title": "Guncelleme ve Yeni Ozellikler",
+      "keywords": ["guncelleme", "yeni ozellik", "versiyon", "update", "son surum", "guncelleme hatasi", "yeni versiyon", "degisiklikler", "ne degisti", "yenilik", "patch", "sistem guncellemesi", "upgrade"],
+      "file": "guncelleme-yapma.md",
+      "requiresEscalation": false,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "hesap-yetkilendirme",
+      "title": "Hesap ve Yetki Sorunu",
+      "keywords": ["yetki sorunu", "erisim yok", "izin hatasi", "yetkim yok", "gorunmuyor", "erisemiyorum", "yetkilendirme", "izin verilmedi", "forbidden", "unauthorized", "rol degisikligi", "kullanici ekleme", "hesap acma", "hesap kapatma", "yetki tanimlama"],
+      "file": "hesap-yetkilendirme.md",
+      "requiresEscalation": true,
+      "requiredInfo": ["kullanici_adi"],
+      "canResolveDirectly": false
+    },
+    {
+      "id": "yavas-calisiyor",
+      "title": "Sistem Yavas Calisiyor",
+      "keywords": ["yavas calisiyor", "yavas", "donuyor", "kasiyor", "performans sorunu", "cok yavas", "yuklenmiyor", "sayfa gecikmesi", "sistem dondu", "takildi", "cevap vermiyor", "islem uzun suruyor", "bekliyorum", "loading", "gecikme"],
+      "file": "yavas-calisiyor.md",
+      "requiresEscalation": false,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "entegrasyon-sorunu",
+      "title": "Entegrasyon / API Sorunu",
+      "keywords": ["entegrasyon", "api hatasi", "api sorunu", "baglanti hatasi", "veri gelmiyor", "senkronizasyon", "entegrasyon calismadi", "api key", "api anahtari", "webhook", "ucuncu parti", "dis sistem", "veri aktarimi", "api baglanamadi"],
+      "file": "entegrasyon-sorunu.md",
+      "requiresEscalation": true,
+      "requiredInfo": ["kullanici_adi"],
+      "canResolveDirectly": false
+    },
+    {
+      "id": "veri-aktarimi",
+      "title": "Veri Aktarimi (Import/Export)",
+      "keywords": ["veri aktarimi", "import", "export", "veri yukle", "veri indir", "csv yukleme", "excel yukleme", "veri tasima", "toplu yukleme", "dosya yukleme", "veri cekme", "veri gonderme", "bulk import", "toplu islem"],
+      "file": "veri-aktarimi.md",
+      "requiresEscalation": false,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "bildirim-ayarlari",
+      "title": "Bildirim ve E-posta Ayarlari",
+      "keywords": ["bildirim", "bildirim gelmiyor", "email ayarlari", "mail gelmiyor", "bildirim kapatma", "bildirim acma", "e-posta bildirimi", "push bildirim", "hatirlatma", "uyari", "notification", "bildirim sesi", "spam", "bildirim tercihleri"],
+      "file": "bildirim-ayarlari.md",
       "requiresEscalation": false,
       "requiredInfo": [],
       "canResolveDirectly": true

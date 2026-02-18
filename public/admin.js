@@ -1071,6 +1071,8 @@ async function saveEnvConfig() {
     envSaveStatus.textContent = "Kaydedildi";
     showToast(payload.message || "Env guncellendi.", "success");
     setTimeout(() => { envSaveStatus.textContent = ""; }, 3000);
+    // API key/model degismis olabilir — sistem durumunu force check ile yenile
+    setTimeout(() => { void loadSystemInfo(true); }, 1500);
   } catch (error) {
     envSaveStatus.textContent = "Hata!";
     showToast("Env kaydetme hatasi: " + error.message, "error");
@@ -1181,6 +1183,8 @@ async function saveChatFlowConfig() {
     showToast("Sohbet akis ayarlari kaydedildi.", "success");
     if (status) status.textContent = "Kaydedildi";
     setTimeout(() => { if (status) status.textContent = ""; }, 3000);
+    // Sistem durumunu yenile
+    setTimeout(() => { void loadSystemInfo(); }, 1000);
   } catch (error) {
     showToast("Kaydetme hatasi: " + error.message, "error");
     if (status) status.textContent = "Hata!";
@@ -1368,9 +1372,10 @@ if (scLogoInput) scLogoInput.addEventListener("change", () => { void uploadSiteL
 // TAB 4: SYSTEM
 // ══════════════════════════════════════════════════════════════════════════
 
-async function loadSystemInfo() {
+async function loadSystemInfo(forceCheck) {
   try {
-    const payload = await apiGet("admin/system");
+    const endpoint = forceCheck ? "admin/system?forceCheck=1" : "admin/system";
+    const payload = await apiGet(endpoint);
     renderSystemHealth(payload);
     renderAgentStatus(payload.agentStatus || []);
     renderKBSystemStatus(payload.knowledgeBase || {});
@@ -1457,7 +1462,7 @@ async function reloadAgentConfig() {
   }
 }
 
-sysRefreshBtn.addEventListener("click", () => { void loadSystemInfo(); });
+sysRefreshBtn.addEventListener("click", () => { void loadSystemInfo(true); });
 sysReloadBtn.addEventListener("click", () => { void reloadAgentConfig(); });
 
 // ══════════════════════════════════════════════════════════════════════════

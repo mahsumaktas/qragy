@@ -666,7 +666,14 @@ const OUTSIDE_SUPPORT_HOURS_MESSAGE =
 
 function readTextFileSafe(filePath, fallback = "") {
   try {
-    return fs.readFileSync(filePath, "utf8").trim() || fallback;
+    let text = fs.readFileSync(filePath, "utf8").trim() || fallback;
+    // Inject COMPANY_NAME from env into agent file placeholders
+    if (COMPANY_NAME) {
+      text = text.replace(/\{\{COMPANY_NAME\}\}/g, COMPANY_NAME);
+    } else {
+      text = text.replace(/\{\{COMPANY_NAME\}\}/g, BOT_NAME);
+    }
+    return text;
   } catch (_error) {
     return fallback;
   }
@@ -1111,7 +1118,7 @@ function reloadRuntimeEnv() {
   if (env.DEPLOY_WEBHOOK_SECRET !== undefined) DEPLOY_WEBHOOK_SECRET = (env.DEPLOY_WEBHOOK_SECRET || "").trim();
   // LLM/Embedding provider vars are read directly from process.env by lib/providers.js
   // Sync new vars to process.env so getProviderConfig() picks them up
-  const providerKeys = ["LLM_PROVIDER", "LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL", "LLM_FALLBACK_MODELS", "LLM_FALLBACK_MODEL", "LLM_MAX_OUTPUT_TOKENS", "LLM_REQUEST_TIMEOUT_MS", "ENABLE_THINKING", "EMBEDDING_PROVIDER", "EMBEDDING_MODEL", "EMBEDDING_API_KEY", "EMBEDDING_BASE_URL", "EMBEDDING_DIMENSIONS"];
+  const providerKeys = ["LLM_PROVIDER", "LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL", "LLM_FALLBACK_MODELS", "LLM_FALLBACK_MODEL", "LLM_MAX_OUTPUT_TOKENS", "LLM_REQUEST_TIMEOUT_MS", "ENABLE_THINKING", "EMBEDDING_PROVIDER", "EMBEDDING_MODEL", "EMBEDDING_API_KEY", "EMBEDDING_BASE_URL", "EMBEDDING_DIMENSIONS", "GOOGLE_API_KEY", "GEMINI_API_KEY", "GOOGLE_MODEL", "GOOGLE_MAX_OUTPUT_TOKENS", "GOOGLE_THINKING_BUDGET", "GOOGLE_REQUEST_TIMEOUT_MS", "GOOGLE_FALLBACK_MODEL"];
   for (const key of providerKeys) {
     if (env[key] !== undefined) process.env[key] = env[key];
   }
@@ -1301,6 +1308,28 @@ function detectTopicFromMessages(userMessages) {
   return { topicId: null, confidence: 0, method: "none" };
 }
 
+// LLM-based intent classification fallback when keyword matching fails
+async function classifyTopicWithLLM(userMessage) {
+  if (!TOPIC_INDEX.topics.length || !userMessage) return null;
+  const providerCfg = getProviderConfig();
+  if (!providerCfg.apiKey && providerCfg.provider !== "ollama") return null;
+  try {
+    const topicList = TOPIC_INDEX.topics.map(t => `${t.id}: ${t.title}`).join("\n");
+    const classificationPrompt = `Asagidaki kullanici mesajini en uygun destek konusuyla eslesdir.\n\nKonular:\n${topicList}\n\nMesaj: "${userMessage}"\n\nSadece konu ID'sini dondur (ornegin: giris-yapamiyorum). Hicbiriyle eslesmiyorsa "none" yaz. Baska bir sey yazma.`;
+    const result = await callLLM(
+      [{ role: "user", parts: [{ text: classificationPrompt }] }],
+      "Sen bir siniflandirma botusun. Sadece konu ID veya none dondur.",
+      32
+    );
+    const reply = (result.reply || "").trim().toLowerCase().replace(/[^a-z0-9\-]/g, "");
+    if (reply === "none" || !reply) return null;
+    const matched = TOPIC_INDEX.topics.find(t => t.id === reply);
+    return matched ? matched.id : null;
+  } catch (_e) {
+    return null;
+  }
+}
+
 function detectEscalationTriggers(text) {
   const normalized = normalizeForMatching(text);
   const toolName = REMOTE_TOOL_NAME || "remote_tool";
@@ -1328,7 +1357,7 @@ function detectEscalationTriggers(text) {
   return { shouldEscalate: false, reason: null };
 }
 
-function buildConversationContext(memory, userMessages) {
+async function buildConversationContext(memory, userMessages) {
   const context = {
     currentTopic: null,
     topicConfidence: 0,
@@ -1362,10 +1391,15 @@ function buildConversationContext(memory, userMessages) {
   } else if (isGreetingOnlyMessage(latestMessage)) {
     context.conversationState = "welcome_or_greet";
   } else {
-    // Keyword eslesmese bile AI konu tespiti yapabilir.
-    // Teknik icerikli mesajlarda topic_detection state'ine gec
-    // boylece Gemini tum konu listesini gorur ve dogru yonlendirme yapar.
-    context.conversationState = "topic_detection";
+    // Keyword eslesmedi — LLM-based classification dene
+    const llmTopicId = await classifyTopicWithLLM(latestMessage);
+    if (llmTopicId) {
+      context.currentTopic = llmTopicId;
+      context.topicConfidence = 0.7;
+      context.conversationState = "topic_guided_support";
+    } else {
+      context.conversationState = "topic_detection";
+    }
   }
 
   if (memory.branchCode) {
@@ -1750,51 +1784,31 @@ function buildConfirmationMessage(memory) {
 
 function buildSystemPrompt(memory, conversationContext, knowledgeResults) {
   const parts = [];
+  const state = conversationContext?.conversationState || "welcome_or_greet";
+  const turnCount = conversationContext?.turnCount || 0;
 
-  // 1. Kimlik
-  if (SOUL_TEXT) {
-    parts.push(SOUL_TEXT);
-  }
+  // Core identity — always included
+  if (SOUL_TEXT) parts.push(SOUL_TEXT);
+  if (PERSONA_TEXT) parts.push(PERSONA_TEXT);
 
-  // 2. Alan bilgisi
-  if (DOMAIN_TEXT) {
-    parts.push(DOMAIN_TEXT);
-  }
+  // Early turns (0-1): only soul + persona + bootstrap for lighter prompt
+  if (turnCount <= 1) {
+    if (BOOTSTRAP_TEXT) parts.push(BOOTSTRAP_TEXT);
+  } else {
+    // Full agent config for ongoing conversations
+    if (DOMAIN_TEXT) parts.push(DOMAIN_TEXT);
+    if (BOOTSTRAP_TEXT) parts.push(BOOTSTRAP_TEXT);
+    if (SKILLS_TEXT) parts.push(SKILLS_TEXT);
+    if (HARD_BANS_TEXT) parts.push(HARD_BANS_TEXT);
 
-  // 3. Session başlatma
-  if (BOOTSTRAP_TEXT) {
-    parts.push(BOOTSTRAP_TEXT);
-  }
+    // Skip escalation matrix during farewell state
+    if (state !== "farewell" && ESCALATION_MATRIX_TEXT) {
+      parts.push(ESCALATION_MATRIX_TEXT);
+    }
 
-  // 4. Konuşma tarzı
-  parts.push(PERSONA_TEXT);
-
-  // 5. Yetenek matrisi
-  if (SKILLS_TEXT) {
-    parts.push(SKILLS_TEXT);
-  }
-
-  // 6. Kesin yasaklar
-  if (HARD_BANS_TEXT) {
-    parts.push(HARD_BANS_TEXT);
-  }
-
-  // 7. Escalation matrisi
-  if (ESCALATION_MATRIX_TEXT) {
-    parts.push(ESCALATION_MATRIX_TEXT);
-  }
-
-  // 8. Durum akışı
-  parts.push(RESPONSE_POLICY_TEXT);
-
-  // 9. Başarı kriterleri
-  if (DOD_TEXT) {
-    parts.push(DOD_TEXT);
-  }
-
-  // 10. Çıktı filtreleme
-  if (OUTPUT_FILTER_TEXT) {
-    parts.push(OUTPUT_FILTER_TEXT);
+    parts.push(RESPONSE_POLICY_TEXT);
+    if (DOD_TEXT) parts.push(DOD_TEXT);
+    if (OUTPUT_FILTER_TEXT) parts.push(OUTPUT_FILTER_TEXT);
   }
 
   // Konu listesini HER ZAMAN ekle - AI kendi anlamsal analiziyle dogru konuyu tespit eder
@@ -1825,14 +1839,6 @@ function buildSystemPrompt(memory, conversationContext, knowledgeResults) {
   parts.push(`Memory schema: ${JSON.stringify(MEMORY_TEMPLATE)}`);
   parts.push(`Current memory: ${JSON.stringify(memory)}`);
   parts.push(`Conversation state: ${JSON.stringify(conversationContext || {})}`);
-
-  parts.push("Yanıtları düz metin üret. Markdown, liste, kod bloğu ve başlık kullanma.");
-  parts.push("Yanıtların kısa olsun (1-4 cümle, bilgilendirmelerde 5-6 cümle) ve destek amacına hizmet etsin.");
-  parts.push("Kullanıcının talebini yukarıdaki konu listesiyle eşleştir. Sadece keyword'lere değil anlamına bak. Örneğin 'bilet kesemiyorum' = 'bilet yazdıramıyorum', 'ekran dondu' = 'giriş yapamıyorum' gibi.");
-  parts.push("Konu tespit ettiysen o konunun akışını (troubleshooting, bilgilendirme, escalation) uygula. Detaylı konu dosyası varsa onu takip et, yoksa konu listesindeki başlığa uygun yönlendirme yap.");
-  parts.push("Hiçbir konuyla eşleşmiyorsa ve teknik destek dışıysa, şube kodu + sorun özeti toplayarak ticket oluştur.");
-  parts.push("ÖNEMLİ: Escalation yapmadan ÖNCE mutlaka şube kodunu topla. Şube kodu yoksa escalation mesajı verme, önce şube kodunu sor.");
-  parts.push("ÖNEMLİ: Escalation öncesi ONAY sor. Direkt aktarma. Önce şu mesajı ver: 'Bu konuda canlı destek temsilcimiz size yardımcı olabilir. Sizi temsilcimize aktarmamı ister misiniz?' Kullanıcı onay verdikten sonra (evet, tamam, olur, aktar gibi): 'Sizi canlı destek temsilcimize aktarıyorum. Kısa sürede yardımcı olacaktır.' Tek istisna: Kullanıcı kendisi 'temsilciye aktar' veya 'canlı destek istiyorum' derse direkt aktarım mesajı ver.");
   parts.push("Onay metni (sadece ticket toplama için): Talebinizi aldım. Şube kodu: <KOD>. Kısa açıklama: <ÖZET>. Destek ekibi en kısa sürede dönüş yapacaktır.");
   parts.push("Uygun olduğunda yanıtının sonuna hızlı yanıt seçenekleri ekle: [QUICK_REPLIES: secenek1 | secenek2 | secenek3]. Maks 3 seçenek. Yalnızca kullanıcıyı yönlendirmek mantıklıysa ekle.");
 
@@ -2688,7 +2694,7 @@ app.post("/api/chat", async (req, res) => {
       return res.status(400).json({ error: "Geçerli mesaj bulunamadı." });
     }
 
-    const conversationContext = buildConversationContext(memory, activeUserMessages);
+    const conversationContext = await buildConversationContext(memory, activeUserMessages);
 
     if (hasRequiredFields(memory) && !conversationContext.currentTopic) {
       const aiSummary = await generateEscalationSummary(contents, memory, conversationContext);
@@ -3315,6 +3321,11 @@ app.put("/api/admin/env", requireAdminAccess, (req, res) => {
 
     writeEnvFile(cleanUpdates);
     reloadRuntimeEnv();
+    // API key veya model degistiyse health check'i hemen tetikle
+    const keyChanged = ["GOOGLE_API_KEY", "GEMINI_API_KEY", "LLM_API_KEY", "GOOGLE_MODEL", "LLM_MODEL", "LLM_PROVIDER"].some(k => k in cleanUpdates);
+    if (keyChanged) {
+      setTimeout(checkLLMHealth, 500);
+    }
     return res.json({ ok: true, message: "Env guncellendi ve aninda uyguland\u0131." });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -3458,8 +3469,13 @@ app.post("/api/admin/sunshine-config/test", requireAdminAccess, async (_req, res
 });
 
 // System: Status
-app.get("/api/admin/system", requireAdminAccess, async (_req, res) => {
+app.get("/api/admin/system", requireAdminAccess, async (req, res) => {
   try {
+    // forceCheck=1 parametresi ile anlik health check tetikle
+    if (req.query.forceCheck === "1") {
+      await checkLLMHealth();
+    }
+
     const memUsage = process.memoryUsage();
     const kbRowCount = knowledgeTable ? await knowledgeTable.countRows().catch(() => 0) : 0;
 
@@ -4155,7 +4171,27 @@ async function processChatMessage(messagesArray, source = "web") {
     .slice(-50)
     .map(m => ({ role: m.role, content: String(m.content).slice(0, 500) }));
 
-  const conversationContext = buildConversationContext(memory, activeUserMessages);
+  // Gibberish detection (parity with web chat)
+  if (isGibberishMessage(latestUserMessage)) {
+    recordAnalyticsEvent({ source: "gibberish", responseTimeMs: Date.now() - chatStartTime });
+    return { reply: chatFlowConfig.gibberishMessage, source: "gibberish", memory };
+  }
+
+  // Farewell detection (parity with web chat)
+  if (isFarewellMessage(latestUserMessage, activeUserMessages.length)) {
+    const hasTicket = hasRequiredFields(memory);
+    recordAnalyticsEvent({ source: "closing-flow", responseTimeMs: Date.now() - chatStartTime });
+    return {
+      reply: hasTicket ? chatFlowConfig.farewellMessage : chatFlowConfig.anythingElseMessage,
+      source: "closing-flow",
+      memory
+    };
+  }
+
+  // Sentiment analysis (parity with web chat)
+  const sentiment = analyzeSentiment(latestUserMessage);
+
+  const conversationContext = await buildConversationContext(memory, activeUserMessages);
 
   // Deterministic reply
   if (conversationContext.conversationState === "welcome_or_greet" ||
@@ -4173,7 +4209,13 @@ async function processChatMessage(messagesArray, source = "web") {
     return { reply: buildMissingFieldsReply(memory, latestUserMessage), source: "fallback-no-key", memory };
   }
 
-  const contents = activeMessages
+  // Context window compression for long conversations
+  let processedMessages = activeMessages;
+  if (activeMessages.length > 10) {
+    processedMessages = await compressConversationHistory(activeMessages);
+  }
+
+  const contents = processedMessages
     .filter(item => item && typeof item.content === "string" && item.content.trim())
     .map(item => ({ role: item.role === "assistant" ? "model" : "user", parts: [{ text: item.content.trim() }] }));
 
@@ -4212,6 +4254,10 @@ async function processChatMessage(messagesArray, source = "web") {
 
   // AI reply
   const knowledgeResults = await searchKnowledge(latestUserMessage);
+  // Content gap detection
+  if (knowledgeResults.length === 0 && latestUserMessage.length > 10) {
+    recordContentGap(latestUserMessage);
+  }
   const systemPrompt = buildSystemPrompt(memory, conversationContext, knowledgeResults);
   let geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
   if (geminiResult.finishReason === "MAX_TOKENS" && geminiResult.reply.length < 160) {
@@ -4221,9 +4267,14 @@ async function processChatMessage(messagesArray, source = "web") {
     recordLLMError({ message: "Primary model failed, fallback used", status: 429 }, "tg-chat-fallback");
   }
   let reply = sanitizeAssistantReply(geminiResult.reply);
+  // Response quality validation
+  const qualityCheck = validateBotResponse(reply, []);
+  if (!qualityCheck.valid) {
+    reply = buildMissingFieldsReply(memory, latestUserMessage);
+  }
   if (!reply) reply = buildMissingFieldsReply(memory, latestUserMessage);
 
-  recordAnalyticsEvent({ source: conversationContext.currentTopic ? "topic-guided" : "gemini", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null, fallbackUsed: Boolean(geminiResult.fallbackUsed) });
+  recordAnalyticsEvent({ source: conversationContext.currentTopic ? "topic-guided" : "gemini", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null, fallbackUsed: Boolean(geminiResult.fallbackUsed), sentiment });
   return { reply, source: conversationContext.currentTopic ? "topic-guided" : "gemini", memory };
 }
 
