@@ -524,6 +524,7 @@ function showConversationDetail(sessionId) {
     }
 
     detailEl.innerHTML = html;
+    detailEl.classList.add("visible");
     detailEl.scrollIntoView({ behavior: "smooth", block: "start" });
   }).catch(() => {});
 }
@@ -634,9 +635,11 @@ async function loadSearchTicketDetail(ticketId) {
     }
 
     detailEl.innerHTML = html;
+    detailEl.classList.add("visible");
     detailEl.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) {
     detailEl.innerHTML = '<p class="empty">Hata: ' + escapeHtml(error.message) + '</p>';
+    detailEl.classList.add("visible");
   }
 }
 
