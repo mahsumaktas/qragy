@@ -5,6 +5,7 @@ const express = require("express");
 const path = require("path");
 const { callLLM, callLLMWithFallback, embedText, getProviderConfig } = require("./lib/providers");
 const { chunkText } = require("./lib/chunker");
+const sqliteDb = require("./lib/db");
 const lancedb = require("@lancedb/lancedb");
 const Papa = require("papaparse");
 const multer = require("multer");
@@ -135,10 +136,9 @@ let analyticsData = { daily: {} };
 
 function loadAnalyticsData() {
   try {
-    if (fs.existsSync(ANALYTICS_FILE)) {
-      analyticsData = JSON.parse(fs.readFileSync(ANALYTICS_FILE, "utf8"));
-      if (!analyticsData.daily) analyticsData.daily = {};
-    }
+    const loaded = sqliteDb.loadAnalyticsData();
+    analyticsData = loaded;
+    if (!analyticsData.daily) analyticsData.daily = {};
   } catch (_e) {
     analyticsData = { daily: {} };
   }
@@ -146,7 +146,7 @@ function loadAnalyticsData() {
 
 function saveAnalyticsData() {
   try {
-    fs.writeFileSync(ANALYTICS_FILE, JSON.stringify(analyticsData, null, 2), "utf8");
+    sqliteDb.saveAnalyticsData(analyticsData);
   } catch (_e) { /* silent */ }
 }
 
@@ -460,15 +460,15 @@ function saveSunshineSessions(sessions) {
 // ── Live Conversations ──────────────────────────────────────────────────
 function loadConversations() {
   try {
-    if (fs.existsSync(CONVERSATIONS_FILE)) {
-      return JSON.parse(fs.readFileSync(CONVERSATIONS_FILE, "utf8"));
-    }
+    return sqliteDb.loadConversations();
   } catch (_e) { /* silent */ }
   return { conversations: [] };
 }
 
 function saveConversations(data) {
-  fs.writeFileSync(CONVERSATIONS_FILE, JSON.stringify(data, null, 2), "utf8");
+  try {
+    sqliteDb.saveConversations(data);
+  } catch (_e) { /* silent */ }
 }
 
 function upsertConversation(sessionId, messages, memory, extra = {}) {
@@ -791,32 +791,21 @@ function ensureDataDir() {
 }
 
 function ensureTicketsDbFile() {
-  ensureDataDir();
-
-  if (!fs.existsSync(TICKETS_DB_FILE)) {
-    fs.writeFileSync(TICKETS_DB_FILE, JSON.stringify({ tickets: [] }, null, 2), "utf8");
-  }
+  // No-op: SQLite handles initialization via lib/db.js
 }
 
 function loadTicketsDb() {
-  ensureTicketsDbFile();
-  const parsed = readJsonFileSafe(TICKETS_DB_FILE, { tickets: [] });
-
-  if (!Array.isArray(parsed?.tickets)) {
+  try {
+    return sqliteDb.loadTicketsDb();
+  } catch (_e) {
     return { tickets: [] };
   }
-
-  return parsed;
 }
 
-function saveTicketsDb(db) {
-  ensureTicketsDbFile();
-  const safeDb = {
-    tickets: Array.isArray(db?.tickets) ? db.tickets : []
-  };
-  const tempFile = `${TICKETS_DB_FILE}.tmp`;
-  fs.writeFileSync(tempFile, JSON.stringify(safeDb, null, 2), "utf8");
-  fs.renameSync(tempFile, TICKETS_DB_FILE);
+function saveTicketsDb(data) {
+  try {
+    sqliteDb.saveTicketsDb(data);
+  } catch (_e) { /* silent */ }
 }
 
 function createTicketId() {
