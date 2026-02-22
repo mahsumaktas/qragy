@@ -725,9 +725,16 @@ require("./src/routes/admin").mount(app, {
   getSupportTimezone: () => SUPPORT_TIMEZONE,
   AGENT_DIR, TOPICS_DIR, MEMORY_DIR, UPLOADS_DIR, DATA_DIR,
   SLA_FIRST_RESPONSE_MIN: config.slaFirstResponseMin, SLA_RESOLUTION_MIN: config.slaResolutionMin,
-  logger, searchKnowledge,
+  logger, searchKnowledge, validateBotResponse,
   loadSiteConfig, loadSunshineConfig,
   ngServices,
+  getAgentConfigSummary: () => ({
+    soulText: agentConfig.getSoulText(),
+    personaText: agentConfig.getPersonaText(),
+    domainText: agentConfig.getDomainText(),
+    topicIndexSummary: agentConfig.getTopicIndexSummary(),
+    topicCount: agentConfig.getTopicIndex().topics.length,
+  }),
   contextualChunker: ngContextualChunker,
   urlExtractor: ngUrlExtractor,
 });
