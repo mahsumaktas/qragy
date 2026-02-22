@@ -35,4 +35,11 @@ function normalizeForMatching(text) {
     .trim();
 }
 
-module.exports = { maskPII, sanitizeReply, normalizeForMatching };
+const CREDENTIAL_PATTERN = /(?:sifre|parola|password|pin|şifre)\s*[:=]?\s*\S+/gi;
+
+function maskCredentials(text) {
+  if (!text || typeof text !== "string") return text;
+  return text.replace(CREDENTIAL_PATTERN, "[MASKED-CREDENTIAL]");
+}
+
+module.exports = { maskPII, sanitizeReply, normalizeForMatching, maskCredentials };

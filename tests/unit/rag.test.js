@@ -1,4 +1,4 @@
-const { fullTextSearch, reciprocalRankFusion, filterByRelevance, getAdaptiveTopK, phraseMatch } = require("../../src/services/rag.js");
+const { fullTextSearch, reciprocalRankFusion, filterByRelevance, getAdaptiveTopK, phraseMatch, RAG_DISTANCE_THRESHOLD } = require("../../src/services/rag.js");
 
 describe("RAG", () => {
   const sampleKB = [
@@ -27,11 +27,18 @@ describe("RAG", () => {
     it("should return false for single word", () => { expect(phraseMatch("yazici", "Yazici nasil kurulur?")).toBe(false); });
   });
   describe("filterByRelevance", () => {
-    it("should keep distance < 1.2", () => {
+    it("should export RAG_DISTANCE_THRESHOLD as 0.8", () => {
+      expect(RAG_DISTANCE_THRESHOLD).toBe(0.8);
+    });
+    it("should keep distance <= threshold", () => {
       expect(filterByRelevance([{ question: "t", _distance: 0.3 }]).length).toBe(1);
       expect(filterByRelevance([{ question: "t", _distance: 0.7 }]).length).toBe(1);
+      expect(filterByRelevance([{ question: "t", _distance: 0.8 }]).length).toBe(1);
     });
-    it("should filter distance > 1.2", () => {
+    it("should filter distance > threshold (0.9)", () => {
+      expect(filterByRelevance([{ question: "t", _distance: 0.9 }]).length).toBe(0);
+    });
+    it("should filter distance > threshold (1.5)", () => {
       expect(filterByRelevance([{ question: "t", _distance: 1.5 }]).length).toBe(0);
     });
   });

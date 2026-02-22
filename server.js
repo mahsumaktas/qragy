@@ -18,9 +18,11 @@ const { createAuthMiddleware } = require("./src/middleware/auth.js");
 const { securityHeaders } = require("./src/middleware/security.js");
 const { detectInjection, validateOutput, GENERIC_REPLY } = require("./src/middleware/injectionGuard.js");
 const { isLikelyBranchCode: isLikelyBranchCodeV2 } = require("./src/utils/validators.js");
-const { maskPII: maskPIIv2, sanitizeReply, normalizeForMatching: normalizeForMatchingV2 } = require("./src/utils/sanitizer.js");
+const { maskPII: maskPIIv2, sanitizeReply, normalizeForMatching: normalizeForMatchingV2, maskCredentials } = require("./src/utils/sanitizer.js");
 const { validateBotResponse: validateBotResponseV2 } = require("./src/services/responseValidator.js");
 const { invalidateTopicCache } = require("./src/services/topic.js");
+const { RAG_DISTANCE_THRESHOLD } = require("./src/services/rag.js");
+const { safeError } = require("./src/utils/errorHelper.js");
 
 const app = express();
 
@@ -124,6 +126,9 @@ function checkRateLimit(ip) {
   return rateLimiter.check(ip);
 }
 
+// ── Admin Rate Limiter ──────────────────────────────────────────────────
+const adminRateLimiter = createRateLimiter({ maxRequests: 100, windowMs: 60000 });
+
 // ── Analytics (in-memory buffer → periodic flush) ────────────────────────
 const analyticsBuffer = [];
 let analyticsData = { daily: {} };
@@ -133,7 +138,8 @@ function loadAnalyticsData() {
     const loaded = sqliteDb.loadAnalyticsData();
     analyticsData = loaded;
     if (!analyticsData.daily) analyticsData.daily = {};
-  } catch (_e) {
+  } catch (err) {
+    console.warn("[loadAnalytics] Error:", err.message);
     analyticsData = { daily: {} };
   }
 }
@@ -141,7 +147,7 @@ function loadAnalyticsData() {
 function saveAnalyticsData() {
   try {
     sqliteDb.saveAnalyticsData(analyticsData);
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[saveAnalytics] Error:", err.message); }
 }
 
 function recordAnalyticsEvent(event) {
@@ -224,7 +230,7 @@ function loadWebhooks() {
     if (fs.existsSync(WEBHOOKS_FILE)) {
       return JSON.parse(fs.readFileSync(WEBHOOKS_FILE, "utf8"));
     }
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[loadWebhooks] Error:", err.message); }
   return [];
 }
 
@@ -236,7 +242,7 @@ function saveWebhooks(hooks) {
 function loadWebhookDeliveryLog() {
   try {
     if (fs.existsSync(WEBHOOK_DELIVERY_LOG_FILE)) return JSON.parse(fs.readFileSync(WEBHOOK_DELIVERY_LOG_FILE, "utf8"));
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[loadWebhookDeliveryLog] Error:", err.message); }
   return { deliveries: [] };
 }
 
@@ -299,7 +305,7 @@ function loadTelegramSessions() {
     if (fs.existsSync(TELEGRAM_SESSIONS_FILE)) {
       return JSON.parse(fs.readFileSync(TELEGRAM_SESSIONS_FILE, "utf8"));
     }
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[loadTelegramSessions] Error:", err.message); }
   return {};
 }
 
@@ -313,7 +319,7 @@ function loadPromptVersions() {
     if (fs.existsSync(PROMPT_VERSIONS_FILE)) {
       return JSON.parse(fs.readFileSync(PROMPT_VERSIONS_FILE, "utf8"));
     }
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[loadPromptVersions] Error:", err.message); }
   return { versions: [] };
 }
 
@@ -359,7 +365,8 @@ function loadChatFlowConfig() {
       const saved = JSON.parse(fs.readFileSync(CHAT_FLOW_CONFIG_FILE, "utf8"));
       chatFlowConfig = { ...DEFAULT_CHAT_FLOW_CONFIG, ...saved };
     }
-  } catch (_e) {
+  } catch (err) {
+    console.warn("[loadChatFlowConfig] Error:", err.message);
     chatFlowConfig = { ...DEFAULT_CHAT_FLOW_CONFIG };
   }
 }
@@ -394,7 +401,8 @@ function loadSiteConfig() {
       const saved = JSON.parse(fs.readFileSync(SITE_CONFIG_FILE, "utf8"));
       siteConfig = { ...DEFAULT_SITE_CONFIG, ...saved };
     }
-  } catch (_e) {
+  } catch (err) {
+    console.warn("[loadSiteConfig] Error:", err.message);
     siteConfig = { ...DEFAULT_SITE_CONFIG };
   }
 }
@@ -425,7 +433,8 @@ function loadSunshineConfig() {
       const saved = JSON.parse(fs.readFileSync(SUNSHINE_CONFIG_FILE, "utf8"));
       sunshineConfig = { ...DEFAULT_SUNSHINE_CONFIG, ...saved };
     }
-  } catch (_e) {
+  } catch (err) {
+    console.warn("[loadSunshineConfig] Error:", err.message);
     sunshineConfig = { ...DEFAULT_SUNSHINE_CONFIG };
   }
 }
@@ -443,7 +452,7 @@ function loadSunshineSessions() {
     if (fs.existsSync(SUNSHINE_SESSIONS_FILE)) {
       return JSON.parse(fs.readFileSync(SUNSHINE_SESSIONS_FILE, "utf8"));
     }
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[loadSunshineSessions] Error:", err.message); }
   return {};
 }
 
@@ -455,14 +464,14 @@ function saveSunshineSessions(sessions) {
 function loadConversations() {
   try {
     return sqliteDb.loadConversations();
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[loadConversations] Error:", err.message); }
   return { conversations: [] };
 }
 
 function saveConversations(data) {
   try {
     sqliteDb.saveConversations(data);
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[saveConversations] Error:", err.message); }
 }
 
 function upsertConversation(sessionId, messages, memory, extra = {}) {
@@ -728,16 +737,25 @@ let TOPIC_INDEX_SUMMARY = TOPIC_INDEX.topics.map(
 ).join("\n");
 
 const topicFileCache = new Map();
+const TOPIC_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const TOPIC_CACHE_MAX_SIZE = 200;
+
 function loadTopicFile(topicId) {
-  if (topicFileCache.has(topicId)) {
-    return topicFileCache.get(topicId);
+  const cached = topicFileCache.get(topicId);
+  if (cached && (Date.now() - cached.ts) < TOPIC_CACHE_TTL) {
+    return cached.content;
   }
   const topic = TOPIC_INDEX.topics.find((t) => t.id === topicId);
   if (!topic) {
     return "";
   }
   const content = readTextFileSafe(path.join(TOPICS_DIR, topic.file), "");
-  topicFileCache.set(topicId, content);
+  topicFileCache.set(topicId, { content, ts: Date.now() });
+  // Evict oldest if over max size
+  if (topicFileCache.size > TOPIC_CACHE_MAX_SIZE) {
+    const firstKey = topicFileCache.keys().next().value;
+    topicFileCache.delete(firstKey);
+  }
   return content;
 }
 
@@ -791,7 +809,8 @@ function ensureTicketsDbFile() {
 function loadTicketsDb() {
   try {
     return sqliteDb.loadTicketsDb();
-  } catch (_e) {
+  } catch (err) {
+    console.warn("[loadTicketsDb] Error:", err.message);
     return { tickets: [] };
   }
 }
@@ -799,7 +818,7 @@ function loadTicketsDb() {
 function saveTicketsDb(data) {
   try {
     sqliteDb.saveTicketsDb(data);
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[saveTicketsDb] Error:", err.message); }
 }
 
 function createTicketId() {
@@ -1279,7 +1298,8 @@ async function classifyTopicWithLLM(userMessage) {
     if (reply === "none" || !reply) return null;
     const matched = TOPIC_INDEX.topics.find(t => t.id === reply);
     return matched ? matched.id : null;
-  } catch (_e) {
+  } catch (err) {
+    console.warn("[detectTopicWithLLM] Error:", err.message);
     return null;
   }
 }
@@ -1828,7 +1848,7 @@ async function reingestKnowledgeBase() {
 
   const db = await lancedb.connect(LANCE_DB_PATH);
   // Drop existing table and recreate
-  try { await db.dropTable("knowledge_qa"); } catch (_e) { /* table may not exist */ }
+  try { await db.dropTable("knowledge_qa"); } catch (err) { console.warn("[reingest] dropTable:", err.message); }
   knowledgeTable = await db.createTable("knowledge_qa", records);
   console.log(`Bilgi tabani yeniden yuklendi: ${records.length} kayit.`);
 }
@@ -1865,7 +1885,8 @@ function fullTextSearch(query, topK = 5) {
     }
     scored.sort((a, b) => b.textScore - a.textScore);
     return scored.slice(0, topK);
-  } catch (_e) {
+  } catch (err) {
+    console.warn("[textSearchKB] Error:", err.message);
     return [];
   }
 }
@@ -1906,7 +1927,7 @@ async function searchKnowledge(query, topK = 3) {
         .limit(topK * 2)
         .toArray();
       vectorResults = results
-        .filter((r) => r._distance < 1.0)
+        .filter((r) => r._distance <= RAG_DISTANCE_THRESHOLD)
         .map((r) => ({ question: r.question, answer: r.answer, distance: r._distance }));
     } catch (err) {
       console.warn("Bilgi tabani vector arama hatasi:", err.message);
@@ -1970,7 +1991,7 @@ function analyzeSentiment(text) {
 function loadContentGaps() {
   try {
     if (fs.existsSync(CONTENT_GAPS_FILE)) return JSON.parse(fs.readFileSync(CONTENT_GAPS_FILE, "utf8"));
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[loadContentGaps] Error:", err.message); }
   return { gaps: [] };
 }
 
@@ -2051,7 +2072,7 @@ async function compressConversationHistory(messages) {
           ...recentMessages
         ];
       }
-    } catch (_e) { /* fallback to simple truncation */ }
+    } catch (err) { console.warn("[compressHistory] Error:", err.message); }
   }
 
   // Simple fallback: keep first 2 + last 6
@@ -2095,7 +2116,7 @@ if (DEPLOY_WEBHOOK_SECRET) {
     }
 
     let payload;
-    try { payload = JSON.parse(req.body.toString()); } catch (_e) {
+    try { payload = JSON.parse(req.body.toString()); } catch (err) {
       return res.status(400).json({ error: "Invalid JSON" });
     }
     if (payload.ref !== "refs/heads/main") return res.json({ status: "ignored", reason: "not main branch" });
@@ -2257,7 +2278,7 @@ app.post("/api/tickets/:ticketId/rating", (req, res) => {
 function loadFeedback() {
   try {
     if (fs.existsSync(FEEDBACK_FILE)) return JSON.parse(fs.readFileSync(FEEDBACK_FILE, "utf8"));
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[loadFeedback] Error:", err.message); }
   return { entries: [] };
 }
 
@@ -2311,6 +2332,23 @@ app.post("/api/chat/feedback", (req, res) => {
   if (rating === "up") day.feedbackUp++; else day.feedbackDown++;
   saveAnalyticsData();
   return res.json({ ok: true });
+});
+
+// ── Admin Rate Limiting (all /api/admin endpoints) ──────────────────────
+app.use("/api/admin", (req, res, next) => {
+  const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
+  if (!adminRateLimiter.check(ip)) {
+    return res.status(429).json({ error: "Cok fazla istek. Lutfen bekleyin." });
+  }
+  next();
+});
+
+app.post("/api/admin/backup", requireAdminAccess, (_req, res) => {
+  const backupPath = sqliteDb.backupDatabase();
+  if (backupPath) {
+    return res.json({ ok: true, path: backupPath });
+  }
+  return res.status(500).json({ error: "Backup olusturulamadi." });
 });
 
 app.get("/api/admin/summary", requireAdminAccess, (_req, res) => {
@@ -2712,9 +2750,10 @@ app.post("/api/chat", async (req, res) => {
     if (conversationContext.escalationTriggered) {
       const escalationReply = "Sizi canlı destek temsilcimize aktarıyorum. Kısa sürede yardımcı olacaktır.";
       const aiSummary = await generateEscalationSummary(contents, memory, conversationContext);
+      const isCredentialEscalation = (conversationContext.escalationReason || "").includes("_credentials");
       const escalationMemory = {
         ...memory,
-        issueSummary: aiSummary
+        issueSummary: isCredentialEscalation ? maskCredentials(aiSummary) : aiSummary
       };
       const ticketResult = createOrReuseTicket(escalationMemory, supportAvailability, {
         source: "escalation-trigger",
@@ -3002,7 +3041,7 @@ app.get("/api/admin/knowledge", requireAdminAccess, (_req, res) => {
     const rows = loadCSVData();
     return res.json({ ok: true, records: rows.map((r, i) => ({ id: i + 1, question: r.question || "", answer: r.answer || "" })) });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3021,7 +3060,7 @@ app.post("/api/admin/knowledge", requireAdminAccess, async (req, res) => {
 
     return res.json({ ok: true, id: rows.length });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3032,7 +3071,7 @@ app.post("/api/admin/knowledge/reingest", requireAdminAccess, async (_req, res) 
     const rowCount = knowledgeTable ? await knowledgeTable.countRows() : 0;
     return res.json({ ok: true, recordCount: rowCount });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3054,7 +3093,7 @@ app.put("/api/admin/knowledge/:id", requireAdminAccess, async (req, res) => {
 
     return res.json({ ok: true });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3073,7 +3112,7 @@ app.delete("/api/admin/knowledge/:id", requireAdminAccess, async (req, res) => {
 
     return res.json({ ok: true });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3083,7 +3122,7 @@ app.get("/api/admin/agent/files", requireAdminAccess, (_req, res) => {
     const files = fs.readdirSync(AGENT_DIR).filter(f => f.endsWith(".md")).sort();
     return res.json({ ok: true, files });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3120,7 +3159,7 @@ app.put("/api/admin/agent/files/:filename", requireAdminAccess, (req, res) => {
     loadAllAgentConfig();
     return res.json({ ok: true });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3130,7 +3169,7 @@ app.get("/api/admin/agent/topics", requireAdminAccess, (_req, res) => {
     const index = readJsonFileSafe(path.join(TOPICS_DIR, "_index.json"), { topics: [] });
     return res.json({ ok: true, topics: index.topics });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3144,7 +3183,7 @@ app.get("/api/admin/agent/topics/:topicId", requireAdminAccess, (req, res) => {
     const content = readTextFileSafe(path.join(TOPICS_DIR, topic.file), "");
     return res.json({ ok: true, topic, content });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3174,7 +3213,7 @@ app.put("/api/admin/agent/topics/:topicId", requireAdminAccess, (req, res) => {
     invalidateTopicCache(req.params.topicId);
     return res.json({ ok: true });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3207,7 +3246,7 @@ app.post("/api/admin/agent/topics", requireAdminAccess, (req, res) => {
     loadAllAgentConfig();
     return res.json({ ok: true, topic: newTopic });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3225,13 +3264,13 @@ app.delete("/api/admin/agent/topics/:topicId", requireAdminAccess, (req, res) =>
 
     // Optionally delete the topic file
     const topicFile = path.join(TOPICS_DIR, topic.file);
-    try { fs.unlinkSync(topicFile); } catch (_e) { /* ignore */ }
+    try { fs.unlinkSync(topicFile); } catch (err) { console.warn("[deleteTopic] File cleanup:", err.message); }
 
     loadAllAgentConfig();
     invalidateTopicCache(req.params.topicId);
     return res.json({ ok: true });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3242,7 +3281,7 @@ app.get("/api/admin/agent/memory", requireAdminAccess, (_req, res) => {
     const conversationSchema = readJsonFileSafe(path.join(MEMORY_DIR, "conversation-schema.json"), {});
     return res.json({ ok: true, files: { "ticket-template.json": ticketTemplate, "conversation-schema.json": conversationSchema } });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3257,7 +3296,7 @@ app.put("/api/admin/agent/memory/:filename", requireAdminAccess, (req, res) => {
 
   // Validate JSON
   try { JSON.parse(content); } catch (err) {
-    return res.status(400).json({ error: "Gecersiz JSON: " + err.message });
+    return res.status(400).json({ error: "Gecersiz JSON formati." });
   }
 
   try {
@@ -3265,7 +3304,7 @@ app.put("/api/admin/agent/memory/:filename", requireAdminAccess, (req, res) => {
     loadAllAgentConfig();
     return res.json({ ok: true });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3285,7 +3324,7 @@ app.get("/api/admin/env", requireAdminAccess, (_req, res) => {
     }
     return res.json({ ok: true, env: masked, sensitiveKeys: SENSITIVE_KEYS });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3312,7 +3351,7 @@ app.put("/api/admin/env", requireAdminAccess, (req, res) => {
     }
     return res.json({ ok: true, message: "Env guncellendi ve aninda uyguland\u0131." });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3338,7 +3377,7 @@ app.put("/api/admin/chat-flow", requireAdminAccess, (req, res) => {
     saveChatFlowConfig(clean);
     res.json({ ok: true, config: chatFlowConfig });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3363,7 +3402,7 @@ app.put("/api/admin/site-config", requireAdminAccess, (req, res) => {
     saveSiteConfig(clean);
     res.json({ ok: true, config: siteConfig });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3388,7 +3427,7 @@ app.post("/api/admin/site-logo", requireAdminAccess, express.raw({ type: ["image
     saveSiteConfig({ logoUrl });
     res.json({ ok: true, logoUrl });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3420,7 +3459,7 @@ app.put("/api/admin/sunshine-config", requireAdminAccess, (req, res) => {
     if (clean.enabled !== undefined) ZENDESK_SC_ENABLED = Boolean(clean.enabled);
     res.json({ ok: true, config: sunshineConfig });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3448,7 +3487,7 @@ app.post("/api/admin/sunshine-config/test", requireAdminAccess, async (_req, res
       res.json({ ok: false, error: "API hatasi: " + resp.status + " " + errText.slice(0, 200) });
     }
   } catch (err) {
-    res.json({ ok: false, error: "Baglanti hatasi: " + err.message });
+    res.json({ ok: false, error: safeError(err, "connection-test") });
   }
 });
 
@@ -3488,7 +3527,7 @@ app.get("/api/admin/system", requireAdminAccess, async (req, res) => {
       llmHealth: llmHealthStatus
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3501,7 +3540,7 @@ app.post("/api/admin/agent/reload", requireAdminAccess, (_req, res) => {
     loadSunshineConfig();
     return res.json({ ok: true, message: "Agent config yeniden yuklendi." });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3512,7 +3551,7 @@ app.post("/api/admin/agent/reload", requireAdminAccess, (_req, res) => {
 function loadAuditLog() {
   try {
     if (fs.existsSync(AUDIT_LOG_FILE)) return JSON.parse(fs.readFileSync(AUDIT_LOG_FILE, "utf8"));
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[loadAuditLog] Error:", err.message); }
   return { entries: [] };
 }
 
@@ -3707,7 +3746,7 @@ const SUGGESTED_FAQS_FILE = path.join(DATA_DIR, "suggested-faqs.json");
 function loadSuggestedFAQs() {
   try {
     if (fs.existsSync(SUGGESTED_FAQS_FILE)) return JSON.parse(fs.readFileSync(SUGGESTED_FAQS_FILE, "utf8"));
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[loadSuggestedFAQs] Error:", err.message); }
   return { faqs: [] };
 }
 
@@ -3763,7 +3802,7 @@ app.post("/api/admin/auto-faq/generate", requireAdminAccess, async (_req, res) =
           generated++;
         }
       }
-    } catch (_e) { /* skip */ }
+    } catch (err) { console.warn("[autoFAQ] Generation skip:", err.message); }
   }
 
   saveSuggestedFAQs(data);
@@ -3903,7 +3942,7 @@ app.get("/api/admin/analytics", requireAdminAccess, (_req, res) => {
       topTopics
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -3975,7 +4014,7 @@ app.post("/api/admin/webhooks/:id/test", requireAdminAccess, async (req, res) =>
     const resp = await fetch(hook.url, { method: "POST", headers, body });
     return res.json({ ok: true, status: resp.status });
   } catch (err) {
-    return res.json({ ok: false, error: err.message });
+    return res.json({ ok: false, error: safeError(err, "webhook-test") });
   }
 });
 
@@ -4029,7 +4068,8 @@ app.post("/api/admin/knowledge/upload", requireAdminAccess, upload.single("file"
           64
         );
         question = (qResult.reply || "").trim();
-      } catch (_e) {
+      } catch (err) {
+        console.warn("[fileUpload] Question generation:", err.message);
         question = chunk.slice(0, 100) + "...";
       }
       if (!question) question = chunk.slice(0, 100) + "...";
@@ -4042,12 +4082,12 @@ app.post("/api/admin/knowledge/upload", requireAdminAccess, upload.single("file"
     await reingestKnowledgeBase();
 
     // Cleanup uploaded file
-    try { fs.unlinkSync(req.file.path); } catch (_e) { /* ignore */ }
+    try { fs.unlinkSync(req.file.path); } catch (err) { console.warn("[fileUpload] Cleanup:", err.message); }
 
     return res.json({ ok: true, chunksAdded: added, totalRecords: rows.length });
   } catch (err) {
-    try { fs.unlinkSync(req.file.path); } catch (_e) { /* ignore */ }
-    return res.status(500).json({ error: err.message });
+    try { fs.unlinkSync(req.file.path); } catch (err) { console.warn("[fileUpload] Cleanup:", err.message); }
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -4128,7 +4168,7 @@ app.post("/api/admin/prompt-versions/:id/rollback", requireAdminAccess, (req, re
     loadAllAgentConfig();
     return res.json({ ok: true, message: `${version.filename} geri alindi.` });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: safeError(err, "api") });
   }
 });
 
@@ -4622,7 +4662,7 @@ app.get("*", (_req, res) => {
       }
     }
     if (changed) saveSunshineSessions(sessions);
-  } catch (_e) { /* silent */ }
+  } catch (err) { console.warn("[startup] Sunshine session cleanup:", err.message); }
   // Ensure uploads directory
   if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   await initKnowledgeBase();
@@ -4641,7 +4681,7 @@ app.get("*", (_req, res) => {
         saveTicketsDb(db);
         console.log(`[Retention] ${before - db.tickets.length} eski ticket silindi (${DATA_RETENTION_DAYS} gun).`);
       }
-    } catch (_e) { /* silent */ }
+    } catch (err) { console.warn("[dataRetention] Error:", err.message); }
   }
   // Run once at startup, then daily
   runDataRetention();
@@ -4652,7 +4692,12 @@ app.get("*", (_req, res) => {
   setInterval(checkSunshineInactivity, 60000);
   setInterval(checkWebConversationInactivity, 5 * 60 * 1000); // every 5 min
 
-  app.listen(PORT, () => {
+  // Startup backup
+  sqliteDb.backupDatabase();
+  // Daily backup interval
+  setInterval(() => sqliteDb.backupDatabase(), 24 * 60 * 60 * 1000);
+
+  const server = app.listen(PORT, () => {
     console.log(`${BOT_NAME} ${PORT} portunda hazir.`);
     startTelegramPolling();
 
@@ -4660,6 +4705,26 @@ app.get("*", (_req, res) => {
     setTimeout(checkLLMHealth, 10000);
     setInterval(checkLLMHealth, 5 * 60 * 1000);
   });
+
+  // ── Graceful Shutdown ──────────────────────────────────────────────────
+  function gracefulShutdown(signal) {
+    console.log(`\n[${signal}] Kapatiliyor...`);
+    server.close(() => {
+      console.log("[shutdown] HTTP server kapatildi.");
+      saveAnalyticsData();
+      sqliteDb.closeDb();
+      console.log("[shutdown] Temiz cikis.");
+      process.exit(0);
+    });
+    // Force exit after 10s
+    setTimeout(() => {
+      console.error("[shutdown] Force exit (10s timeout).");
+      process.exit(1);
+    }, 10000).unref();
+  }
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 })();
 
 // ── LLM Health Check ──────────────────────────────────────────────────────

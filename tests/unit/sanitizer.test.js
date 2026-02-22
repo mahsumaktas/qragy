@@ -1,4 +1,4 @@
-const { maskPII, sanitizeReply, normalizeForMatching } = require("../../src/utils/sanitizer.js");
+const { maskPII, sanitizeReply, normalizeForMatching, maskCredentials } = require("../../src/utils/sanitizer.js");
 
 describe("Sanitizer", () => {
   describe("maskPII", () => {
@@ -17,5 +17,22 @@ describe("Sanitizer", () => {
   describe("normalizeForMatching", () => {
     it("should lowercase and handle Turkish chars", () => { expect(normalizeForMatching("Merhaba Dünya")).toBe("merhaba dunya"); });
     it("should collapse whitespace", () => { expect(normalizeForMatching("  cok   bosluk  ")).toBe("cok bosluk"); });
+  });
+  describe("maskCredentials", () => {
+    it("should mask 'sifre' values", () => {
+      expect(maskCredentials("sifre: abc123")).toBe("[MASKED-CREDENTIAL]");
+    });
+    it("should mask 'parola' values", () => {
+      expect(maskCredentials("parola=mypass")).toBe("[MASKED-CREDENTIAL]");
+    });
+    it("should mask 'password' values", () => {
+      expect(maskCredentials("password: secret")).toBe("[MASKED-CREDENTIAL]");
+    });
+    it("should mask 'pin' values", () => {
+      expect(maskCredentials("pin 1234")).toBe("[MASKED-CREDENTIAL]");
+    });
+    it("should leave normal text unchanged", () => {
+      expect(maskCredentials("yazicim calismiyor")).toBe("yazicim calismiyor");
+    });
   });
 });
