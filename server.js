@@ -2516,9 +2516,30 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
+    // Closed followup — user sends message after farewell
+    const convData = loadConversations();
+    const existingConv = convData.conversations.find(c => c.sessionId === sessionId);
+    if (existingConv?.farewellOffered && activeUserMessages.length > 0) {
+      existingConv.farewellOffered = false;
+      saveConversations(convData);
+      return res.json({
+        reply: "Baska bir konuda yardimci olabilir miyim?",
+        model: GOOGLE_MODEL,
+        source: "closed-followup",
+        memory,
+        handoffReady: false,
+        support: getSupportAvailability()
+      });
+    }
+
     // Farewell/closing flow detection
     if (isFarewellMessage(latestUserMessage, activeUserMessages.length)) {
       const hasTicket = hasRequiredFields(memory);
+      // Mark farewell offered for this session
+      if (existingConv) {
+        existingConv.farewellOffered = true;
+        saveConversations(convData);
+      }
       if (hasTicket) {
         // Find existing ticket for CSAT
         const ticketsDb = loadTicketsDb();
