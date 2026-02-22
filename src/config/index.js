@@ -17,7 +17,7 @@ function loadConfig(env = process.env) {
     port: Number(env.PORT || 3000),
     googleApiKey: env.GOOGLE_API_KEY || env.GEMINI_API_KEY || "",
     googleModel: env.GOOGLE_MODEL || "gemini-3-pro-preview",
-    googleMaxOutputTokens: Number(env.GOOGLE_MAX_OUTPUT_TOKENS || 1024),
+    googleMaxOutputTokens: Number(env.GOOGLE_MAX_OUTPUT_TOKENS || 2048),
     googleThinkingBudget: Number(env.GOOGLE_THINKING_BUDGET || 64),
     googleRequestTimeoutMs: Number(env.GOOGLE_REQUEST_TIMEOUT_MS || 15000),
     googleFallbackModel: (env.GOOGLE_FALLBACK_MODEL || "").trim(),

@@ -158,7 +158,7 @@ function createChatProcessor(deps) {
     const citations = formatCitations ? formatCitations(knowledgeResults) : [];
     const systemPrompt = buildSystemPrompt(memory, conversationContext, knowledgeResults);
     let geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
-    if (geminiResult.finishReason === "MAX_TOKENS" && geminiResult.reply.length < 160) {
+    if (geminiResult.finishReason === "MAX_TOKENS") {
       geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2);
     }
     if (geminiResult.fallbackUsed) {
