@@ -307,6 +307,17 @@ const { buildSystemPrompt } = promptBuilder;
 // ── User Memory Service ─────────────────────────────────────────────────
 const userMemory = createUserMemory({ sqliteDb: { getDb: () => sqliteDb.db }, logger });
 
+// buildGenerationConfig, callGemini, callGeminiWithFallback — moved to lib/providers.js
+
+// ── Knowledge Service ───────────────────────────────────────────────────
+const knowledgeService = createKnowledgeService({
+  lancedb, embedText, loadCSVData, logger,
+  lanceDbPath: LANCE_DB_PATH,
+  ragDistanceThreshold: RAG_DISTANCE_THRESHOLD,
+});
+const { initKnowledgeBase, reingestKnowledgeBase, searchKnowledge } = knowledgeService;
+const getKnowledgeTable = knowledgeService.getKnowledgeTable;
+
 // ── Next-Gen RAG & Memory Services (feature-flagged) ─────────────────────
 const USE_ADAPTIVE_PIPELINE = /^(1|true|yes)$/i.test(process.env.USE_ADAPTIVE_PIPELINE || "");
 
@@ -369,16 +380,7 @@ const conversationSummarizer = createConversationSummarizer({
   callLLM, getProviderConfig, getChatFlowConfig, logger,
 });
 
-// buildGenerationConfig, callGemini, callGeminiWithFallback — moved to lib/providers.js
 
-// ── Knowledge Service ───────────────────────────────────────────────────
-const knowledgeService = createKnowledgeService({
-  lancedb, embedText, loadCSVData, logger,
-  lanceDbPath: LANCE_DB_PATH,
-  ragDistanceThreshold: RAG_DISTANCE_THRESHOLD,
-});
-const { initKnowledgeBase, reingestKnowledgeBase, searchKnowledge } = knowledgeService;
-const getKnowledgeTable = knowledgeService.getKnowledgeTable;
 
 // ── Conversation Utils Service ──────────────────────────────────────────
 const convUtils = createConversationUtils({
