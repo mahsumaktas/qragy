@@ -12,6 +12,16 @@ const multer = require("multer");
 const CSV_EXAMPLE_FILE = path.join(__dirname, "knowledge_base.example.csv");
 const CSV_FILE = path.join(__dirname, "data", "knowledge_base.csv");
 
+// ── Modular imports ──────────────────────────────────────────────────────
+const { createRateLimiter } = require("./src/middleware/rateLimiter.js");
+const { createAuthMiddleware } = require("./src/middleware/auth.js");
+const { securityHeaders } = require("./src/middleware/security.js");
+const { detectInjection, validateOutput, GENERIC_REPLY } = require("./src/middleware/injectionGuard.js");
+const { isLikelyBranchCode: isLikelyBranchCodeV2 } = require("./src/utils/validators.js");
+const { maskPII: maskPIIv2, sanitizeReply, normalizeForMatching: normalizeForMatchingV2 } = require("./src/utils/sanitizer.js");
+const { validateBotResponse: validateBotResponseV2 } = require("./src/services/responseValidator.js");
+const { invalidateTopicCache } = require("./src/services/topic.js");
+
 const app = express();
 
 // ── Global error handlers ───────────────────────────────────────────────
@@ -107,28 +117,12 @@ const WEBHOOK_DELIVERY_LOG_FILE = path.join(DATA_DIR, "webhook-delivery-log.json
 
 let knowledgeTable = null;
 
-// ── Rate Limiter (in-memory) ────────────────────────────────────────────
-const rateLimitStore = new Map();
-
+// ── Rate Limiter (modular) ──────────────────────────────────────────────
+const rateLimiter = createRateLimiter({ maxRequests: RATE_LIMIT_MAX, windowMs: RATE_LIMIT_WINDOW_MS });
 function checkRateLimit(ip) {
   if (!RATE_LIMIT_ENABLED) return true;
-  const now = Date.now();
-  let entry = rateLimitStore.get(ip);
-  if (!entry || now > entry.resetAt) {
-    entry = { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
-    rateLimitStore.set(ip, entry);
-  }
-  entry.count++;
-  return entry.count <= RATE_LIMIT_MAX;
+  return rateLimiter.check(ip);
 }
-
-// Cleanup stale entries every 60s
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, entry] of rateLimitStore) {
-    if (now > entry.resetAt) rateLimitStore.delete(ip);
-  }
-}, 60000);
 
 // ── Analytics (in-memory buffer → periodic flush) ────────────────────────
 const analyticsBuffer = [];
@@ -986,26 +980,8 @@ function sanitizeTicketForList(ticket) {
   };
 }
 
-function requireAdminAccess(req, res, next) {
-  if (!ADMIN_TOKEN) {
-    return res.status(503).json({ error: "Admin panel yapilandirilmamis. ADMIN_TOKEN ayarlayin." });
-  }
-
-  const headerToken = String(req.headers["x-admin-token"] || "").trim();
-  const queryToken = String(req.query.token || "").trim();
-  const candidate = headerToken || queryToken;
-  if (!candidate || candidate.length !== ADMIN_TOKEN.length) {
-    return res.status(401).json({ error: "Admin erisimi icin token gerekli." });
-  }
-
-  const candidateBuf = Buffer.from(candidate);
-  const tokenBuf = Buffer.from(ADMIN_TOKEN);
-  if (!crypto.timingSafeEqual(candidateBuf, tokenBuf)) {
-    return res.status(401).json({ error: "Admin erisimi icin token gerekli." });
-  }
-
-  return next();
-}
+// Auth middleware — modular (src/middleware/auth.js)
+const requireAdminAccess = createAuthMiddleware(() => ADMIN_TOKEN);
 
 function loadCSVData() {
   try {
@@ -1248,20 +1224,9 @@ function sanitizeIssueSummary(text, branchCode = "") {
 
   return cleaned[0].toUpperCase() + cleaned.slice(1);
 }
+// normalizeForMatching — modular (src/utils/sanitizer.js)
 function normalizeForMatching(text) {
-  return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ş/g, "s").replace(/Ş/g, "s")
-    .replace(/ç/g, "c").replace(/Ç/g, "c")
-    .replace(/ı/g, "i").replace(/İ/g, "i")
-    .replace(/ö/g, "o").replace(/Ö/g, "o")
-    .replace(/ü/g, "u").replace(/Ü/g, "u")
-    .replace(/ğ/g, "g").replace(/Ğ/g, "g")
-    .toLowerCase()
-    .replace(/[.!?]+/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return normalizeForMatchingV2(text);
 }
 
 function detectTopicFromMessages(userMessages) {
@@ -1447,15 +1412,9 @@ function isGreetingOnlyMessage(text) {
   return /^(hi|hello|selamlar|merhabalar)$/.test(normalized);
 }
 
+// sanitizeAssistantReply — modular (src/utils/sanitizer.js)
 function sanitizeAssistantReply(text) {
-  return String(text || "")
-    .replace(/\r/g, "")
-    // Keep **bold** and *italic* for client-side markdown rendering
-    .replace(/`{1,3}/g, "")
-    .replace(/#{1,6}\s/g, "") // Remove heading markers
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, 800);
+  return sanitizeReply(text);
 }
 
 function buildMissingFieldsReply(memory, latestUserMessage = "") {
@@ -1532,26 +1491,9 @@ function buildDeterministicCollectionReply(memory, activeUserMessages, hasClosed
   return null;
 }
 
+// isLikelyBranchCode — modular (src/utils/validators.js)
 function isLikelyBranchCode(value) {
-  if (typeof value !== "string") {
-    return false;
-  }
-
-  const code = value.trim().toUpperCase();
-
-  if (!/^[A-Z0-9-]{2,20}$/.test(code)) {
-    return false;
-  }
-
-  if (!/[0-9]/.test(code)) {
-    return false;
-  }
-
-  if (/^(?:\+?90)?0?\d{10}$/.test(code)) {
-    return false;
-  }
-
-  return true;
+  return isLikelyBranchCodeV2(value);
 }
 
 function extractBranchCodeFromText(text) {
@@ -2051,18 +1993,9 @@ function recordContentGap(query) {
   saveContentGaps(data);
 }
 
-// ── PII Masking ─────────────────────────────────────────────────────────
+// maskPII — modular (src/utils/sanitizer.js)
 function maskPII(text) {
-  if (!text || typeof text !== "string") return text;
-  // TC Kimlik No (11 digits)
-  let masked = text.replace(/\b\d{11}\b/g, "[TC_MASKED]");
-  // Phone numbers (05xx xxx xx xx patterns)
-  masked = masked.replace(/\b0?5\d{2}[\s\-.]?\d{3}[\s\-.]?\d{2}[\s\-.]?\d{2}\b/g, "[TEL_MASKED]");
-  // Email
-  masked = masked.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[EMAIL_MASKED]");
-  // IBAN (TR + 24 digits)
-  masked = masked.replace(/TR\s?\d{2}[\s]?\d{4}[\s]?\d{4}[\s]?\d{4}[\s]?\d{4}[\s]?\d{4}[\s]?\d{2}/gi, "[IBAN_MASKED]");
-  return masked;
+  return maskPIIv2(text);
 }
 
 // ── Conversation Quality Score ──────────────────────────────────────────
@@ -2125,36 +2058,18 @@ async function compressConversationHistory(messages) {
   return [...messages.slice(0, 2), ...recentMessages];
 }
 
-// ── Response Quality Validation ─────────────────────────────────────────
-function validateBotResponse(reply, sources) {
-  if (!reply || typeof reply !== "string") return { valid: false, reason: "empty" };
-  const trimmed = reply.trim();
-  if (trimmed.length < 10) return { valid: false, reason: "too_short" };
-  // Detect repetition (same sentence 3+ times)
-  const sentences = trimmed.split(/[.!?]+/).filter(s => s.trim().length > 5);
-  if (sentences.length >= 3) {
-    const unique = new Set(sentences.map(s => s.trim().toLowerCase()));
-    if (unique.size === 1) return { valid: false, reason: "repetitive" };
-  }
-  // Detect hallucination markers
-  const hallucMarkers = ["ben bir yapay zeka olarak", "as an ai", "i cannot", "i'm sorry but"];
-  for (const marker of hallucMarkers) {
-    if (trimmed.toLowerCase().includes(marker)) return { valid: false, reason: "hallucination_marker" };
-  }
-  return { valid: true };
+// validateBotResponse — modular (src/services/responseValidator.js)
+function validateBotResponse(reply) {
+  return validateBotResponseV2(reply, "tr");
 }
 
 ensureTicketsDbFile();
 
-app.use((req, res, next) => {
-  // Security headers
-  res.header("X-Content-Type-Options", "nosniff");
-  res.header("X-Frame-Options", "DENY");
-  res.header("X-XSS-Protection", "1; mode=block");
-  res.header("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.header("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+// Security headers — modular (src/middleware/security.js)
+app.use(securityHeaders);
 
-  // CORS - allow same-origin and configured origins
+// CORS middleware
+app.use((req, res, next) => {
   const origin = req.headers.origin || "";
   const allowed = [
     "http://localhost:" + PORT,
@@ -2556,6 +2471,26 @@ app.post("/api/chat", async (req, res) => {
       return res.status(400).json({ error: "messages alani bos olamaz." });
     }
 
+    // Message length limit
+    const MAX_MESSAGE_LENGTH = 1000;
+    const latestUserMsg = rawMessages[rawMessages.length - 1];
+    if (latestUserMsg && latestUserMsg.role === "user" && typeof latestUserMsg.content === "string" && latestUserMsg.content.length > MAX_MESSAGE_LENGTH) {
+      return res.status(400).json({ error: `Mesaj cok uzun. Maksimum ${MAX_MESSAGE_LENGTH} karakter gonderilebilir.` });
+    }
+
+    // Injection Guard — Layer 1 (input sanitization)
+    const latestMsg = rawMessages[rawMessages.length - 1];
+    if (latestMsg && latestMsg.role === "user") {
+      const injectionCheck = detectInjection(latestMsg.content || "");
+      if (injectionCheck.blocked) {
+        return res.json({
+          reply: GENERIC_REPLY,
+          source: "injection-blocked",
+          sessionId,
+        });
+      }
+    }
+
     const originalJson = res.json.bind(res);
     res.json = (data) => {
       if (data && typeof data === "object" && !data.sessionId) {
@@ -2588,9 +2523,30 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
+    // Closed followup — user sends message after farewell
+    const convData = loadConversations();
+    const existingConv = convData.conversations.find(c => c.sessionId === sessionId);
+    if (existingConv?.farewellOffered && activeUserMessages.length > 0) {
+      existingConv.farewellOffered = false;
+      saveConversations(convData);
+      return res.json({
+        reply: "Baska bir konuda yardimci olabilir miyim?",
+        model: GOOGLE_MODEL,
+        source: "closed-followup",
+        memory,
+        handoffReady: false,
+        support: getSupportAvailability()
+      });
+    }
+
     // Farewell/closing flow detection
     if (isFarewellMessage(latestUserMessage, activeUserMessages.length)) {
       const hasTicket = hasRequiredFields(memory);
+      // Mark farewell offered for this session
+      if (existingConv) {
+        existingConv.farewellOffered = true;
+        saveConversations(convData);
+      }
       if (hasTicket) {
         // Find existing ticket for CSAT
         const ticketsDb = loadTicketsDb();
@@ -2918,6 +2874,16 @@ app.post("/api/chat", async (req, res) => {
 
     reply = sanitizeAssistantReply(geminiResult.reply);
 
+    // Injection Guard — Layer 3 (output validation)
+    const systemFragments = [
+      (typeof SOUL_TEXT === "string" ? SOUL_TEXT : "").slice(0, 50),
+      (typeof PERSONA_TEXT === "string" ? PERSONA_TEXT : "").slice(0, 50),
+    ].filter(Boolean);
+    const outputCheck = validateOutput(reply, systemFragments);
+    if (!outputCheck.safe) {
+      reply = GENERIC_REPLY;
+    }
+
     // Response quality validation
     const qualityCheck = validateBotResponse(reply, sources);
     if (!qualityCheck.valid) {
@@ -3205,6 +3171,7 @@ app.put("/api/admin/agent/topics/:topicId", requireAdminAccess, (req, res) => {
     }
 
     loadAllAgentConfig();
+    invalidateTopicCache(req.params.topicId);
     return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -3261,6 +3228,7 @@ app.delete("/api/admin/agent/topics/:topicId", requireAdminAccess, (req, res) =>
     try { fs.unlinkSync(topicFile); } catch (_e) { /* ignore */ }
 
     loadAllAgentConfig();
+    invalidateTopicCache(req.params.topicId);
     return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -4283,6 +4251,17 @@ async function processChatMessage(messagesArray, source = "web") {
     recordLLMError({ message: "Primary model failed, fallback used", status: 429 }, "tg-chat-fallback");
   }
   let reply = sanitizeAssistantReply(geminiResult.reply);
+
+  // Injection Guard — Layer 3 (output validation)
+  const tgSystemFragments = [
+    (typeof SOUL_TEXT === "string" ? SOUL_TEXT : "").slice(0, 50),
+    (typeof PERSONA_TEXT === "string" ? PERSONA_TEXT : "").slice(0, 50),
+  ].filter(Boolean);
+  const tgOutputCheck = validateOutput(reply, tgSystemFragments);
+  if (!tgOutputCheck.safe) {
+    reply = GENERIC_REPLY;
+  }
+
   // Response quality validation
   const qualityCheck = validateBotResponse(reply, []);
   if (!qualityCheck.valid) {
@@ -4400,7 +4379,8 @@ app.post("/api/sunshine/webhook", express.json({ limit: "100kb" }), (req, res) =
         }
 
         const session = sessions[sessionKey];
-        session.messages.push({ role: "user", content: message.content.text });
+        const userText = (message.content.text || "").slice(0, 1000);
+        session.messages.push({ role: "user", content: userText });
         session.lastActivity = Date.now();
         session.nudge75Sent = false;
         session.nudge90Sent = false;
@@ -4452,7 +4432,7 @@ async function handleTelegramUpdate(update) {
   sessions[chatId].nudge90Sent = false;
   sessions[chatId].closed = false;
 
-  sessions[chatId].messages.push({ role: "user", content: msg.text });
+  sessions[chatId].messages.push({ role: "user", content: (msg.text || "").slice(0, 1000) });
   // Keep last 30 messages
   if (sessions[chatId].messages.length > 30) {
     sessions[chatId].messages = sessions[chatId].messages.slice(-30);
