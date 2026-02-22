@@ -309,28 +309,124 @@ Add Qragy to any website:
 
 ```
 qragy/
-├── server.js                    # API, AI, RAG, tickets — single file
+├── server.js                       # App setup, middleware, route mounting, startup (~660 lines)
+├── src/
+│   ├── config/
+│   │   └── index.js                # Centralized env config loader + validation
+│   ├── routes/
+│   │   ├── admin/                  # Admin panel API endpoints
+│   │   │   ├── index.js            # Admin route aggregator
+│   │   │   ├── agent.js            # Agent config CRUD
+│   │   │   ├── analytics.js        # Analytics dashboard
+│   │   │   ├── config.js           # Runtime config management
+│   │   │   ├── insights.js         # SLA, auto-FAQ, content gaps
+│   │   │   ├── knowledge.js        # Knowledge base management
+│   │   │   ├── system.js           # System health, audit log
+│   │   │   ├── tickets.js          # Ticket CRUD + bulk ops + prompt versions
+│   │   │   └── webhooks.js         # Webhook config + test
+│   │   ├── chat.js                 # POST /api/chat — main chat endpoint
+│   │   ├── conversation.js         # Handoff, CSAT, file upload, session status
+│   │   ├── deploy.js               # GitHub webhook auto-deploy
+│   │   ├── health.js               # GET /api/health
+│   │   └── widget.js               # GET /api/config (widget configuration)
+│   ├── services/
+│   │   ├── agentConfig.js          # Agent prompt/config file loader with caching
+│   │   ├── analytics.js            # Event buffer, daily aggregation, CSAT tracking
+│   │   ├── chatEngine.js           # Core chat logic (LLM calls, field collection)
+│   │   ├── chatProcessor.js        # Chat message processing pipeline
+│   │   ├── configStore.js          # Runtime config file store (chat flow, site, etc.)
+│   │   ├── conversationManager.js  # Conversation CRUD + clarification tracking
+│   │   ├── conversationUtils.js    # Conversation context building
+│   │   ├── escalation.js           # Escalation rule evaluation
+│   │   ├── knowledge.js            # Knowledge base search + content gaps
+│   │   ├── llmHealth.js            # LLM error tracking + circuit breaker
+│   │   ├── memory.js               # Conversation memory extraction
+│   │   ├── promptBuilder.js        # Prompt builder service wrapper
+│   │   ├── rag.js                  # RAG retrieval via LanceDB
+│   │   ├── responseValidator.js    # Bot response safety validation
+│   │   ├── statemachine.js         # Conversation state machine
+│   │   ├── supportHours.js         # Business hours calculation
+│   │   ├── ticketStore.js          # Ticket CRUD + duplicate detection
+│   │   ├── topic.js                # Topic classification
+│   │   ├── webChatPipeline.js      # Web chat orchestration pipeline
+│   │   └── webhooks.js             # HMAC-signed webhook delivery with retry
+│   ├── prompt/
+│   │   └── builder.js              # System prompt assembly with token budgeting
+│   ├── middleware/
+│   │   ├── auth.js                 # Admin token authentication
+│   │   ├── rateLimiter.js          # Per-IP rate limiting
+│   │   ├── security.js             # CORS, Helmet, security headers
+│   │   └── injectionGuard.js       # Prompt injection detection + output validation
+│   └── utils/
+│       ├── adminHelpers.js         # CSV data + .env file management
+│       ├── conversationHelpers.js  # Message parsing utilities
+│       ├── errorHelper.js          # Safe error serialization
+│       ├── logger.js               # Structured logger [ISO] [LEVEL] [context]
+│       ├── sanitizer.js            # PII masking, text normalization
+│       ├── session.js              # Session ID generation
+│       ├── ticketHelpers.js        # Ticket record building + duplicate detection
+│       └── validators.js           # Input validators (email, phone, branch code)
 ├── lib/
-│   ├── providers.js             # Multi-model LLM + embedding abstraction
-│   └── chunker.js               # Document chunking engine
-├── knowledge_base.example.csv   # Example Q&A data
-├── agent/                       # Bot personality & rules
-│   ├── soul.md                  # Identity
-│   ├── persona.md               # Tone & style
-│   ├── topics/                  # Structured support flows
-│   │   ├── _index.json          # Topic registry
-│   │   └── *.md                 # Topic instructions
-│   └── ...                      # Escalation, filtering, etc.
-├── memory/                      # Conversation & ticket templates
-├── public/                      # Frontend (vanilla JS)
-│   ├── index.html               # Chat UI
-│   ├── admin.html               # Admin panel
-│   └── embed.js                 # Embeddable widget
-├── scripts/ingest.js            # CSV → LanceDB embedder
-├── Dockerfile                   # Docker image definition
-├── docker-compose.yml           # Easy container setup
-└── data/                        # Runtime data (auto-created)
+│   ├── providers.js                # Multi-model LLM + embedding abstraction
+│   ├── chunker.js                  # Document chunking engine
+│   └── db.js                       # SQLite database layer
+├── tests/
+│   ├── unit/                       # 190+ unit tests (23 test files)
+│   └── integration/                # Integration tests (supertest)
+├── agent/                          # Bot personality & rules
+│   ├── soul.md, persona.md         # Identity & tone
+│   ├── topics/                     # Structured support flows
+│   └── ...                         # Escalation, filtering, etc.
+├── memory/                         # Conversation & ticket templates
+├── public/                         # Frontend (vanilla JS, no build step)
+├── scripts/ingest.js               # CSV → LanceDB embedder
+├── Dockerfile                      # Docker image
+├── docker-compose.yml              # Container setup
+├── .github/workflows/ci.yml        # CI: lint + test + coverage
+└── data/                           # Runtime data (auto-created)
 ```
+
+### Design Patterns
+
+- **Factory + DI**: Services use `createXxxService(deps)` — all dependencies injected
+- **Route mounting**: Routes use `mount(app, deps)` pattern
+- **CommonJS**: All modules use `require()` / `module.exports`
+- **Getter closures**: Mutable runtime config accessed via `() => VALUE` getters
+
+## Development
+
+### Prerequisites
+
+- Node.js 20+
+- npm
+
+### Setup
+
+```bash
+git clone https://github.com/mahsumaktas/qragy.git
+cd qragy && npm install
+cp .env.example .env  # add your API key
+```
+
+### Running Tests
+
+```bash
+npm test                  # Run all tests (190+ tests)
+npm run test:coverage     # Run with coverage report
+```
+
+### Linting
+
+```bash
+npx eslint .              # Check for lint errors
+npx eslint . --fix        # Auto-fix fixable issues
+```
+
+### Code Quality
+
+- **ESLint** with flat config (eslint.config.js) — enforces `eqeqeq`, `no-var`, `prefer-const`
+- **Vitest** for unit + integration testing with V8 coverage
+- **CI Pipeline** runs lint + test on every push/PR to main
 
 ---
 
@@ -411,7 +507,8 @@ All admin endpoints require `x-admin-token` header when `ADMIN_TOKEN` is set.
 | Vector DB | LanceDB (embedded, serverless) |
 | Embeddings | Gemini / OpenAI / Ollama (configurable) |
 | Frontend | Vanilla JS — zero build step |
-| Storage | CSV + JSON files |
+| Database | SQLite (better-sqlite3) + LanceDB |
+| Storage | JSON config files, CSV knowledge base |
 | Container | Docker (optional) |
 
 ---

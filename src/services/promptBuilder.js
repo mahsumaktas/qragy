@@ -1,0 +1,107 @@
+"use strict";
+
+/**
+ * Prompt Builder Service
+ *
+ * Builds the system prompt for LLM calls from agent config, topic data,
+ * memory state, and knowledge base results.
+ * Factory pattern — agent text getters injected via deps.
+ */
+function createPromptBuilder(deps) {
+  const {
+    getAgentTexts,
+    getTopicIndexSummary,
+    loadTopicFile,
+    getTopicMeta,
+    getMemoryTemplate,
+  } = deps;
+
+  function buildSystemPrompt(memory, conversationContext, knowledgeResults) {
+    const {
+      SOUL_TEXT, PERSONA_TEXT, BOOTSTRAP_TEXT, DOMAIN_TEXT,
+      SKILLS_TEXT, HARD_BANS_TEXT, ESCALATION_MATRIX_TEXT,
+      RESPONSE_POLICY_TEXT, DOD_TEXT, OUTPUT_FILTER_TEXT,
+    } = getAgentTexts();
+    const TOPIC_INDEX_SUMMARY = getTopicIndexSummary();
+    const MEMORY_TEMPLATE = getMemoryTemplate();
+
+    const parts = [];
+    const state = conversationContext?.conversationState || "welcome_or_greet";
+    const turnCount = conversationContext?.turnCount || 0;
+
+    // Core identity — always included
+    if (SOUL_TEXT) parts.push(SOUL_TEXT);
+    if (PERSONA_TEXT) parts.push(PERSONA_TEXT);
+
+    // Early turns (0-1): only soul + persona + bootstrap for lighter prompt
+    if (turnCount <= 1) {
+      if (BOOTSTRAP_TEXT) parts.push(BOOTSTRAP_TEXT);
+    } else {
+      // Full agent config for ongoing conversations
+      if (DOMAIN_TEXT) parts.push(DOMAIN_TEXT);
+      if (BOOTSTRAP_TEXT) parts.push(BOOTSTRAP_TEXT);
+      if (SKILLS_TEXT) parts.push(SKILLS_TEXT);
+      if (HARD_BANS_TEXT) parts.push(HARD_BANS_TEXT);
+
+      // Skip escalation matrix during farewell state
+      if (state !== "farewell" && ESCALATION_MATRIX_TEXT) {
+        parts.push(ESCALATION_MATRIX_TEXT);
+      }
+
+      parts.push(RESPONSE_POLICY_TEXT);
+      if (DOD_TEXT) parts.push(DOD_TEXT);
+      if (OUTPUT_FILTER_TEXT) parts.push(OUTPUT_FILTER_TEXT);
+    }
+
+    // Konu listesini HER ZAMAN ekle
+    parts.push(`## Destek Konuları Listesi\nKullanıcının talebini aşağıdaki konulardan en uygun olanıyla eşleştir. Keyword'lere değil anlama bak.\n${TOPIC_INDEX_SUMMARY}`);
+
+    // Keyword ile on-eslesme yapildiysa detayli konu dosyasini da ekle
+    if (conversationContext?.currentTopic) {
+      const topicContent = loadTopicFile(conversationContext.currentTopic);
+      const topicMeta = getTopicMeta(conversationContext.currentTopic);
+      if (topicContent) {
+        parts.push(`## Tespit Edilen Konu Detayı\nKonu: ${topicMeta?.title || conversationContext.currentTopic}\n${topicContent}`);
+        if (topicMeta?.requiredInfo?.length) {
+          parts.push(`## Escalation Gerekirse Toplanacak Bilgiler\nBu bilgiler SADECE escalation (canlı temsilciye aktarım) gerektiğinde toplanır. Bilgilendirme YAPILMADAN bu bilgileri SORMA.\n${topicMeta.requiredInfo.join(", ")}`);
+        }
+        if (topicMeta?.requiresEscalation) {
+          parts.push("## Not: Bu konu sonunda canlı temsilciye aktarım gerektirir.");
+        }
+        if (topicMeta?.canResolveDirectly) {
+          parts.push("## Not: Bu konu doğrudan çözülebilir. Bilgi tabanı ve konu dosyasındaki adımları kullanarak HEMEN bilgilendir. Firma/şube/kullanıcı kodu SORMA. Bilgilendirme sonrası uğurlama prosedürüne geç.");
+        }
+      }
+    }
+
+    if (conversationContext?.escalationTriggered) {
+      parts.push(`## ESCALATION TETİKLENDİ\nSebep: ${conversationContext.escalationReason}\nEscalation mesajı gönder: "Sizi canlı destek temsilcimize aktarıyorum. Kısa sürede yardımcı olacaktır."`);
+    }
+
+    parts.push(`Memory schema: ${JSON.stringify(MEMORY_TEMPLATE)}`);
+    parts.push(`Current memory: ${JSON.stringify(memory)}`);
+    parts.push(`Conversation state: ${JSON.stringify(conversationContext || {})}`);
+    parts.push("Onay metni (SADECE escalation/ticket toplama sonrası kullan): Talebinizi aldım. Şube kodu: <KOD>. Kısa açıklama: <ÖZET>. Destek ekibi en kısa sürede dönüş yapacaktır.");
+    parts.push("Uygun olduğunda yanıtının sonuna hızlı yanıt seçenekleri ekle: [QUICK_REPLIES: secenek1 | secenek2 | secenek3]. Maks 3 seçenek. Yalnızca kullanıcıyı yönlendirmek mantıklıysa ekle.");
+
+    // RAG: Bilgi tabani sonuclarini ekle
+    if (Array.isArray(knowledgeResults) && knowledgeResults.length > 0) {
+      const kbLines = ["## Bilgi Tabanı Sonuçları",
+        "Aşağıdaki soru-cevap çiftleri kullanıcının sorusuyla ilişkili olabilir.",
+        "Bu bilgileri kullanarak HEMEN yanıt ver. Firma/şube bilgisi sormadan ÖNCE bu cevapları paylaş.",
+        "Kullanıcının sorusuna uygun değilse görmezden gel.", ""];
+      for (const item of knowledgeResults) {
+        kbLines.push(`Soru: ${item.question}`);
+        kbLines.push(`Cevap: ${item.answer}`);
+        kbLines.push("");
+      }
+      parts.push(kbLines.join("\n"));
+    }
+
+    return parts.join("\n\n");
+  }
+
+  return { buildSystemPrompt };
+}
+
+module.exports = { createPromptBuilder };

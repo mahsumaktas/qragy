@@ -44,7 +44,7 @@ function fullTextSearch(knowledgeBase, query, topK = 3) {
 function filterByRelevance(vectorResults) {
   return vectorResults.filter((r) => {
     const d = r._distance;
-    if (d == null) return true;
+    if (d === null || d === undefined) return true;
     return d <= RAG_DISTANCE_THRESHOLD;
   });
 }

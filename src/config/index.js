@@ -38,7 +38,7 @@ function loadConfig(env = process.env) {
     rateLimitEnabled: parseBool(env.RATE_LIMIT_ENABLED, true),
     rateLimitMax: Number(env.RATE_LIMIT_MAX || 20),
     rateLimitWindowMs: Number(env.RATE_LIMIT_WINDOW_MS || 60000),
-    deterministicCollectionMode: !parseBool(env.DETERMINISTIC_COLLECTION_MODE === "false" ? "true" : "false", false),
+    deterministicCollectionMode: parseBool(env.DETERMINISTIC_COLLECTION_MODE, true),
     adminToken: (env.ADMIN_TOKEN || "").trim(),
     botName: (env.BOT_NAME || "QRAGY Bot").trim(),
     companyName: (env.COMPANY_NAME || "").trim(),
@@ -48,6 +48,9 @@ function loadConfig(env = process.env) {
     telegramPollingIntervalMs: Number(env.TELEGRAM_POLLING_INTERVAL_MS || 2000),
     deployWebhookSecret: (env.DEPLOY_WEBHOOK_SECRET || "").trim(),
     dataRetentionDays: Number(env.DATA_RETENTION_DAYS || 90),
+    allowedOrigin: (env.ALLOWED_ORIGIN || "").trim(),
+    slaFirstResponseMin: Number(env.SLA_FIRST_RESPONSE_MIN || 5),
+    slaResolutionMin: Number(env.SLA_RESOLUTION_MIN || 60),
     agentDir: path.join(__dirname, "..", "..", "agent"),
     topicsDir: path.join(__dirname, "..", "..", "agent", "topics"),
     memoryDir: path.join(__dirname, "..", "..", "memory"),
@@ -57,4 +60,15 @@ function loadConfig(env = process.env) {
   };
 }
 
-module.exports = { loadConfig, parseBool, parseCommaSeparated, parseNumberArray };
+function validateConfig(config) {
+  const warnings = [];
+  if (!config.googleApiKey) {
+    warnings.push("GOOGLE_API_KEY (veya GEMINI_API_KEY) tanimlanmamis — LLM cagrilari basarisiz olacak");
+  }
+  if (!config.adminToken) {
+    warnings.push("ADMIN_TOKEN tanimlanmamis — admin paneli korumasiz");
+  }
+  return warnings;
+}
+
+module.exports = { loadConfig, validateConfig, parseBool, parseCommaSeparated, parseNumberArray };

@@ -1410,7 +1410,7 @@ async function handoffToZendesk(payload) {
     if (isEmbedMode) {
       postHandoffToParent(summary, tags, memory);
       setTimeout(() => {
-        try { window.parent.postMessage({ type: "QRAGY_CLOSE", source: "qragy-ai-widget" }, "*"); } catch (_e) {}
+        try { window.parent.postMessage({ type: "QRAGY_CLOSE", source: "qragy-ai-widget" }, "*"); } catch (_e) { /* cross-origin expected */ }
       }, 2500);
     } else {
       // Standalone modda: sayfadaki Canli Destek butonunu tikla

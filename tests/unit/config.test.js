@@ -25,4 +25,38 @@ describe("Config", () => {
     const { loadConfig } = require("../../src/config/index.js");
     expect(loadConfig({ SUPPORT_OPEN_DAYS: "1,2,3,4,5" }).supportOpenDays).toEqual([1,2,3,4,5]);
   });
+  it("should warn when GOOGLE_API_KEY is missing", () => {
+    const { loadConfig, validateConfig } = require("../../src/config/index.js");
+    const cfg = loadConfig({});
+    const warnings = validateConfig(cfg);
+    expect(warnings.some((w) => w.includes("GOOGLE_API_KEY"))).toBe(true);
+  });
+  it("should not warn when required keys are present", () => {
+    const { loadConfig, validateConfig } = require("../../src/config/index.js");
+    const cfg = loadConfig({ GOOGLE_API_KEY: "test-key", ADMIN_TOKEN: "tok" });
+    const warnings = validateConfig(cfg);
+    expect(warnings.length).toBe(0);
+  });
+  it("should parse SLA config", () => {
+    const { loadConfig } = require("../../src/config/index.js");
+    const cfg = loadConfig({ SLA_FIRST_RESPONSE_MIN: "10", SLA_RESOLUTION_MIN: "120" });
+    expect(cfg.slaFirstResponseMin).toBe(10);
+    expect(cfg.slaResolutionMin).toBe(120);
+  });
+  it("deterministicCollectionMode true by default", () => {
+    const { loadConfig } = require("../../src/config/index.js");
+    expect(loadConfig({}).deterministicCollectionMode).toBe(true);
+  });
+  it("deterministicCollectionMode false on '0'", () => {
+    const { loadConfig } = require("../../src/config/index.js");
+    expect(loadConfig({ DETERMINISTIC_COLLECTION_MODE: "0" }).deterministicCollectionMode).toBe(false);
+  });
+  it("deterministicCollectionMode false on 'no'", () => {
+    const { loadConfig } = require("../../src/config/index.js");
+    expect(loadConfig({ DETERMINISTIC_COLLECTION_MODE: "no" }).deterministicCollectionMode).toBe(false);
+  });
+  it("deterministicCollectionMode false on 'false'", () => {
+    const { loadConfig } = require("../../src/config/index.js");
+    expect(loadConfig({ DETERMINISTIC_COLLECTION_MODE: "false" }).deterministicCollectionMode).toBe(false);
+  });
 });
