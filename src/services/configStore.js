@@ -27,7 +27,10 @@ function createConfigStore(deps) {
     farewellMessage: "İyi günler dilerim! İhtiyacınız olursa tekrar yazabilirsiniz.",
     csatEnabled: true,
     csatMessage: "Deneyiminizi değerlendirir misiniz?",
-    welcomeMessage: "Merhaba, Teknik Destek hattına hoş geldiniz. Size nasıl yardımcı olabilirim?"
+    welcomeMessage: "Merhaba, Teknik Destek hattına hoş geldiniz. Size nasıl yardımcı olabilirim?",
+    questionExtractionEnabled: true,
+    conversationSummaryEnabled: true,
+    summaryThreshold: 15
   };
 
   let chatFlowConfig = { ...DEFAULT_CHAT_FLOW_CONFIG };
@@ -60,6 +63,8 @@ function createConfigStore(deps) {
     logoUrl: "",
     themeColor: "#2563EB",
     primaryColor: "",
+    headerBg: "",
+    chatBubbleColor: "",
     inputPlaceholder: "Mesajinizi yazin...",
     sendButtonText: "Gonder"
   };
@@ -113,6 +118,35 @@ function createConfigStore(deps) {
     fs.writeFileSync(paths.sunshineConfigFile, JSON.stringify(sunshineConfig, null, 2), "utf8");
   }
 
+  // ── WhatsApp Configuration ──────────────────────────────────────────
+  const DEFAULT_WHATSAPP_CONFIG = {
+    enabled: false,
+    phoneNumberId: "",
+    accessToken: "",
+    verifyToken: "",
+  };
+
+  let whatsappConfig = { ...DEFAULT_WHATSAPP_CONFIG };
+
+  function loadWhatsAppConfig() {
+    try {
+      if (paths.whatsappConfigFile && fs.existsSync(paths.whatsappConfigFile)) {
+        const saved = JSON.parse(fs.readFileSync(paths.whatsappConfigFile, "utf8"));
+        whatsappConfig = { ...DEFAULT_WHATSAPP_CONFIG, ...saved };
+      }
+    } catch (err) {
+      logger.warn("loadWhatsAppConfig", "Error", err);
+      whatsappConfig = { ...DEFAULT_WHATSAPP_CONFIG };
+    }
+  }
+
+  function saveWhatsAppConfig(updates) {
+    whatsappConfig = { ...whatsappConfig, ...updates };
+    if (paths.whatsappConfigFile) {
+      fs.writeFileSync(paths.whatsappConfigFile, JSON.stringify(whatsappConfig, null, 2), "utf8");
+    }
+  }
+
   // ── Session Persistence ─────────────────────────────────────────────────
   function loadTelegramSessions() {
     try {
@@ -162,10 +196,33 @@ function createConfigStore(deps) {
     fs.writeFileSync(paths.promptVersionsFile, JSON.stringify(data, null, 2), "utf8");
   }
 
+  // ── Setup Complete Flag ────────────────────────────────────────────────
+  function isSetupComplete() {
+    try {
+      if (paths.setupCompleteFile && fs.existsSync(paths.setupCompleteFile)) {
+        const data = JSON.parse(fs.readFileSync(paths.setupCompleteFile, "utf8"));
+        return data.complete === true;
+      }
+    } catch (err) {
+      logger.warn("isSetupComplete", "Error reading setup file", err);
+    }
+    return false;
+  }
+
+  function markSetupComplete(data = {}) {
+    const payload = {
+      complete: true,
+      ...data,
+      completedAt: new Date().toISOString(),
+    };
+    fs.writeFileSync(paths.setupCompleteFile, JSON.stringify(payload, null, 2), "utf8");
+  }
+
   // ── Initialize ──────────────────────────────────────────────────────────
   loadChatFlowConfig();
   loadSiteConfig();
   loadSunshineConfig();
+  loadWhatsAppConfig();
 
   return {
     // Chat Flow
@@ -183,6 +240,11 @@ function createConfigStore(deps) {
     loadSunshineConfig,
     saveSunshineConfig,
     DEFAULT_SUNSHINE_CONFIG,
+    // WhatsApp
+    getWhatsAppConfig: () => whatsappConfig,
+    loadWhatsAppConfig,
+    saveWhatsAppConfig,
+    DEFAULT_WHATSAPP_CONFIG,
     // Sessions
     loadTelegramSessions,
     saveTelegramSessions,
@@ -191,6 +253,9 @@ function createConfigStore(deps) {
     // Prompt Versioning
     loadPromptVersions,
     savePromptVersion,
+    // Setup
+    isSetupComplete,
+    markSetupComplete,
   };
 }
 

@@ -39,6 +39,7 @@
             <a class="nav-item" data-panel="panelLiveChats">Canlı Sohbetler <span id="convCount" class="nav-badge">0</span></a>
             <a class="nav-item" data-panel="panelClosedChats">Kapalı Sohbetler</a>
             <a class="nav-item" data-panel="panelSearch">Arama</a>
+            <a class="nav-item" data-panel="panelInbox">Agent Inbox <span id="inboxCount" class="nav-badge">0</span></a>
 
             <!-- BİLGİ TABANI group -->
             <div class="nav-group-label">BİLGİ TABANI</div>
@@ -47,6 +48,7 @@
 
             <!-- BOT YAPILANDIRMA group -->
             <div class="nav-group-label">BOT YAPILANDIRMA</div>
+            <a class="nav-item" data-panel="panelBotTest">Bot Test</a>
             <a class="nav-item" data-panel="panelAgentFiles">Agent Dosyaları</a>
             <a class="nav-item" data-panel="panelTopics">Konular</a>
             <a class="nav-item" data-panel="panelMemory">Bellek Şablonları</a>
@@ -56,10 +58,12 @@
             <a class="nav-item" data-panel="panelWebhooks">Webhooks</a>
             <a class="nav-item" data-panel="panelPromptVersions">Prompt Geçmişi</a>
             <a class="nav-item" data-panel="panelSunshine">CRM Entegrasyonu</a>
+            <a class="nav-item" data-panel="panelWhatsApp">WhatsApp</a>
 
             <!-- ANALİTİK group -->
             <div class="nav-group-label">ANALİTİK</div>
             <a class="nav-item" data-panel="panelAnalytics">Dashboard</a>
+            <a class="nav-item" data-panel="panelFeedbackReport">Feedback Raporu</a>
             <a class="nav-item" data-panel="panelContentGaps">Content Gaps</a>
 
             <!-- SİSTEM group -->
@@ -219,6 +223,7 @@
                   <option value="web">Web</option>
                   <option value="telegram">Telegram</option>
                   <option value="sunshine">Sunshine</option>
+                  <option value="whatsapp">WhatsApp</option>
                 </select>
               </label>
 
@@ -272,6 +277,41 @@
             </section>
 
             <div id="searchTicketDetail" class="chat-detail-inline"></div>
+          </div>
+
+          <!-- PANEL: Agent Inbox -->
+          <div id="panelInbox" class="panel">
+            <div class="section-header" style="margin-bottom:12px;display:flex;align-items:center;gap:12px">
+              <h3>Agent Inbox</h3>
+              <button type="button" id="inboxRefreshBtn" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">Yenile</button>
+            </div>
+            <div class="inbox-layout">
+              <!-- Left: Queue list -->
+              <div class="inbox-queue-panel">
+                <h4 style="margin:0 0 8px">Bekleyenler <span id="inboxPendingCount" class="badge">0</span></h4>
+                <div id="inboxPendingList" class="inbox-list">
+                  <p class="empty">Kuyrukta kimse yok.</p>
+                </div>
+                <h4 style="margin:16px 0 8px">Aktif Gorusmeler <span id="inboxActiveCount" class="badge">0</span></h4>
+                <div id="inboxActiveList" class="inbox-list">
+                  <p class="empty">Aktif gorusme yok.</p>
+                </div>
+              </div>
+              <!-- Right: Chat view -->
+              <div class="inbox-chat-panel">
+                <div id="inboxChatHeader" class="inbox-chat-header">
+                  <span>Bir gorusme secin</span>
+                </div>
+                <div id="inboxChatMessages" class="inbox-chat-messages">
+                  <p class="empty">Gorusme secilmedi.</p>
+                </div>
+                <div id="inboxChatActions" class="inbox-chat-actions" style="display:none">
+                  <input id="inboxMessageInput" type="text" placeholder="Mesaj yazin..." class="inbox-message-input" />
+                  <button id="inboxSendBtn" class="btn btn-primary">Gonder</button>
+                  <button id="inboxReleaseBtn" class="btn btn-secondary">Birak</button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- PANEL: Bilgi Tabani Kayitlar -->
@@ -599,6 +639,22 @@
                   </div>
                   <small>Boş bırakırsanız varsayılan tema rengi kullanılır</small>
                 </div>
+                <div class="cf-field">
+                  <label for="scHeaderBg">Header Arka Plan Rengi</label>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <input id="scHeaderBg" type="color" value="#2563EB" style="width:40px;height:32px;border:1px solid var(--line);border-radius:4px;cursor:pointer" />
+                    <span id="scHeaderBgHex" style="font-size:0.85rem;color:var(--muted)"></span>
+                  </div>
+                  <small>Boş bırakırsanız varsayılan gradient kullanılır</small>
+                </div>
+                <div class="cf-field">
+                  <label for="scChatBubbleColor">Sohbet Balonu Rengi</label>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <input id="scChatBubbleColor" type="color" value="#2563EB" style="width:40px;height:32px;border:1px solid var(--line);border-radius:4px;cursor:pointer" />
+                    <span id="scChatBubbleColorHex" style="font-size:0.85rem;color:var(--muted)"></span>
+                  </div>
+                  <small>Bot mesaj balonlarının arka plan rengi</small>
+                </div>
               </div>
 
               <div class="cf-actions">
@@ -720,6 +776,64 @@
             </div>
           </div>
 
+          <!-- PANEL: WhatsApp Entegrasyonu -->
+          <div id="panelWhatsApp" class="panel">
+            <div class="chat-flow-config">
+              <h3>WhatsApp Entegrasyonu (Cloud API)</h3>
+              <p class="section-desc">WhatsApp Business Cloud API entegrasyonu ile WhatsApp uzerinden gelen mesajlari Qragy ile karsilayin.</p>
+
+              <div class="cf-group">
+                <h4>Baglanti Ayarlari</h4>
+                <div class="cf-field">
+                  <label for="waEnabled">Entegrasyon Durumu</label>
+                  <select id="waEnabled" class="cf-textarea" style="height:auto">
+                    <option value="false">Kapali</option>
+                    <option value="true">Acik</option>
+                  </select>
+                </div>
+                <div class="cf-field">
+                  <label for="waPhoneNumberId">Phone Number ID</label>
+                  <input id="waPhoneNumberId" type="text" class="cf-textarea" style="height:auto" placeholder="Meta Business Phone Number ID" />
+                </div>
+                <div class="cf-field">
+                  <label for="waAccessToken">Access Token</label>
+                  <input id="waAccessToken" type="password" class="cf-textarea" style="height:auto" placeholder="Permanent Access Token" />
+                </div>
+                <div class="cf-field">
+                  <label for="waVerifyToken">Verify Token</label>
+                  <input id="waVerifyToken" type="text" class="cf-textarea" style="height:auto" placeholder="Webhook dogrulama tokeni (sizin belirlediginiz)" />
+                </div>
+              </div>
+
+              <div class="cf-group">
+                <h4>Webhook URL</h4>
+                <p class="section-desc">Meta Developer Portal'dan asagidaki URL'yi webhook olarak ekleyin. Subscriptions: <code>messages</code></p>
+                <div class="cf-field">
+                  <label>Webhook Endpoint</label>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <code id="waWebhookUrl" style="background:var(--bg);padding:8px 12px;border-radius:6px;border:1px solid var(--line);flex:1;word-break:break-all;font-size:0.85rem"></code>
+                    <button id="waCopyUrlBtn" class="btn btn-secondary" style="white-space:nowrap">Kopyala</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="cf-actions">
+                <button id="waSaveBtn" class="btn btn-primary">Kaydet</button>
+                <span id="waSaveStatus" class="status-text"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- PANEL: Bot Test -->
+          <div id="panelBotTest" class="panel">
+            <iframe
+              id="botTestIframe"
+              src="/test-widget.html?testMode=true"
+              style="width:100%;height:100%;border:none;border-radius:8px"
+              title="Bot Test"
+            ></iframe>
+          </div>
+
           <!-- PANEL: Analitik Dashboard -->
           <div id="panelAnalytics" class="panel">
             <div class="section-header">
@@ -731,6 +845,36 @@
                   <option value="90d">Son 90 Gün</option>
                 </select>
               </div>
+            </div>
+
+            <!-- KPI Dashboard Cards -->
+            <div id="dashboardKpi" class="kpi-grid">
+              <div class="kpi-card">
+                <div class="kpi-label">Bugun Sohbet</div>
+                <div class="kpi-value" id="kpiTodayChats">-</div>
+                <div class="kpi-sub" id="kpiTodayResolution"></div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">Haftalik Sohbet</div>
+                <div class="kpi-value" id="kpiWeeklyChats">-</div>
+                <div class="kpi-trend" id="kpiWeeklyTrend"></div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">Haftalik CSAT</div>
+                <div class="kpi-value" id="kpiWeeklyCsat">-</div>
+                <div class="kpi-trend" id="kpiCsatTrend"></div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">Aylik Cozum Orani</div>
+                <div class="kpi-value" id="kpiMonthlyResolution">-</div>
+                <div class="kpi-trend" id="kpiMonthlyTrend"></div>
+              </div>
+            </div>
+
+            <!-- Top Topics (from dashboard-stats) -->
+            <div id="dashboardTopTopics" class="kpi-topics" style="display:none">
+              <h4>Bu Haftanin En Cok Konusulan 5 Konusu</h4>
+              <div id="kpiTopTopicsList" class="kpi-topics-list"></div>
             </div>
 
             <div id="analyticsSummary" class="summary-grid"></div>
@@ -753,6 +897,56 @@
                   </thead>
                   <tbody id="topTopicsTableBody">
                     <tr><td colspan="3" class="empty">Yükleniyor...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- PANEL: Feedback Raporu -->
+          <div id="panelFeedbackReport" class="panel">
+            <div class="section-header">
+              <h2>Feedback Raporu</h2>
+              <div class="section-actions">
+                <select id="feedbackDaysRange">
+                  <option value="7" selected>Son 7 Gun</option>
+                  <option value="30">Son 30 Gun</option>
+                  <option value="90">Son 90 Gun</option>
+                </select>
+              </div>
+            </div>
+            <div id="feedbackSummary" class="summary-grid"></div>
+            <div class="analytics-topics-section" style="margin-top:16px">
+              <h3>En Cok Tekrarlanan Sorunlar</h3>
+              <div class="table-section">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Konu (Anahtar Kelimeler)</th>
+                      <th>Tekrar</th>
+                      <th>Ornek Mesajlar</th>
+                    </tr>
+                  </thead>
+                  <tbody id="feedbackTopIssuesBody">
+                    <tr><td colspan="4" class="empty">Yukleniyor...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="analytics-topics-section" style="margin-top:16px">
+              <h3>Negatif Feedback Detaylari</h3>
+              <div class="table-section">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Kullanici Mesaji</th>
+                      <th>Bot Yaniti</th>
+                      <th>Tarih</th>
+                    </tr>
+                  </thead>
+                  <tbody id="feedbackNegativeBody">
+                    <tr><td colspan="3" class="empty">Yukleniyor...</td></tr>
                   </tbody>
                 </table>
               </div>

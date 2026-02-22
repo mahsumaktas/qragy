@@ -130,12 +130,31 @@ function createAgentConfigService(deps) {
     return TOPIC_INDEX.topics.find((t) => t.id === topicId) || null;
   }
 
+  // ── Sector template loading ──────────────────────────────────────────
+  function loadTemplate(sector) {
+    const templatePath = path.join(agentDir, "templates", `${sector}.json`);
+    return readJsonFileSafe(templatePath, null);
+  }
+
+  function getAvailableTemplates() {
+    const templatesDir = path.join(agentDir, "templates");
+    try {
+      return fs.readdirSync(templatesDir)
+        .filter(f => f.endsWith(".json"))
+        .map(f => f.replace(".json", ""));
+    } catch (_) {
+      return [];
+    }
+  }
+
   return {
     readTextFileSafe,
     readJsonFileSafe,
     loadAllAgentConfig,
     loadTopicFile,
     getTopicMeta,
+    loadTemplate,
+    getAvailableTemplates,
     getSoulText: () => SOUL_TEXT,
     getBootstrapText: () => BOOTSTRAP_TEXT,
     getPersonaText: () => PERSONA_TEXT,

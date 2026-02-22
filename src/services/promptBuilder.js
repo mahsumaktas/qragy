@@ -1,5 +1,7 @@
 "use strict";
 
+const { trimToTokenBudget, TOKEN_BUDGETS } = require("./memory.js");
+
 /**
  * Prompt Builder Service
  *
@@ -16,7 +18,7 @@ function createPromptBuilder(deps) {
     getMemoryTemplate,
   } = deps;
 
-  function buildSystemPrompt(memory, conversationContext, knowledgeResults) {
+  function buildSystemPrompt(memory, conversationContext, knowledgeResults, options) {
     const {
       SOUL_TEXT, PERSONA_TEXT, BOOTSTRAP_TEXT, DOMAIN_TEXT,
       SKILLS_TEXT, HARD_BANS_TEXT, ESCALATION_MATRIX_TEXT,
@@ -84,7 +86,52 @@ function createPromptBuilder(deps) {
     parts.push("Onay metni (SADECE escalation/ticket toplama sonrası kullan): Talebinizi aldım. Şube kodu: <KOD>. Kısa açıklama: <ÖZET>. Destek ekibi en kısa sürede dönüş yapacaktır.");
     parts.push("Uygun olduğunda yanıtının sonuna hızlı yanıt seçenekleri ekle: [QUICK_REPLIES: secenek1 | secenek2 | secenek3]. Maks 3 seçenek. Yalnızca kullanıcıyı yönlendirmek mantıklıysa ekle.");
 
-    // RAG: Bilgi tabani sonuclarini ekle
+    // User Memory: kalici kullanici hafizasi
+    const userMemory = options?.userMemory;
+    if (userMemory && typeof userMemory === "object" && Object.keys(userMemory).length > 0) {
+      const memLines = ["--- KULLANICI HAFIZASI ---", "Bu kullanici hakkinda bildiklerimiz:"];
+      for (const [k, v] of Object.entries(userMemory)) {
+        memLines.push(`${k}: ${v}`);
+      }
+      memLines.push("---");
+      parts.push(memLines.join("\n"));
+    }
+
+    // Core Memory (from new memory engine — replaces old userMemory when provided)
+    if (options?.coreMemoryText) {
+      parts.push(options.coreMemoryText);
+    }
+
+    // Recall Memory
+    if (options?.recallMemoryText) {
+      parts.push(options.recallMemoryText);
+    }
+
+    // Reflexion warnings
+    if (options?.reflexionWarnings) {
+      parts.push(options.reflexionWarnings);
+    }
+
+    // Graph context
+    if (options?.graphContext) {
+      parts.push(options.graphContext);
+    }
+
+    // Zero-shot bootstrap: sektor bilgisi ile yardimci baglam
+    if (options?.sectorTemplate) {
+      const tmpl = options.sectorTemplate;
+      parts.push(`## Sektor Bilgisi: ${tmpl.title || ""}\n${tmpl.persona || ""}`);
+      if (tmpl.policies?.length) {
+        parts.push("Politikalar:\n" + tmpl.policies.map(p => `- ${p}`).join("\n"));
+      }
+    }
+
+    // Graceful fallback when KB is empty
+    if (!knowledgeResults || knowledgeResults.length === 0) {
+      parts.push("## Not: Bilgi tabaninda ilgili kayit bulunamadi. Genel bilginle yardimci ol, ancak spesifik firma bilgisi verme. Gerekirse: 'Detayli bilgim yok ama size yardimci olmaya calisacagim' de.");
+    }
+
+    // RAG: Bilgi tabani sonuclarini ekle (token budget ile sinirla)
     if (Array.isArray(knowledgeResults) && knowledgeResults.length > 0) {
       const kbLines = ["## Bilgi Tabanı Sonuçları",
         "Aşağıdaki soru-cevap çiftleri kullanıcının sorusuyla ilişkili olabilir.",
@@ -95,7 +142,8 @@ function createPromptBuilder(deps) {
         kbLines.push(`Cevap: ${item.answer}`);
         kbLines.push("");
       }
-      parts.push(kbLines.join("\n"));
+      const ragText = kbLines.join("\n");
+      parts.push(trimToTokenBudget(ragText, TOKEN_BUDGETS.ragContext));
     }
 
     return parts.join("\n\n");

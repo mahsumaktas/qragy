@@ -196,6 +196,7 @@ const panelLoaders = {
   panelSearch: () => loadSearchTickets(),
   panelKB: () => loadKnowledgeBase(),
   panelAutoFAQ: () => loadAutoFAQs(),
+  panelBotTest: () => { /* iframe loads on its own */ },
   panelAgentFiles: () => loadAgentFiles(),
   panelTopics: () => loadTopics(),
   panelMemory: () => loadMemoryFiles(),
@@ -205,7 +206,10 @@ const panelLoaders = {
   panelWebhooks: () => loadWebhooks(),
   panelPromptVersions: () => loadPromptVersions(),
   panelSunshine: () => loadSunshineConfig(),
+  panelWhatsApp: () => loadWhatsAppConfig(),
+  panelInbox: () => loadInbox(),
   panelAnalytics: () => loadAnalytics(),
+  panelFeedbackReport: () => loadFeedbackReport(),
   panelContentGaps: () => loadContentGaps(),
   panelSystem: () => loadSystemInfo()
 };
@@ -1381,6 +1385,22 @@ function renderSiteConfig(config) {
     primaryColor.oninput = () => { if (primaryHex) primaryHex.textContent = primaryColor.value; };
   }
 
+  const headerBg = $("scHeaderBg");
+  const headerBgHex = $("scHeaderBgHex");
+  if (headerBg) {
+    headerBg.value = config.headerBg || "#2563EB";
+    if (headerBgHex) headerBgHex.textContent = headerBg.value;
+    headerBg.oninput = () => { if (headerBgHex) headerBgHex.textContent = headerBg.value; };
+  }
+
+  const chatBubbleColor = $("scChatBubbleColor");
+  const chatBubbleColorHex = $("scChatBubbleColorHex");
+  if (chatBubbleColor) {
+    chatBubbleColor.value = config.chatBubbleColor || "#2563EB";
+    if (chatBubbleColorHex) chatBubbleColorHex.textContent = chatBubbleColor.value;
+    chatBubbleColor.oninput = () => { if (chatBubbleColorHex) chatBubbleColorHex.textContent = chatBubbleColor.value; };
+  }
+
   // Logo preview
   const preview = $("scLogoPreview");
   const logoName = $("scLogoName");
@@ -1403,7 +1423,9 @@ async function saveSiteConfigAdmin() {
     inputPlaceholder: ($("scInputPlaceholder") || {}).value || "",
     sendButtonText: ($("scSendButtonText") || {}).value || "",
     themeColor: ($("scThemeColor") || {}).value || "#2563EB",
-    primaryColor: ($("scPrimaryColor") || {}).value || ""
+    primaryColor: ($("scPrimaryColor") || {}).value || "",
+    headerBg: ($("scHeaderBg") || {}).value || "",
+    chatBubbleColor: ($("scChatBubbleColor") || {}).value || ""
   };
 
   const saveBtn = $("scSaveBtn");
@@ -1834,12 +1856,106 @@ $("promptVersionsTableBody").addEventListener("click", async (event) => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════
+// DASHBOARD KPI STATS
+// ══════════════════════════════════════════════════════════════════════════
+
+async function loadDashboardStats() {
+  try {
+    const data = await apiGet("admin/dashboard-stats");
+    renderKpiCards(data);
+  } catch (_err) {
+    // Sessiz hata — KPI kartlari gosterilmez, mevcut analitik calisir
+    const kpiGrid = $("dashboardKpi");
+    if (kpiGrid) kpiGrid.style.display = "none";
+  }
+}
+
+function renderKpiCards(data) {
+  const kpiGrid = $("dashboardKpi");
+  if (!kpiGrid) return;
+  kpiGrid.style.display = "";
+
+  // Today chats
+  const todayChatsEl = $("kpiTodayChats");
+  if (todayChatsEl) todayChatsEl.textContent = data.today ? data.today.chats : 0;
+
+  const todayResEl = $("kpiTodayResolution");
+  if (todayResEl) {
+    const rate = data.today && data.today.resolutionRate != null ? data.today.resolutionRate : "-";
+    todayResEl.textContent = rate !== "-" ? "Cozum: %" + rate : "";
+  }
+
+  // Weekly chats
+  const weeklyChatsEl = $("kpiWeeklyChats");
+  if (weeklyChatsEl) weeklyChatsEl.textContent = data.thisWeek ? data.thisWeek.chats : 0;
+
+  renderTrend($("kpiWeeklyTrend"), data.trends ? data.trends.weeklyChats : 0);
+
+  // Weekly CSAT
+  const csatEl = $("kpiWeeklyCsat");
+  if (csatEl) {
+    const csatVal = data.thisWeek && data.thisWeek.csatAvg != null ? data.thisWeek.csatAvg + "/5" : "-";
+    csatEl.textContent = csatVal;
+  }
+
+  renderTrend($("kpiCsatTrend"), data.trends ? data.trends.weeklyCsat : 0);
+
+  // Monthly resolution rate
+  const monthResEl = $("kpiMonthlyResolution");
+  if (monthResEl) {
+    const mRate = data.thisMonth && data.thisMonth.resolutionRate != null ? "%" + data.thisMonth.resolutionRate : "-";
+    monthResEl.textContent = mRate;
+  }
+
+  renderTrend($("kpiMonthlyTrend"), data.trends ? data.trends.monthlyChats : 0);
+
+  // Top topics
+  const topicsSection = $("dashboardTopTopics");
+  const topicsList = $("kpiTopTopicsList");
+  if (topicsSection && topicsList) {
+    const topics = (data.thisWeek && data.thisWeek.topTopics) || [];
+    if (topics.length > 0) {
+      topicsSection.style.display = "";
+      topicsList.textContent = "";
+      for (const t of topics) {
+        const tag = document.createElement("span");
+        tag.className = "kpi-topic-tag";
+        const nameSpan = document.createTextNode(t.topicId + " ");
+        const countSpan = document.createElement("span");
+        countSpan.className = "topic-count";
+        countSpan.textContent = t.count;
+        tag.appendChild(nameSpan);
+        tag.appendChild(countSpan);
+        topicsList.appendChild(tag);
+      }
+    } else {
+      topicsSection.style.display = "none";
+    }
+  }
+}
+
+function renderTrend(el, value) {
+  if (!el) return;
+  if (value > 0) {
+    el.className = "kpi-trend trend-up";
+    el.textContent = "\u2191 %" + value;
+  } else if (value < 0) {
+    el.className = "kpi-trend trend-down";
+    el.textContent = "\u2193 %" + Math.abs(value);
+  } else {
+    el.className = "kpi-trend trend-neutral";
+    el.textContent = "- degisim yok";
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // ANALYTICS
 // ══════════════════════════════════════════════════════════════════════════
 
 async function loadAnalytics() {
   const range = $("analyticsRange").value;
   try {
+    loadDashboardStats();
     const payload = await apiGet("admin/analytics?range=" + range);
     renderAnalyticsSummary(payload.summary || {});
     renderAnalyticsChart(payload.daily || []);
@@ -1917,6 +2033,78 @@ function renderTopTopics(topics) {
     tr.innerHTML = "<td>" + (i + 1) + "</td><td>" + escapeHtml(t.topicId || "-") + "</td><td>" + (t.count || 0) + "</td>";
     tbody.appendChild(tr);
   });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// FEEDBACK REPORT
+// ══════════════════════════════════════════════════════════════════════════
+
+async function loadFeedbackReport() {
+  const summaryEl = $("feedbackSummary");
+  const issuesBody = $("feedbackTopIssuesBody");
+  const negBody = $("feedbackNegativeBody");
+  if (!summaryEl || !issuesBody || !negBody) return;
+
+  const days = Number(($("feedbackDaysRange") || {}).value) || 7;
+
+  try {
+    const data = await apiGet("admin/feedback-report?days=" + days);
+    const s = data.summary || {};
+
+    // Summary cards
+    summaryEl.innerHTML = "";
+    [
+      ["Toplam Feedback", s.total || 0],
+      ["Pozitif", s.positive || 0],
+      ["Negatif", s.negative || 0],
+      ["Negatif Oran", s.total > 0 ? Math.round((s.negative / s.total) * 100) + "%" : "-"],
+    ].forEach(([label, value]) => {
+      const card = document.createElement("article");
+      card.className = "summary-card";
+      card.innerHTML = "<h3>" + escapeHtml(String(value)) + "</h3><p>" + escapeHtml(label) + "</p>";
+      summaryEl.appendChild(card);
+    });
+
+    // Top issues table
+    const issues = s.topIssues || [];
+    if (!issues.length) {
+      issuesBody.innerHTML = '<tr><td colspan="4" class="empty">Negatif feedback bulunamadi.</td></tr>';
+    } else {
+      issuesBody.innerHTML = "";
+      issues.forEach((issue, i) => {
+        const tr = document.createElement("tr");
+        const examples = (issue.examples || []).map(ex => escapeHtml(ex.userMessage)).join("<br>");
+        tr.innerHTML = "<td>" + (i + 1) + "</td>"
+          + "<td>" + escapeHtml(issue.key || "-") + "</td>"
+          + "<td>" + (issue.count || 0) + "</td>"
+          + "<td style='font-size:0.85rem;max-width:400px'>" + examples + "</td>";
+        issuesBody.appendChild(tr);
+      });
+    }
+
+    // Negative feedback detail table
+    const negatives = data.negative || [];
+    if (!negatives.length) {
+      negBody.innerHTML = '<tr><td colspan="3" class="empty">Negatif feedback yok.</td></tr>';
+    } else {
+      negBody.innerHTML = "";
+      negatives.slice(0, 50).forEach(entry => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = "<td>" + escapeHtml(entry.userMessage || "-") + "</td>"
+          + "<td style='font-size:0.85rem;max-width:300px'>" + escapeHtml(entry.botResponse || "-") + "</td>"
+          + "<td>" + fmtDate(entry.timestamp) + "</td>";
+        negBody.appendChild(tr);
+      });
+    }
+  } catch (_e) {
+    summaryEl.innerHTML = "";
+    issuesBody.innerHTML = '<tr><td colspan="4" class="empty">Yuklenemedi.</td></tr>';
+    negBody.innerHTML = '<tr><td colspan="3" class="empty">Yuklenemedi.</td></tr>';
+  }
+}
+
+if ($("feedbackDaysRange")) {
+  $("feedbackDaysRange").addEventListener("change", () => { void loadFeedbackReport(); });
 }
 
 async function loadContentGaps() {
@@ -2177,6 +2365,307 @@ if ($("sunCopyUrlBtn")) {
       navigator.clipboard.writeText(url).then(() => showToast("Kopyalandı!", "success"));
     }
   });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// WHATSAPP CONFIG
+// ══════════════════════════════════════════════════════════════════════════
+
+async function loadWhatsAppConfig() {
+  try {
+    const payload = await apiGet("admin/whatsapp");
+    renderWhatsAppConfig(payload.config || {});
+  } catch (error) {
+    showToast("WhatsApp config yuklenemedi: " + error.message, "error");
+  }
+}
+
+function renderWhatsAppConfig(config) {
+  const fields = {
+    waPhoneNumberId: "phoneNumberId",
+    waAccessToken: "accessToken",
+    waVerifyToken: "verifyToken"
+  };
+
+  for (const [id, key] of Object.entries(fields)) {
+    const el = $(id);
+    if (el) el.value = config[key] || "";
+  }
+
+  const enabledEl = $("waEnabled");
+  if (enabledEl) enabledEl.value = config.enabled ? "true" : "false";
+
+  // Show webhook URL
+  const urlEl = $("waWebhookUrl");
+  if (urlEl) {
+    urlEl.textContent = window.location.origin + "/api/webhooks/whatsapp";
+  }
+}
+
+async function saveWhatsAppConfig() {
+  const body = {
+    enabled: ($("waEnabled") || {}).value === "true",
+    phoneNumberId: ($("waPhoneNumberId") || {}).value || "",
+    accessToken: ($("waAccessToken") || {}).value || "",
+    verifyToken: ($("waVerifyToken") || {}).value || ""
+  };
+
+  const status = $("waSaveStatus");
+  const btn = $("waSaveBtn");
+  if (status) status.textContent = "Kaydediliyor...";
+  if (btn) btn.disabled = true;
+
+  try {
+    await apiPut("admin/whatsapp", body);
+    if (status) status.textContent = "Kaydedildi";
+    showToast("WhatsApp ayarlari kaydedildi.", "success");
+    setTimeout(() => { if (status) status.textContent = ""; }, 3000);
+  } catch (error) {
+    if (status) status.textContent = "Hata!";
+    showToast("Kaydetme hatasi: " + error.message, "error");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// WhatsApp event listeners
+if ($("waSaveBtn")) $("waSaveBtn").addEventListener("click", () => { void saveWhatsAppConfig(); });
+if ($("waCopyUrlBtn")) {
+  $("waCopyUrlBtn").addEventListener("click", () => {
+    const url = ($("waWebhookUrl") || {}).textContent || "";
+    if (url && navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => showToast("Kopyalandi!", "success"));
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// AGENT INBOX
+// ══════════════════════════════════════════════════════════════════════════
+
+const inboxState = {
+  selectedId: null,
+  selectedSessionId: null,
+  sseSource: null,
+};
+
+async function loadInbox() {
+  try {
+    const data = await apiGet("admin/inbox");
+    const pending = data.pending || [];
+    const active = data.active || [];
+
+    // Update badge
+    const badge = $("inboxCount");
+    if (badge) badge.textContent = String(pending.length);
+    const pendingCount = $("inboxPendingCount");
+    if (pendingCount) pendingCount.textContent = String(pending.length);
+    const activeCount = $("inboxActiveCount");
+    if (activeCount) activeCount.textContent = String(active.length);
+
+    // Render pending list
+    renderInboxList($("inboxPendingList"), pending, "pending");
+    // Render active list
+    renderInboxList($("inboxActiveList"), active, "active");
+
+    // Start SSE if not connected
+    connectInboxSSE();
+  } catch (err) {
+    const el = $("inboxPendingList");
+    if (el) el.innerHTML = '<p class="empty">Hata: ' + escapeHtml(err.message) + "</p>";
+  }
+}
+
+function renderInboxList(container, items, type) {
+  if (!container) return;
+  if (!items.length) {
+    container.innerHTML = '<p class="empty">' + (type === "pending" ? "Kuyrukta kimse yok." : "Aktif gorusme yok.") + "</p>";
+    return;
+  }
+  container.innerHTML = "";
+  for (const item of items) {
+    const div = document.createElement("div");
+    div.className = "inbox-item" + (inboxState.selectedId === item.id ? " selected" : "");
+    div.setAttribute("data-inbox-id", item.id);
+    div.setAttribute("data-session-id", item.sessionId);
+
+    let actionsHtml = "";
+    if (type === "pending") {
+      actionsHtml = '<button class="inbox-claim-btn" data-claim-id="' + item.id + '">Al</button>';
+    } else {
+      actionsHtml = '<span class="inbox-agent-badge">' + escapeHtml(item.assignedTo || "admin") + "</span>";
+    }
+
+    div.innerHTML =
+      '<div class="inbox-item-info">' +
+        '<div class="inbox-item-name">' + escapeHtml(item.customerName || item.sessionId.slice(-8)) + "</div>" +
+        '<div class="inbox-item-topic">' + escapeHtml(item.topic || item.summary || "-") + "</div>" +
+      "</div>" +
+      '<div class="inbox-item-time">' + fmtDate(item.createdAt) + "</div>" +
+      '<div class="inbox-item-actions">' + actionsHtml + "</div>";
+
+    div.addEventListener("click", (e) => {
+      // Ignore claim button clicks
+      if (e.target.closest("[data-claim-id]")) return;
+      selectInboxItem(item.id, item.sessionId, type);
+    });
+
+    container.appendChild(div);
+  }
+}
+
+function selectInboxItem(id, sessionId, type) {
+  inboxState.selectedId = id;
+  inboxState.selectedSessionId = sessionId;
+
+  // Highlight selected
+  document.querySelectorAll(".inbox-item").forEach(el => {
+    el.classList.toggle("selected", Number(el.getAttribute("data-inbox-id")) === id);
+  });
+
+  // Update header
+  const header = $("inboxChatHeader");
+  if (header) header.innerHTML = "<span>Oturum: " + escapeHtml(sessionId.slice(-12)) + "</span>";
+
+  // Show actions only for active (claimed) items
+  const actions = $("inboxChatActions");
+  if (actions) actions.style.display = (type === "active") ? "flex" : "none";
+
+  // Load chat history
+  loadInboxChat(sessionId);
+}
+
+async function loadInboxChat(sessionId) {
+  const messagesEl = $("inboxChatMessages");
+  if (!messagesEl) return;
+
+  try {
+    const payload = await apiGet("admin/conversations");
+    const conv = (payload.conversations || []).find(c => c.sessionId === sessionId);
+    if (!conv || !Array.isArray(conv.chatHistory) || !conv.chatHistory.length) {
+      messagesEl.innerHTML = '<p class="empty">Sohbet gecmisi yok.</p>';
+      return;
+    }
+    messagesEl.innerHTML = "";
+    for (const msg of conv.chatHistory) {
+      const cls = msg.role === "user" ? "chat-msg chat-msg-user" : "chat-msg chat-msg-bot";
+      const lbl = msg.role === "user" ? "Kullanici" : (msg.agentMessage ? "Agent" : "Bot");
+      const div = document.createElement("div");
+      div.className = cls;
+      div.innerHTML = '<span class="chat-msg-label">' + escapeHtml(lbl) + "</span>" +
+        '<span class="chat-msg-content">' + escapeHtml(msg.content || "") + "</span>";
+      messagesEl.appendChild(div);
+    }
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  } catch (err) {
+    messagesEl.innerHTML = '<p class="empty">Hata: ' + escapeHtml(err.message) + "</p>";
+  }
+}
+
+// Claim handler (event delegation)
+document.addEventListener("click", (e) => {
+  const claimBtn = e.target.closest("[data-claim-id]");
+  if (!claimBtn) return;
+  e.stopPropagation();
+  const id = Number(claimBtn.getAttribute("data-claim-id"));
+  claimInboxItem(id);
+});
+
+async function claimInboxItem(id) {
+  try {
+    await apiPost("admin/inbox/" + id + "/claim", { agentName: "admin" });
+    showToast("Gorusme alindi.", "success");
+    void loadInbox();
+  } catch (err) {
+    showToast("Hata: " + err.message, "error");
+  }
+}
+
+// Send message
+if ($("inboxSendBtn")) {
+  $("inboxSendBtn").addEventListener("click", () => sendInboxMessage());
+}
+if ($("inboxMessageInput")) {
+  $("inboxMessageInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendInboxMessage();
+    }
+  });
+}
+
+async function sendInboxMessage() {
+  const input = $("inboxMessageInput");
+  if (!input || !inboxState.selectedId) return;
+  const message = input.value.trim();
+  if (!message) return;
+
+  try {
+    await apiPost("admin/inbox/" + inboxState.selectedId + "/message", { message });
+    input.value = "";
+    // Reload chat
+    if (inboxState.selectedSessionId) {
+      loadInboxChat(inboxState.selectedSessionId);
+    }
+  } catch (err) {
+    showToast("Mesaj gonderilemedi: " + err.message, "error");
+  }
+}
+
+// Release handler
+if ($("inboxReleaseBtn")) {
+  $("inboxReleaseBtn").addEventListener("click", async () => {
+    if (!inboxState.selectedId) return;
+    try {
+      await apiPost("admin/inbox/" + inboxState.selectedId + "/release", {});
+      showToast("Gorusme bota devredildi.", "success");
+      inboxState.selectedId = null;
+      inboxState.selectedSessionId = null;
+      const header = $("inboxChatHeader");
+      if (header) header.innerHTML = "<span>Bir gorusme secin</span>";
+      const msgs = $("inboxChatMessages");
+      if (msgs) msgs.innerHTML = '<p class="empty">Gorusme secilmedi.</p>';
+      const actions = $("inboxChatActions");
+      if (actions) actions.style.display = "none";
+      void loadInbox();
+    } catch (err) {
+      showToast("Hata: " + err.message, "error");
+    }
+  });
+}
+
+// Refresh button
+if ($("inboxRefreshBtn")) {
+  $("inboxRefreshBtn").addEventListener("click", () => loadInbox());
+}
+
+// SSE connection for real-time updates
+function connectInboxSSE() {
+  if (inboxState.sseSource) return; // already connected
+  try {
+    const url = "api/admin/inbox/stream" + (state.token ? "?token=" + encodeURIComponent(state.token) : "");
+    const es = new EventSource(url);
+
+    es.addEventListener("claimed", () => void loadInbox());
+    es.addEventListener("released", () => void loadInbox());
+    es.addEventListener("message", (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.sessionId && data.sessionId === inboxState.selectedSessionId) {
+          loadInboxChat(data.sessionId);
+        }
+      } catch (_) { /* ignore parse errors */ }
+    });
+
+    es.onerror = () => {
+      es.close();
+      inboxState.sseSource = null;
+    };
+
+    inboxState.sseSource = es;
+  } catch (_) {
+    // SSE not supported or error
+  }
 }
 
 // ── Initialization ─────────────────────────────────────────────────────────

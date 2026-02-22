@@ -30,6 +30,7 @@ const fileInput = document.getElementById("fileInput");
 const messages = [];
 const urlParams = new URLSearchParams(window.location.search);
 const isEmbedMode = urlParams.get("embed") === "1";
+const isTestMode = window.__QRAGY_TEST_MODE__ === true || urlParams.has("testMode");
 const USER_BUFFER_WINDOW_MS = 4000;
 const TIMESTAMP_GAP_MS = 3 * 60 * 1000;
 const STORAGE_KEY = "qragy_chat";
@@ -1204,6 +1205,14 @@ function applySiteConfig(site) {
     document.documentElement.style.setProperty("--primary", site.primaryColor);
   }
 
+  if (site.headerBg) {
+    document.documentElement.style.setProperty("--header-bg", site.headerBg);
+  }
+
+  if (site.chatBubbleColor) {
+    document.documentElement.style.setProperty("--chat-bubble-color", site.chatBubbleColor);
+  }
+
   if (site.inputPlaceholder) {
     const el = document.getElementById("chatInput");
     if (el) el.placeholder = site.inputPlaceholder;
@@ -1564,7 +1573,8 @@ async function handoffToZendesk(payload) {
 function getSessionId() {
   let id = localStorage.getItem(SESSION_ID_KEY);
   if (!id) {
-    id = "s-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+    const prefix = isTestMode ? "test_" : "s-";
+    id = prefix + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
     localStorage.setItem(SESSION_ID_KEY, id);
   }
   return id;

@@ -10,7 +10,89 @@ function mount(app, deps) {
     getAnalyticsData,
     safeError,
     Papa,
+    feedbackAnalyzer,
+    loadFeedback,
   } = deps;
+
+  // ── Dashboard Stats (KPI cards) ────────────────────────────────────────
+  app.get("/api/admin/dashboard-stats", requireAdminAccess, (_req, res) => {
+    try {
+      flushAnalyticsBuffer();
+      const analyticsDataVal = getAnalyticsData();
+      const now = new Date();
+      const todayKey = now.toISOString().slice(0, 10);
+
+      // This week (Monday-based)
+      const dayOfWeek = now.getDay() || 7; // Sunday=7
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - dayOfWeek + 1);
+      const weekStartKey = weekStart.toISOString().slice(0, 10);
+
+      // This month
+      const monthStartKey = todayKey.slice(0, 8) + "01";
+
+      // Previous periods for trends
+      const prevWeekStart = new Date(weekStart);
+      prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+      const prevWeekStartKey = prevWeekStart.toISOString().slice(0, 10);
+
+      const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevMonthStartKey = prevMonthDate.toISOString().slice(0, 10);
+      const prevMonthEndDate = new Date(now.getFullYear(), now.getMonth(), 0);
+      const prevMonthEndKey = prevMonthEndDate.toISOString().slice(0, 10);
+
+      function aggregatePeriod(startKey, endKey) {
+        let chats = 0, escalations = 0, csatSum = 0, csatCount = 0;
+        let responseMs = 0, responseCount = 0;
+        const topicCounts = {};
+        for (const [dayKey, day] of Object.entries(analyticsDataVal.daily || {})) {
+          if (dayKey < startKey || (endKey && dayKey > endKey)) continue;
+          chats += day.totalChats || 0;
+          escalations += day.escalationCount || 0;
+          csatSum += day.csatSum || 0;
+          csatCount += day.csatCount || 0;
+          responseMs += day.totalResponseMs || 0;
+          responseCount += day.responseCount || 0;
+          for (const [tid, cnt] of Object.entries(day.topicCounts || {})) {
+            topicCounts[tid] = (topicCounts[tid] || 0) + cnt;
+          }
+        }
+        return {
+          chats, escalations,
+          csatAvg: csatCount > 0 ? Math.round((csatSum / csatCount) * 10) / 10 : null,
+          avgResponseMs: responseCount > 0 ? Math.round(responseMs / responseCount) : null,
+          resolutionRate: chats > 0 ? Math.round(((chats - escalations) / chats) * 100) : null,
+          topTopics: Object.entries(topicCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([topicId, count]) => ({ topicId, count }))
+        };
+      }
+
+      const today = aggregatePeriod(todayKey, todayKey);
+      const thisWeek = aggregatePeriod(weekStartKey);
+      const thisMonth = aggregatePeriod(monthStartKey);
+      const prevWeek = aggregatePeriod(prevWeekStartKey, weekStartKey);
+      const prevMonth = aggregatePeriod(prevMonthStartKey, prevMonthEndKey);
+
+      // Trend calculation (percentage change)
+      function trend(current, previous) {
+        if (!previous || previous === 0) return current > 0 ? 100 : 0;
+        return Math.round(((current - previous) / previous) * 100);
+      }
+
+      res.json({
+        ok: true,
+        today,
+        thisWeek,
+        thisMonth,
+        trends: {
+          weeklyChats: trend(thisWeek.chats, prevWeek.chats),
+          monthlyChats: trend(thisMonth.chats, prevMonth.chats),
+          weeklyCsat: trend(thisWeek.csatAvg || 0, prevWeek.csatAvg || 0),
+        }
+      });
+    } catch (err) {
+      return res.status(500).json({ error: safeError(err, "api") });
+    }
+  });
 
   // ── Analytics Dashboard ─────────────────────────────────────────────────
   app.get("/api/admin/analytics", requireAdminAccess, (_req, res) => {
@@ -110,6 +192,19 @@ function mount(app, deps) {
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Content-Disposition", `attachment; filename=analytics-${new Date().toISOString().slice(0, 10)}.json`);
     return res.json(entries);
+  });
+
+  // ── Feedback Report ───────────────────────────────────────────────────
+  app.get("/api/admin/feedback-report", requireAdminAccess, (req, res) => {
+    try {
+      const days = Number(req.query.days) || 7;
+      const feedbackData = loadFeedback();
+      const entries = Array.isArray(feedbackData) ? feedbackData : (feedbackData?.entries || []);
+      const report = feedbackAnalyzer.analyze(entries, { days });
+      res.json({ ok: true, ...report });
+    } catch (err) {
+      return res.status(500).json({ error: safeError(err, "api") });
+    }
   });
 }
 

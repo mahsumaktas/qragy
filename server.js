@@ -30,7 +30,7 @@ const { detectInjection, validateOutput, GENERIC_REPLY } = require("./src/middle
 const { maskPII, normalizeForMatching, maskCredentials } = require("./src/utils/sanitizer.js");
 const { validateBotResponse: validateBotResponseFn } = require("./src/services/responseValidator.js");
 const { invalidateTopicCache } = require("./src/services/topic.js");
-const { RAG_DISTANCE_THRESHOLD } = require("./src/services/rag.js");
+const { RAG_DISTANCE_THRESHOLD, formatCitations } = require("./src/services/rag.js");
 const { safeError } = require("./src/utils/errorHelper.js");
 const chatEngine = require("./src/services/chatEngine");
 const { createAnalyticsService } = require("./src/services/analytics");
@@ -39,8 +39,24 @@ const { createConfigStore } = require("./src/services/configStore");
 const { createSupportHoursService } = require("./src/services/supportHours");
 const { createKnowledgeService } = require("./src/services/knowledge");
 const { createPromptBuilder } = require("./src/services/promptBuilder");
+const { createUserMemory } = require("./src/services/userMemory");
 const { createConversationUtils } = require("./src/services/conversationUtils");
 const { createLLMHealthService } = require("./src/services/llmHealth");
+const { createFeedbackAnalyzer } = require("./src/services/feedbackAnalyzer");
+// ── Next-Gen RAG & Memory imports ────────────────────────────────────────
+const { createSearchEngine } = require("./src/services/rag/searchEngine");
+const { createReranker } = require("./src/services/rag/reranker");
+const { createQueryAnalyzer } = require("./src/services/rag/queryAnalyzer");
+const { createCragEvaluator } = require("./src/services/rag/cragEvaluator");
+const { createContextualChunker } = require("./src/services/rag/contextualChunker");
+const { createCoreMemory } = require("./src/services/memory/coreMemory");
+const { createRecallMemory } = require("./src/services/memory/recallMemory");
+const { createMemoryEngine } = require("./src/services/memory/memoryEngine");
+const { createQualityScorer } = require("./src/services/intelligence/qualityScorer");
+const { createReflexion } = require("./src/services/intelligence/reflexion");
+const { createGraphBuilder } = require("./src/services/intelligence/graphBuilder");
+const { createGraphQuery } = require("./src/services/intelligence/graphQuery");
+const { createChatPipeline } = require("./src/services/pipeline/chatPipeline");
 const ticketHelpersModule = require("./src/utils/ticketHelpers.js");
 const { nowIso } = ticketHelpersModule;
 const { createAdminHelpers } = require("./src/utils/adminHelpers");
@@ -120,6 +136,8 @@ const CHAT_FLOW_CONFIG_FILE = path.join(DATA_DIR, "chat-flow-config.json");
 const SITE_CONFIG_FILE = path.join(DATA_DIR, "site-config.json");
 const SUNSHINE_SESSIONS_FILE = path.join(DATA_DIR, "sunshine-sessions.json");
 const SUNSHINE_CONFIG_FILE = path.join(DATA_DIR, "sunshine-config.json");
+const WHATSAPP_CONFIG_FILE = path.join(DATA_DIR, "whatsapp-config.json");
+const SETUP_COMPLETE_FILE = path.join(DATA_DIR, "setup-complete.json");
 const FEEDBACK_FILE = path.join(DATA_DIR, "feedback.json");
 const CONTENT_GAPS_FILE = path.join(DATA_DIR, "content-gaps.json");
 
@@ -157,17 +175,24 @@ const configStore = createConfigStore({
     sunshineConfigFile: SUNSHINE_CONFIG_FILE,
     telegramSessionsFile: TELEGRAM_SESSIONS_FILE,
     sunshineSessionsFile: SUNSHINE_SESSIONS_FILE,
+    whatsappConfigFile: WHATSAPP_CONFIG_FILE,
     promptVersionsFile: PROMPT_VERSIONS_FILE,
+    setupCompleteFile: SETUP_COMPLETE_FILE,
   }
 });
 const {
   getChatFlowConfig, loadChatFlowConfig, saveChatFlowConfig, DEFAULT_CHAT_FLOW_CONFIG,
   getSiteConfig, loadSiteConfig, saveSiteConfig, DEFAULT_SITE_CONFIG,
   getSunshineConfig, loadSunshineConfig, saveSunshineConfig, DEFAULT_SUNSHINE_CONFIG,
+  getWhatsAppConfig, saveWhatsAppConfig,
   loadTelegramSessions, saveTelegramSessions,
   loadSunshineSessions, saveSunshineSessions,
   loadPromptVersions, savePromptVersion,
+  isSetupComplete, markSetupComplete,
 } = configStore;
+
+// ── Feedback Analyzer ────────────────────────────────────────────────────────────
+const feedbackAnalyzer = createFeedbackAnalyzer({ logger });
 
 // ── Conversation Manager ──────────────────────────────────────────────────────────
 const { createConversationManager } = require("./src/services/conversationManager");
@@ -278,6 +303,69 @@ const promptBuilder = createPromptBuilder({
 });
 const { buildSystemPrompt } = promptBuilder;
 
+// ── User Memory Service ─────────────────────────────────────────────────
+const userMemory = createUserMemory({ sqliteDb: { getDb: () => sqliteDb.db }, logger });
+
+// ── Next-Gen RAG & Memory Services (feature-flagged) ─────────────────────
+const USE_ADAPTIVE_PIPELINE = /^(1|true|yes)$/i.test(process.env.USE_ADAPTIVE_PIPELINE || "");
+
+const ngSearchEngine = createSearchEngine({
+  embedText,
+  knowledgeTable: getKnowledgeTable,
+  ragDistanceThreshold: RAG_DISTANCE_THRESHOLD,
+  logger,
+});
+const ngReranker = createReranker({
+  callLLM, getProviderConfig, logger,
+  cohereApiKey: process.env.COHERE_API_KEY || "",
+});
+const ngQueryAnalyzer = createQueryAnalyzer({ callLLM, getProviderConfig, logger });
+const ngCragEvaluator = createCragEvaluator({ callLLM, getProviderConfig, logger });
+const ngContextualChunker = createContextualChunker({ callLLM, getProviderConfig, logger });
+const ngCoreMemory = createCoreMemory({ sqliteDb, callLLM, getProviderConfig, logger });
+const ngRecallMemory = createRecallMemory({ sqliteDb, logger });
+const ngMemoryEngine = createMemoryEngine({ coreMemory: ngCoreMemory, recallMemory: ngRecallMemory, logger });
+const ngQualityScorer = createQualityScorer({ callLLM, getProviderConfig, sqliteDb, logger });
+const ngReflexion = createReflexion({ callLLM, getProviderConfig, sqliteDb, logger });
+const ngGraphBuilder = createGraphBuilder({ callLLM, getProviderConfig, sqliteDb, logger });
+const ngGraphQuery = createGraphQuery({ sqliteDb, logger });
+const ngChatPipeline = createChatPipeline({
+  queryAnalyzer: ngQueryAnalyzer,
+  searchEngine: ngSearchEngine,
+  reranker: ngReranker,
+  cragEvaluator: ngCragEvaluator,
+  memoryEngine: ngMemoryEngine,
+  reflexion: ngReflexion,
+  graphQuery: ngGraphQuery,
+  qualityScorer: ngQualityScorer,
+  promptBuilder,
+  callLLM,
+  getProviderConfig,
+  logger,
+});
+// Expose NG services for admin routes and event hooks
+const ngServices = {
+  chatPipeline: ngChatPipeline,
+  contextualChunker: ngContextualChunker,
+  graphBuilder: ngGraphBuilder,
+};
+
+// ── Agent Queue Service ─────────────────────────────────────────────────
+const { createAgentQueue } = require("./src/services/agentQueue");
+const agentQueue = createAgentQueue({ sqliteDb: { getDb: () => sqliteDb.db }, logger });
+
+// ── Question Extractor Service ──────────────────────────────────────────
+const { createQuestionExtractor } = require("./src/services/questionExtractor");
+const questionExtractor = createQuestionExtractor({
+  callLLM, getProviderConfig, logger,
+});
+
+// ── Conversation Summarizer Service ──────────────────────────────────────
+const { createConversationSummarizer } = require("./src/services/conversationSummarizer");
+const conversationSummarizer = createConversationSummarizer({
+  callLLM, getProviderConfig, getChatFlowConfig, logger,
+});
+
 // buildGenerationConfig, callGemini, callGeminiWithFallback — moved to lib/providers.js
 
 // ── Knowledge Service ───────────────────────────────────────────────────
@@ -326,6 +414,30 @@ app.use(express.json({ limit: "1mb", type: (req) => {
   return ct.includes("application/json") || ct.includes("text/plain");
 }}));
 app.use(express.static(path.join(__dirname, "public")));
+
+// ── Setup Wizard Redirect ────────────────────────────────────────────────
+app.use((req, res, next) => {
+  // Skip API calls, static files, and setup page itself
+  if (req.path.startsWith("/api/") || req.path.startsWith("/setup") || req.path.includes(".")) {
+    return next();
+  }
+  // If setup not complete and accessing admin, redirect to setup
+  if (req.path === "/admin" && !isSetupComplete()) {
+    return res.redirect("/setup.html");
+  }
+  next();
+});
+
+// ── Setup Route (src/routes/setup.js) ────────────────────────────────────
+require("./src/routes/setup").mount(app, {
+  isSetupComplete,
+  markSetupComplete,
+  saveSiteConfig,
+  saveChatFlowConfig,
+  getSiteConfig,
+  getChatFlowConfig,
+  loadTemplate: agentConfig.loadTemplate,
+});
 
 // ── Health Route (src/routes/health.js) ─────────────────────────────────
 function getHealthSnapshot() {
@@ -427,6 +539,10 @@ const webChatPipeline = createWebChatPipeline({
   NEW_TICKET_INTENT_REGEX: chatEngine.NEW_TICKET_INTENT_REGEX,
   ISSUE_HINT_REGEX: chatEngine.ISSUE_HINT_REGEX,
   GENERIC_REPLY, POST_ESCALATION_FOLLOWUP_MESSAGE: chatEngine.POST_ESCALATION_FOLLOWUP_MESSAGE,
+  formatCitations,
+  questionExtractor,
+  getUserMemory: userMemory,
+  conversationSummarizer,
 });
 
 // ── Chat Routes (src/routes/chat.js) ────────────────────────────────────
@@ -484,6 +600,10 @@ const chatProcessor = createChatProcessor({
   recordAnalyticsEvent,
   sanitizeAssistantReply: chatEngine.sanitizeAssistantReply,
   maskCredentials,
+  formatCitations,
+  questionExtractor,
+  getUserMemory: userMemory,
+  conversationSummarizer,
 });
 
 // ── Telegram Integration ────────────────────────────────────────────────
@@ -524,6 +644,19 @@ const sunshineIntegration = createSunshineIntegration({
 });
 sunshineIntegration.mountWebhook(app);
 
+// ── WhatsApp Integration ─────────────────────────────────────────────
+const { createWhatsAppIntegration } = require("./src/integrations/whatsapp");
+const whatsappIntegration = createWhatsAppIntegration({
+  express,
+  logger,
+  getWhatsAppConfig,
+  getChatFlowConfig,
+  upsertConversation,
+  recordAnalyticsEvent,
+  processChatMessage: chatProcessor.processChatMessage,
+});
+whatsappIntegration.mountWebhook(app);
+
 // ── Admin Rate Limiting (all /api/admin endpoints) ──────────────────────
 app.use("/api/admin", (req, res, next) => {
   const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
@@ -531,6 +664,14 @@ app.use("/api/admin", (req, res, next) => {
     return res.status(429).json({ error: "Cok fazla istek. Lutfen bekleyin." });
   }
   next();
+});
+
+// ── Agent Inbox Routes (src/routes/agentInbox.js) ───────────────────────
+require("./src/routes/agentInbox").mount(app, {
+  requireAdminAccess,
+  agentQueue,
+  loadConversations,
+  logger,
 });
 
 // ── Admin Routes (src/routes/admin.js) ──────────────────────────────────
@@ -559,6 +700,7 @@ require("./src/routes/admin").mount(app, {
   loadWebhooks, saveWebhooks, loadWebhookDeliveryLog,
   loadContentGaps, saveContentGaps,
   loadFeedback: conversationLifecycle.loadFeedback,
+  feedbackAnalyzer,
   safeError, invalidateTopicCache,
   callLLM, getProviderConfig, embedText,
   multer, chunkText,
@@ -570,6 +712,18 @@ require("./src/routes/admin").mount(app, {
   SLA_FIRST_RESPONSE_MIN: config.slaFirstResponseMin, SLA_RESOLUTION_MIN: config.slaResolutionMin,
   logger, searchKnowledge,
   loadSiteConfig, loadSunshineConfig,
+  ngServices,
+});
+
+// ── WhatsApp Admin Route ─────────────────────────────────────────────
+require("./src/routes/whatsapp").mount(app, {
+  requireAdminAccess,
+  getWhatsAppConfig,
+  saveWhatsAppConfig,
+});
+
+app.get("/setup", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "setup.html"));
 });
 
 app.get("/admin", (_req, res) => {
@@ -631,6 +785,9 @@ app.get("*", (_req, res) => {
 
   const server = app.listen(PORT, () => {
     logger.info("startup", `${BOT_NAME} ${PORT} portunda hazir`);
+    if (USE_ADAPTIVE_PIPELINE) {
+      logger.info("startup", "Adaptive RAG pipeline AKTIF (FAST/STANDARD/DEEP routing)");
+    }
     telegramIntegration.startTelegramPolling();
 
     // LLM health check: ilk kontrol 10s sonra, sonra her 5dk'da bir

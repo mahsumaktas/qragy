@@ -27,6 +27,8 @@ module.exports = [
         URL: "readonly",
         URLSearchParams: "readonly",
         AbortController: "readonly",
+        AbortSignal: "readonly",
+        globalThis: "readonly",
         fetch: "readonly",
         Response: "readonly",
         Map: "readonly",

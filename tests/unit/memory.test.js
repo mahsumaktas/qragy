@@ -10,7 +10,7 @@ describe("Memory", () => {
     });
   });
   describe("estimateTokens", () => {
-    it("should estimate ~1 token per 3 chars (Turkish)", () => { expect(estimateTokens("a".repeat(300))).toBe(100); });
+    it("should estimate ~1 token per 2.5 chars (Turkish)", () => { expect(estimateTokens("a".repeat(300))).toBe(120); });
     it("should handle empty", () => { expect(estimateTokens("")).toBe(0); });
   });
   describe("extractiveSummary", () => {

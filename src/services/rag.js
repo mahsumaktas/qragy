@@ -90,4 +90,14 @@ async function searchKnowledge(query, { knowledgeTable, embedFn, knowledgeBase, 
   return [];
 }
 
-module.exports = { fullTextSearch, reciprocalRankFusion, filterByRelevance, getAdaptiveTopK, phraseMatch, searchKnowledge, RAG_DISTANCE_THRESHOLD };
+function formatCitations(results) {
+  if (!Array.isArray(results)) return [];
+  return results.map((item, index) => ({
+    index: index + 1,
+    title: item.question || "",
+    source: item.source || "Bilgi Tabani",
+    snippet: (item.answer || "").slice(0, 200),
+  }));
+}
+
+module.exports = { fullTextSearch, reciprocalRankFusion, filterByRelevance, getAdaptiveTopK, phraseMatch, searchKnowledge, formatCitations, RAG_DISTANCE_THRESHOLD };

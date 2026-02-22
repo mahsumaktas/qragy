@@ -451,6 +451,111 @@ body {
 }
 
 /* ==========================================================================
+   KPI Dashboard Cards
+   ========================================================================== */
+.kpi-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.kpi-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.kpi-value {
+  margin-top: 6px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.kpi-sub {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.kpi-trend {
+  margin-top: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.kpi-trend.trend-up {
+  color: var(--ok);
+}
+
+.kpi-trend.trend-down {
+  color: var(--err);
+}
+
+.kpi-trend.trend-neutral {
+  color: var(--muted);
+}
+
+.kpi-topics {
+  margin-top: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.kpi-topics h4 {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.kpi-topics-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kpi-topic-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.kpi-topic-tag .topic-count {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+@media (max-width: 900px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
    Tables
    ========================================================================== */
 .table-section {
@@ -1718,5 +1823,164 @@ tbody tr:hover {
     max-width: 100%;
     margin: 0;
     border-radius: 0;
+  }
+}
+
+/* ==========================================================================
+   Agent Inbox Layout
+   ========================================================================== */
+.inbox-layout {
+  display: flex;
+  gap: 16px;
+  height: calc(100vh - 200px);
+  min-height: 400px;
+}
+
+.inbox-queue-panel {
+  width: 320px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  padding: 14px;
+}
+
+.inbox-chat-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  overflow: hidden;
+}
+
+.inbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 0.9rem;
+}
+
+.inbox-item:hover {
+  background: var(--bg);
+}
+
+.inbox-item.selected {
+  background: #eef4ff;
+  border-color: var(--primary);
+}
+
+.inbox-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.inbox-item-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-item-topic {
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-item-time {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.inbox-item-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.inbox-claim-btn {
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+}
+
+.inbox-claim-btn:hover {
+  opacity: 0.85;
+}
+
+.inbox-chat-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+  font-size: 0.95rem;
+  background: var(--bg);
+}
+
+.inbox-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inbox-chat-actions {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.inbox-message-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.inbox-message-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.inbox-agent-badge {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .inbox-layout {
+    flex-direction: column;
+    height: auto;
+  }
+  .inbox-queue-panel {
+    width: 100%;
   }
 }

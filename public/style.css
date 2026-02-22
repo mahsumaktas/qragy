@@ -18,6 +18,8 @@
   --success-bg: #e9f7ed;
   --success-line: #b6dec2;
   --chat-area-bg: #fffafa;
+  --header-bg: linear-gradient(140deg, var(--primary), var(--primary-strong));
+  --chat-bubble-color: var(--assistant-bg);
   --radius: 16px;
   --shadow: 0 20px 48px rgba(80, 20, 18, 0.16);
   --widget-transition: 320ms cubic-bezier(0.32, 0.72, 0, 1);
@@ -40,6 +42,8 @@
   --success-bg: #1a2e1f;
   --success-line: #2d4a35;
   --chat-area-bg: #1a1214;
+  --header-bg: linear-gradient(140deg, var(--primary), var(--primary-strong));
+  --chat-bubble-color: var(--assistant-bg);
   --shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
 }
 
@@ -219,7 +223,7 @@ body {
   gap: 12px;
   padding: 14px 14px 12px;
   color: #fff;
-  background: linear-gradient(140deg, var(--primary), var(--primary-strong));
+  background: var(--header-bg);
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
 }
 
@@ -419,7 +423,7 @@ body {
 
 .message.assistant {
   margin-right: auto;
-  background: var(--assistant-bg);
+  background: var(--chat-bubble-color);
 }
 
 /* Message grouping */

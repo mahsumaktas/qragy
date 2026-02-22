@@ -41,7 +41,7 @@ function createKnowledgeService(deps) {
       if (!row.question || !row.answer) continue;
       try {
         const vector = await embedText(row.question);
-        records.push({ question: row.question, answer: row.answer, vector });
+        records.push({ question: row.question, answer: row.answer, source: row.source || "", vector });
       } catch (err) {
         logger.warn("kb", `Embedding hatasi (skip): ${row.question?.slice(0, 40)}`, err);
       }
@@ -80,7 +80,7 @@ function createKnowledgeService(deps) {
           if (aLower.includes(word)) score += 1;
         }
         if (score > 0) {
-          scored.push({ question: row.question, answer: row.answer, textScore: score });
+          scored.push({ question: row.question, answer: row.answer, source: row.source || "", textScore: score });
         }
       }
       scored.sort((a, b) => b.textScore - a.textScore);
@@ -125,7 +125,7 @@ function createKnowledgeService(deps) {
           .toArray();
         vectorResults = results
           .filter((r) => r._distance <= ragDistanceThreshold)
-          .map((r) => ({ question: r.question, answer: r.answer, distance: r._distance }));
+          .map((r) => ({ question: r.question, answer: r.answer, source: r.source || "", distance: r._distance }));
       } catch (err) {
         logger.warn("kb", "Bilgi tabani vector arama hatasi", err);
       }
@@ -137,7 +137,7 @@ function createKnowledgeService(deps) {
     }
 
     if (vectorResults.length) return vectorResults.slice(0, topK);
-    if (textResults.length) return textResults.slice(0, topK).map(r => ({ question: r.question, answer: r.answer, distance: 0.5 }));
+    if (textResults.length) return textResults.slice(0, topK).map(r => ({ question: r.question, answer: r.answer, source: r.source || "", distance: 0.5 }));
     return [];
   }
 

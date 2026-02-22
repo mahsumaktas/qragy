@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bot Test</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    /* Override: auto-open chat, hide hero */
+    #heroSection { display: none !important; }
+    #chatContainer { display: flex !important; height: 100vh !important; max-height: 100vh !important; border-radius: 0 !important; position: static !important; }
+    .test-toolbar { position: fixed; top: 8px; right: 8px; z-index: 10000; display: flex; gap: 8px; }
+    .test-toolbar button { padding: 4px 12px; border-radius: 4px; border: 1px solid #ccc; background: #fff; cursor: pointer; font-size: 12px; }
+    .test-toolbar button:hover { background: #f0f0f0; }
+    .test-badge { position: fixed; top: 8px; left: 8px; z-index: 10000; background: #f59e0b; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="test-badge">TEST MODE</div>
+  <div class="test-toolbar">
+    <button onclick="resetTestSession()">Sifirla</button>
+  </div>
+  <script>
+    // Set test mode flag before app.js loads
+    window.__QRAGY_TEST_MODE__ = true;
+
+    function resetTestSession() {
+      // Clear test session data
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith("qragy_")) localStorage.removeItem(key);
+      }
+      location.reload();
+    }
+  </script>
+  <script src="/app.js"></script>
+</body>
+</html>

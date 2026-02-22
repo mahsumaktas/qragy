@@ -40,7 +40,11 @@ function createChatProcessor(deps) {
     fireWebhook,
     recordAnalyticsEvent,
     sanitizeAssistantReply,
+    formatCitations,
   } = deps;
+
+  // Optional dependency — question extraction for better RAG search
+  const questionExtractor = deps.questionExtractor || null;
 
   async function processChatMessage(messagesArray, source = "web") {
     const chatStartTime = Date.now();
@@ -142,11 +146,16 @@ function createChatProcessor(deps) {
       return { reply: "Sizi canli destek temsilcimize aktariyorum. Kisa surede yardimci olacaktir.", source: "escalation-trigger", memory: escalationMemory };
     }
 
-    // AI reply
-    const knowledgeResults = await searchKnowledge(latestUserMessage);
+    // AI reply — extract standalone question for better RAG search
+    let searchQuery = latestUserMessage;
+    if (questionExtractor && chatFlowConfig.questionExtractionEnabled && chatHistorySnapshot.length > 0) {
+      searchQuery = await questionExtractor.extractQuestion(chatHistorySnapshot, latestUserMessage);
+    }
+    const knowledgeResults = await searchKnowledge(searchQuery);
     if (knowledgeResults.length === 0 && latestUserMessage.length > 10) {
       recordContentGap(latestUserMessage);
     }
+    const citations = formatCitations ? formatCitations(knowledgeResults) : [];
     const systemPrompt = buildSystemPrompt(memory, conversationContext, knowledgeResults);
     let geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
     if (geminiResult.finishReason === "MAX_TOKENS" && geminiResult.reply.length < 160) {
@@ -177,7 +186,7 @@ function createChatProcessor(deps) {
     if (!reply) reply = buildMissingFieldsReply(memory, latestUserMessage);
 
     recordAnalyticsEvent({ source: conversationContext.currentTopic ? "topic-guided" : "gemini", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null, fallbackUsed: Boolean(geminiResult.fallbackUsed), sentiment });
-    return { reply, source: conversationContext.currentTopic ? "topic-guided" : "gemini", memory };
+    return { reply, source: conversationContext.currentTopic ? "topic-guided" : "gemini", memory, citations: citations.length ? citations : undefined };
   }
 
   return { processChatMessage };

@@ -86,7 +86,13 @@ function createWebChatPipeline(deps) {
     ISSUE_HINT_REGEX,
     GENERIC_REPLY,
     POST_ESCALATION_FOLLOWUP_MESSAGE,
+
+    // Citations
+    formatCitations,
   } = deps;
+
+  // Optional dependency — question extraction for better RAG search
+  const questionExtractor = deps.questionExtractor || null;
 
   // ── Shared response builder ────────────────────────────────────────────
 
@@ -435,9 +441,14 @@ function createWebChatPipeline(deps) {
     // Sentiment analysis
     const sentiment = analyzeSentiment(latestUserMessage);
 
-    // RAG: Knowledge base search
+    // RAG: Knowledge base search — extract standalone question for better results
     const GOOGLE_MAX_OUTPUT_TOKENS = getGoogleMaxOutputTokens();
-    const knowledgeResults = await searchKnowledge(latestUserMessage);
+    const chatFlowConfig = getChatFlowConfig();
+    let searchQuery = latestUserMessage;
+    if (questionExtractor && chatFlowConfig.questionExtractionEnabled && chatHistorySnapshot && chatHistorySnapshot.length > 0) {
+      searchQuery = await questionExtractor.extractQuestion(chatHistorySnapshot, latestUserMessage);
+    }
+    const knowledgeResults = await searchKnowledge(searchQuery);
     if (knowledgeResults.length === 0 && latestUserMessage.length > 10) {
       recordContentGap(latestUserMessage);
     }
@@ -446,6 +457,7 @@ function createWebChatPipeline(deps) {
       answer: (r.answer || "").slice(0, 200),
       score: r.rrfScore || r.distance || 0
     }));
+    const citations = formatCitations ? formatCitations(knowledgeResults) : [];
 
     const systemPrompt = buildSystemPrompt(memory, conversationContext, knowledgeResults);
     let geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
@@ -539,6 +551,7 @@ function createWebChatPipeline(deps) {
       reply,
       source: chatSource,
       sources: sources.length ? sources : undefined,
+      citations: citations.length ? citations : undefined,
       memory,
       conversationContext,
       hasClosedTicketHistory,

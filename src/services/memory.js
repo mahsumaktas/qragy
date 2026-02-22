@@ -4,7 +4,7 @@ const RECENT_KEEP_LARGE = 8;
 const LARGE_THRESHOLD = 40;
 const FIRST_KEEP = 3;
 const LAST_KEEP = 8;
-const CHARS_PER_TOKEN = 3;
+const CHARS_PER_TOKEN = 2.5;
 
 function estimateTokens(text) {
   if (!text) return 0;
