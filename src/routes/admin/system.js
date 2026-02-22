@@ -32,6 +32,7 @@ function mount(app, deps) {
     DATA_DIR,
     logger,
     nowIso,
+    loadCSVData,
   } = deps;
 
   // ── Audit Log helpers ──────────────────────────────────────────────────
@@ -221,6 +222,29 @@ function mount(app, deps) {
     });
     saveAuditLog(data);
   }
+
+  // ── Onboarding Status ──────────────────────────────────────────────────
+  app.get("/api/admin/onboarding-status", requireAdminAccess, (_req, res) => {
+    try {
+      const kbCount = typeof loadCSVData === "function" ? loadCSVData().length : 0;
+      const personaExists = fs.existsSync(path.join(AGENT_DIR, "persona.md"));
+      const topicIndex = typeof getTopicIndex === "function" ? getTopicIndex() : { topics: [] };
+      const topicCount = Array.isArray(topicIndex.topics) ? topicIndex.topics.length : 0;
+
+      const items = [
+        { id: "kb", label: "Bilgi tabanina en az 10 soru-cevap ekleyin", done: kbCount >= 10 },
+        { id: "persona", label: "Bot kisiligini ozellestirin", done: personaExists },
+        { id: "topics", label: "En az 3 konu olusturun", done: topicCount >= 3 },
+        { id: "test", label: "Bot'u test edin", done: false }, // Client-side tracking
+        { id: "widget", label: "Widget kodunu kopyalayin", done: false }, // Client-side tracking
+      ];
+
+      const allDone = items.filter(i => i.id !== "test" && i.id !== "widget").every(i => i.done);
+      return res.json({ ok: true, items, allDone });
+    } catch (err) {
+      return res.status(500).json({ error: safeError(err, "api") });
+    }
+  });
 
   // ── Audit Log ───────────────────────────────────────────────────────────
   app.get("/api/admin/audit-log", requireAdminAccess, (_req, res) => {

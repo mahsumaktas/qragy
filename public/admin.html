@@ -32,43 +32,36 @@
             </label>
           </div>
 
-          <!-- TALEPLER group -->
+          <!-- TEMEL group -->
           <nav class="sidebar-nav">
-            <div class="nav-group-label">TALEPLER</div>
-            <a class="nav-item active" data-panel="panelSummary">Özet</a>
-            <a class="nav-item" data-panel="panelLiveChats">Canlı Sohbetler <span id="convCount" class="nav-badge">0</span></a>
-            <a class="nav-item" data-panel="panelClosedChats">Kapalı Sohbetler</a>
-            <a class="nav-item" data-panel="panelSearch">Arama</a>
-            <a class="nav-item" data-panel="panelInbox">Agent Inbox <span id="inboxCount" class="nav-badge">0</span></a>
-
-            <!-- BİLGİ TABANI group -->
-            <div class="nav-group-label">BİLGİ TABANI</div>
-            <a class="nav-item" data-panel="panelKB">Kayıtlar</a>
-            <a class="nav-item" data-panel="panelAutoFAQ">FAQ Önerileri</a>
-
-            <!-- BOT YAPILANDIRMA group -->
-            <div class="nav-group-label">BOT YAPILANDIRMA</div>
+            <div class="nav-group-label">TEMEL</div>
+            <a class="nav-item active" data-panel="panelSummary">Ozet</a>
+            <a class="nav-item" data-panel="panelLiveChats">Canli Sohbetler <span id="convCount" class="nav-badge">0</span></a>
+            <a class="nav-item" data-panel="panelKB">Bilgi Tabani</a>
             <a class="nav-item" data-panel="panelBotTest">Bot Test</a>
-            <a class="nav-item" data-panel="panelAgentFiles">Agent Dosyaları</a>
             <a class="nav-item" data-panel="panelTopics">Konular</a>
-            <a class="nav-item" data-panel="panelMemory">Bellek Şablonları</a>
-            <a class="nav-item" data-panel="panelEnv">Ortam Değişkenleri</a>
-            <a class="nav-item" data-panel="panelChatFlow">Sohbet Akışı</a>
-            <a class="nav-item" data-panel="panelSiteConfig">Site Ayarları</a>
-            <a class="nav-item" data-panel="panelWebhooks">Webhooks</a>
-            <a class="nav-item" data-panel="panelPromptVersions">Prompt Geçmişi</a>
-            <a class="nav-item" data-panel="panelSunshine">CRM Entegrasyonu</a>
-            <a class="nav-item" data-panel="panelWhatsApp">WhatsApp</a>
-
-            <!-- ANALİTİK group -->
-            <div class="nav-group-label">ANALİTİK</div>
+            <a class="nav-item" data-panel="panelChatFlow">Sohbet Akisi</a>
+            <a class="nav-item" data-panel="panelSiteConfig">Site Ayarlari</a>
             <a class="nav-item" data-panel="panelAnalytics">Dashboard</a>
-            <a class="nav-item" data-panel="panelFeedbackReport">Feedback Raporu</a>
-            <a class="nav-item" data-panel="panelContentGaps">Content Gaps</a>
 
-            <!-- SİSTEM group -->
-            <div class="nav-group-label">SİSTEM</div>
-            <a class="nav-item" data-panel="panelSystem">Sistem Durumu</a>
+            <!-- Gelismis toggle -->
+            <div id="advancedToggle" class="nav-advanced-toggle">Gelismis Ayarlar &#9662;</div>
+
+            <!-- GELISMIS group (hidden by default) -->
+            <a class="nav-item advanced" data-panel="panelClosedChats">Kapali Sohbetler</a>
+            <a class="nav-item advanced" data-panel="panelSearch">Arama</a>
+            <a class="nav-item advanced" data-panel="panelInbox">Agent Inbox <span id="inboxCount" class="nav-badge">0</span></a>
+            <a class="nav-item advanced" data-panel="panelAutoFAQ">FAQ Onerileri</a>
+            <a class="nav-item advanced" data-panel="panelAgentFiles">Agent Dosyalari</a>
+            <a class="nav-item advanced" data-panel="panelMemory">Bellek Sablonlari</a>
+            <a class="nav-item advanced" data-panel="panelEnv">Ortam Degiskenleri</a>
+            <a class="nav-item advanced" data-panel="panelWebhooks">Webhooks</a>
+            <a class="nav-item advanced" data-panel="panelPromptVersions">Prompt Gecmisi</a>
+            <a class="nav-item advanced" data-panel="panelSunshine">CRM Entegrasyonu</a>
+            <a class="nav-item advanced" data-panel="panelWhatsApp">WhatsApp</a>
+            <a class="nav-item advanced" data-panel="panelFeedbackReport">Feedback Raporu</a>
+            <a class="nav-item advanced" data-panel="panelContentGaps">Content Gaps</a>
+            <a class="nav-item advanced" data-panel="panelSystem">Sistem Durumu</a>
           </nav>
         </aside>
 
@@ -77,6 +70,17 @@
 
           <!-- PANEL: Ozet -->
           <div id="panelSummary" class="panel active">
+            <!-- Onboarding Checklist -->
+            <div id="onboardingChecklist" class="onboarding-checklist" style="display:none;">
+              <div class="checklist-header">
+                <h3>Baslangic Rehberi</h3>
+                <button id="onboardingDismiss" class="btn btn-sm" title="Kapat">&times;</button>
+              </div>
+              <ul id="onboardingItems"></ul>
+              <div id="onboardingComplete" style="display:none;" class="checklist-complete">
+                Tebrikler! Tum adimlari tamamladiniz.
+              </div>
+            </div>
             <section class="summary-grid" id="summaryGrid"></section>
 
             <div class="panel-split">
@@ -321,9 +325,10 @@
               <div class="section-actions">
                 <button id="kbAddBtn" class="btn btn-primary">+ Yeni Kayıt</button>
                 <label class="btn btn-secondary file-upload-label">
-                  Dosya Yükle (PDF/DOCX/TXT)
-                  <input id="kbFileUpload" type="file" accept=".pdf,.docx,.txt" style="display:none" />
+                  Dosya Yükle
+                  <input id="kbFileUpload" type="file" accept=".pdf,.docx,.txt,.xlsx,.xls" multiple style="display:none" />
                 </label>
+                <button id="kbUrlImportBtn" class="btn btn-secondary">URL Aktar</button>
                 <button id="kbReingestBtn" class="btn btn-secondary">Yeniden Yükle</button>
                 <span id="kbReingestStatus" class="status-text"></span>
                 <span id="kbUploadStatus" class="status-text"></span>
@@ -361,20 +366,49 @@
 
           <!-- PANEL: Agent Dosyalari -->
           <div id="panelAgentFiles" class="panel">
-            <div class="editor-layout">
-              <div class="file-list-panel">
-                <h3>Dosyalar</h3>
-                <ul id="agentFileList"></ul>
-              </div>
-              <div class="editor-panel">
-                <div class="editor-header">
-                  <span id="agentEditorFilename" class="editor-filename">Dosya seçiniz</span>
-                  <div class="editor-actions">
-                    <button id="agentEditorRevertBtn" class="btn btn-secondary" disabled>Geri Al</button>
-                    <button id="agentEditorSaveBtn" class="btn btn-primary" disabled>Kaydet</button>
-                  </div>
+            <div class="agent-tabs">
+              <button class="agent-tab active" data-agent-tab="editor">Dosyalar</button>
+              <button class="agent-tab" data-agent-tab="easyEdit">Kolay Duzenle</button>
+            </div>
+
+            <!-- Tab: File Editor -->
+            <div id="agentTabEditor" class="agent-tab-content">
+              <div class="editor-layout">
+                <div class="file-list-panel">
+                  <h3>Dosyalar</h3>
+                  <ul id="agentFileList"></ul>
                 </div>
-                <textarea id="agentEditorTextarea" class="code-editor" placeholder="Dosya seçiniz..." disabled></textarea>
+                <div class="editor-panel">
+                  <div class="editor-header">
+                    <span id="agentEditorFilename" class="editor-filename">Dosya seciniz</span>
+                    <div class="editor-actions">
+                      <button id="agentEditorRevertBtn" class="btn btn-secondary" disabled>Geri Al</button>
+                      <button id="agentEditorSaveBtn" class="btn btn-primary" disabled>Kaydet</button>
+                    </div>
+                  </div>
+                  <textarea id="agentEditorTextarea" class="code-editor" placeholder="Dosya seciniz..." disabled></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab: Easy Persona Editor -->
+            <div id="agentTabEasyEdit" class="agent-tab-content" style="display:none">
+              <div class="easy-persona-form">
+                <h3>Bot Kisiligini Ozellestiriniz</h3>
+                <p class="field-hint" style="margin-bottom:16px">Asagidaki formu doldurarak bot kisiligini hizlica ayarlayin. Kaydet'e bastiginizda persona.md otomatik olusturulur.</p>
+                <div class="form-grid">
+                  <label>Bot Adi<input id="easyPersonaName" type="text" placeholder="Ornek: Asistan" /></label>
+                  <label>Konusma Tonu
+                    <select id="easyPersonaTone">
+                      <option value="profesyonel">Profesyonel</option>
+                      <option value="samimi">Samimi</option>
+                      <option value="resmi">Resmi</option>
+                    </select>
+                  </label>
+                </div>
+                <label>Selamlama Ornegi<input id="easyPersonaGreeting" type="text" placeholder="Ornek: Merhaba! Size nasil yardimci olabilirim?" /></label>
+                <label>Kisa Tanitim<textarea id="easyPersonaDescription" rows="4" placeholder="Ornek: Ben XYZ firmasinin musteri destek asistaniyim. Urunler, siparisler ve teknik konularda yardimci olabilirim."></textarea></label>
+                <button id="easyPersonaSaveBtn" class="btn btn-primary" style="margin-top:12px">Kaydet</button>
               </div>
             </div>
           </div>
@@ -1026,30 +1060,61 @@
       <div id="topicModal" class="modal-overlay" style="display:none">
         <div class="modal modal-lg">
           <div class="modal-header">
-            <h3>Konu Düzenle</h3>
+            <h3 id="topicModalHeader">Konu Düzenle</h3>
             <button id="topicModalCancelBtn" class="modal-close">&times;</button>
           </div>
           <div class="modal-body">
-            <div class="form-grid">
-              <label>ID<span class="field-hint">Benzersiz slug. Küçük harf, tire ile ayrılmış. Örnek: bilet-yazdiramiyorum</span><input id="topicModalId" type="text" placeholder="konu-slug" /></label>
-              <label>Başlık<span class="field-hint">Kullanıcıya görünmeyen, admin için konu adı. Örnek: Bilet Yazdıramıyorum</span><input id="topicModalTitle" type="text" /></label>
+            <!-- Wizard Steps Indicator -->
+            <div id="topicWizardSteps" class="wizard-steps">
+              <span class="wizard-step active" data-step="1">1. Konu Adi</span>
+              <span class="wizard-step" data-step="2">2. Anahtar Kelimeler</span>
+              <span class="wizard-step" data-step="3">3. Bot Yaniti</span>
+              <span class="wizard-step" data-step="4">4. Eskalasyon</span>
             </div>
-            <label>Anahtar Kelimeler (virgül ile)<span class="field-hint">Kullanıcı mesajında bu kelimeler geçerse bu konu eşleşir. Ne kadar çok varyasyon eklerseniz tespit o kadar iyi olur.</span><input id="topicModalKeywords" type="text" placeholder="bilet yazdiramiyorum, bilet cikmiyor, yazici basmiyor" /></label>
-            <div class="form-row">
-              <div class="checkbox-group">
-                <label class="checkbox-label"><input id="topicModalRequiresEscalation" type="checkbox" /> Eskalasyon Gerektirir</label>
-                <span class="field-hint">İşaretlenirse bu konu sonunda canlı temsilciye aktarım yapılır.</span>
-              </div>
-              <div class="checkbox-group">
-                <label class="checkbox-label"><input id="topicModalCanResolveDirectly" type="checkbox" /> Doğrudan Çözülebilir</label>
-                <span class="field-hint">İşaretlenirse AI bilgilendirme yapıp konuyu kapatabilir, temsilciye gerek kalmaz.</span>
+
+            <!-- Step 1: Name & ID -->
+            <div class="wizard-panel" data-wizard="1">
+              <div class="form-grid">
+                <label>Başlık<span class="field-hint">Admin icin konu adi. Ornek: Bilet Yazdiramiyorum</span><input id="topicModalTitle" type="text" placeholder="Konu basligi" /></label>
+                <label>ID (Slug)<span class="field-hint">Otomatik olusturulur, isterseniz degistirebilirsiniz.</span><input id="topicModalId" type="text" placeholder="konu-slug" /></label>
               </div>
             </div>
-            <label>Gerekli Bilgiler (virgül ile)<span class="field-hint">Eskalasyon öncesi kullanıcıdan toplanması gereken alanlar. Örnek: firma_adi, sube_kodu, hata_mesaji</span><input id="topicModalRequiredInfo" type="text" placeholder="firma_adi, sefer_guzergah, sefer_tarih_saat" /></label>
-            <label>İçerik (Markdown)<span class="field-hint">AI'a bu konuda nasıl davranacağını anlatan talimat dosyası. Troubleshoot adımları, bilgilendirme metni veya eskalasyon kuralları yazabilirsiniz.</span><textarea id="topicModalContent" rows="10" class="code-editor"></textarea></label>
+
+            <!-- Step 2: Keywords -->
+            <div class="wizard-panel" data-wizard="2" style="display:none">
+              <label>Kullanici bu konuyu nasil sorar?<span class="field-hint">Virgul ile ayrilmis anahtar kelimeler. Ne kadar cok varyasyon eklerseniz tespit o kadar iyi olur.</span></label>
+              <input id="topicModalKeywords" type="text" placeholder="bilet yazdiramiyorum, bilet cikmiyor, yazici basmiyor" />
+              <button id="topicSuggestKeywordsBtn" class="btn btn-sm" style="margin-top:8px">AI ile Oner</button>
+              <div id="topicKeywordSuggestion" style="display:none;margin-top:8px;padding:8px;background:var(--bg-secondary);border-radius:6px;font-size:13px"></div>
+            </div>
+
+            <!-- Step 3: Content -->
+            <div class="wizard-panel" data-wizard="3" style="display:none">
+              <label>Bot ne yanit vermeli?<span class="field-hint">AI'a bu konuda nasil davranacagini anlatan talimat. Troubleshoot adimlari, bilgilendirme metni yazabilirsiniz.</span></label>
+              <textarea id="topicModalContent" rows="10" class="code-editor" placeholder="Bu konuda su adimlari izle:&#10;1. ...&#10;2. ..."></textarea>
+            </div>
+
+            <!-- Step 4: Escalation -->
+            <div class="wizard-panel" data-wizard="4" style="display:none">
+              <div class="form-row">
+                <div class="checkbox-group">
+                  <label class="checkbox-label"><input id="topicModalRequiresEscalation" type="checkbox" /> Canli destege aktarilsin mi?</label>
+                  <span class="field-hint">Isaretlenirse bu konu sonunda canli temsilciye aktarim yapilir.</span>
+                </div>
+                <div class="checkbox-group">
+                  <label class="checkbox-label"><input id="topicModalCanResolveDirectly" type="checkbox" /> AI dogrudan cozebilir mi?</label>
+                  <span class="field-hint">Isaretlenirse AI bilgilendirme yapip konuyu kapatabilir.</span>
+                </div>
+              </div>
+              <label>Gerekli Bilgiler (virgul ile)<span class="field-hint">Eskalasyon oncesi kullanicidan toplanmasi gereken alanlar.</span><input id="topicModalRequiredInfo" type="text" placeholder="firma_adi, sefer_guzergah, sefer_tarih_saat" /></label>
+            </div>
           </div>
-          <div class="modal-footer">
-            <button id="topicModalSaveBtn" class="btn btn-primary">Kaydet</button>
+          <div class="modal-footer" style="justify-content:space-between">
+            <button id="topicWizardPrevBtn" class="btn" style="display:none">Geri</button>
+            <div>
+              <button id="topicWizardNextBtn" class="btn btn-primary">Ileri</button>
+              <button id="topicModalSaveBtn" class="btn btn-primary" style="display:none">Kaydet</button>
+            </div>
           </div>
         </div>
       </div>

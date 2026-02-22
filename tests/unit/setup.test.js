@@ -194,6 +194,65 @@ describe("Setup Route", () => {
     expect(chatConfig.welcomeMessage).toContain("Acme Corp");
   });
 
+  it("setup complete writes persona.md and adds sampleQA to CSV", () => {
+    const mockApp = createMockApp();
+    const agentDir = path.join(tmpDir, "agent");
+    fs.mkdirSync(agentDir, { recursive: true });
+
+    // Create a template
+    const templatesDir = path.join(agentDir, "templates");
+    fs.mkdirSync(templatesDir, { recursive: true });
+    fs.writeFileSync(path.join(templatesDir, "e-ticaret.json"), JSON.stringify({
+      sector: "e-ticaret",
+      persona: "Samimi e-ticaret asistani",
+      sampleQA: [
+        { q: "Kargo nerede?", a: "Siparis numaranizi paylasin." },
+        { q: "Iade yapabilir miyim?", a: "14 gun icinde iade mumkun." },
+      ],
+    }), "utf8");
+
+    // Mock CSV data
+    let csvData = [];
+    const loadCSVData = () => csvData;
+    const saveCSVData = (data) => { csvData = data; };
+    const reingestKnowledgeBase = vi.fn().mockResolvedValue();
+
+    const setupModule = require("../../src/routes/setup.js");
+    setupModule.mount(mockApp, {
+      isSetupComplete: store.isSetupComplete,
+      markSetupComplete: store.markSetupComplete,
+      saveSiteConfig: store.saveSiteConfig,
+      saveChatFlowConfig: store.saveChatFlowConfig,
+      loadTemplate: (sector) => {
+        const tp = path.join(templatesDir, `${sector}.json`);
+        try { return JSON.parse(fs.readFileSync(tp, "utf8")); } catch { return null; }
+      },
+      fs, agentDir,
+      loadCSVData, saveCSVData, reingestKnowledgeBase,
+      logger: { info() {}, warn() {}, error() {} },
+    });
+
+    const result = mockApp._call("POST", "/api/setup/complete", {
+      companyName: "TestShop",
+      sector: "e-ticaret",
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body.ok).toBe(true);
+
+    // persona.md should be written
+    const personaPath = path.join(agentDir, "persona.md");
+    expect(fs.existsSync(personaPath)).toBe(true);
+    const personaContent = fs.readFileSync(personaPath, "utf8");
+    expect(personaContent).toContain("TestShop");
+    expect(personaContent).toContain("Samimi e-ticaret asistani");
+
+    // CSV should contain sampleQA
+    expect(csvData).toHaveLength(2);
+    expect(csvData[0].question).toBe("Kargo nerede?");
+    expect(csvData[1].question).toBe("Iade yapabilir miyim?");
+  });
+
   it("POST /api/setup/complete is idempotent", () => {
     const mockApp = createMockApp();
     mountSetupRoute(mockApp);

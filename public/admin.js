@@ -189,8 +189,65 @@ async function apiDelete(path) {
 }
 
 // ── Sidebar Panel Navigation ──────────────────────────────────────────────
+// ── Onboarding Checklist ─────────────────────────────────────────────────
+async function checkOnboardingStatus() {
+  const container = document.getElementById("onboardingChecklist");
+  if (!container) return;
+  const dismissed = localStorage.getItem("qragy_onboarding_dismissed");
+  if (dismissed === "true") { container.style.display = "none"; return; }
+
+  try {
+    const data = await apiGet("admin/onboarding-status");
+    if (!data || !data.items) return;
+
+    // Check client-side items
+    const testedBot = localStorage.getItem("qragy_onboarding_tested") === "true";
+    const copiedWidget = localStorage.getItem("qragy_onboarding_widget") === "true";
+    data.items.forEach(item => {
+      if (item.id === "test" && testedBot) item.done = true;
+      if (item.id === "widget" && copiedWidget) item.done = true;
+    });
+
+    const allDone = data.items.every(i => i.done);
+    const list = document.getElementById("onboardingItems");
+    const completeEl = document.getElementById("onboardingComplete");
+
+    if (allDone) {
+      list.style.display = "none";
+      completeEl.style.display = "block";
+      setTimeout(() => { container.style.display = "none"; localStorage.setItem("qragy_onboarding_dismissed", "true"); }, 5000);
+    } else {
+      // Build list items using safe DOM methods
+      list.textContent = "";
+      data.items.forEach(item => {
+        const li = document.createElement("li");
+        if (item.done) li.classList.add("done");
+        const icon = document.createElement("span");
+        icon.className = "check-icon";
+        icon.textContent = item.done ? "\u2713" : "";
+        li.appendChild(icon);
+        li.appendChild(document.createTextNode(" " + item.label));
+        list.appendChild(li);
+      });
+      completeEl.style.display = "none";
+    }
+
+    container.style.display = "block";
+  } catch (_) { /* silently fail */ }
+}
+
+// Dismiss button
+const onboardingDismissBtn = document.getElementById("onboardingDismiss");
+if (onboardingDismissBtn) {
+  onboardingDismissBtn.addEventListener("click", () => {
+    localStorage.setItem("qragy_onboarding_dismissed", "true");
+    const container = document.getElementById("onboardingChecklist");
+    if (container) container.style.display = "none";
+  });
+}
+
 const panelLoaders = {
-  panelSummary: () => refreshDashboard(),
+  panelSummary: () => { refreshDashboard(); checkOnboardingStatus(); },
   panelLiveChats: () => loadLiveConversations(),
   panelClosedChats: () => loadClosedConversations(),
   panelSearch: () => loadSearchTickets(),
@@ -227,6 +284,23 @@ navItems.forEach(item => {
     switchPanel(item.dataset.panel);
   });
 });
+
+// ── Advanced Settings Toggle ────────────────────────────────────────────
+(function initAdvancedToggle() {
+  const toggle = $("advancedToggle");
+  if (!toggle) return;
+  const advItems = document.querySelectorAll(".nav-item.advanced");
+  const saved = localStorage.getItem("qragy_advanced_open") === "1";
+  if (saved) {
+    advItems.forEach(el => el.classList.add("show"));
+    toggle.classList.add("open");
+  }
+  toggle.addEventListener("click", () => {
+    const isOpen = toggle.classList.toggle("open");
+    advItems.forEach(el => el.classList.toggle("show", isOpen));
+    localStorage.setItem("qragy_advanced_open", isOpen ? "1" : "0");
+  });
+})();
 
 // ══════════════════════════════════════════════════════════════════════════
 // TAB 1: TICKETS
@@ -824,6 +898,27 @@ kbModalCancelBtn.addEventListener("click", closeKBModal);
 kbModalSaveBtn.addEventListener("click", () => { void saveKBRecord(); });
 kbReingestBtn.addEventListener("click", () => { void triggerReingest(); });
 
+// URL Import
+const kbUrlImportBtn = $("kbUrlImportBtn");
+if (kbUrlImportBtn) {
+  kbUrlImportBtn.addEventListener("click", async () => {
+    const url = prompt("Bilgi tabanina aktarmak istediginiz web sayfasinin URL'sini girin:");
+    if (!url || !url.trim()) return;
+    const statusEl = $("kbUploadStatus");
+    statusEl.textContent = "URL icerigi aliniyor...";
+    kbUrlImportBtn.disabled = true;
+    try {
+      const result = await apiPost("/api/admin/knowledge/import-url", { url: url.trim() });
+      statusEl.textContent = `${result.chunksAdded} parca eklendi (${result.title || url})`;
+      await loadKBPanel();
+    } catch (err) {
+      statusEl.textContent = "URL import hatasi: " + (err.message || err);
+    } finally {
+      kbUrlImportBtn.disabled = false;
+    }
+  });
+}
+
 kbTableBody.addEventListener("click", async (event) => {
   const editBtn = event.target.closest(".kb-edit-btn");
   if (editBtn) {
@@ -908,6 +1003,91 @@ function revertAgentFile() {
 agentEditorSaveBtn.addEventListener("click", () => { void saveAgentFile(); });
 agentEditorRevertBtn.addEventListener("click", revertAgentFile);
 
+// ── Agent Tab Switching ─────────────────────────────────────────────────────
+(function initAgentTabs() {
+  const tabs = document.querySelectorAll(".agent-tab[data-agent-tab]");
+  const editorTab = $("agentTabEditor");
+  const easyTab = $("agentTabEasyEdit");
+  if (!tabs.length || !editorTab || !easyTab) return;
+
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      tabs.forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      const which = tab.dataset.agentTab;
+      editorTab.style.display = which === "editor" ? "" : "none";
+      easyTab.style.display = which === "easyEdit" ? "" : "none";
+      if (which === "easyEdit") loadEasyPersona();
+    });
+  });
+})();
+
+async function loadEasyPersona() {
+  try {
+    const payload = await apiGet("admin/agent/files/persona.md");
+    const content = payload.content || "";
+    // Parse existing persona.md fields if possible
+    const nameMatch = content.match(/Ad[ıi]?:\s*(.+)/i);
+    const toneMatch = content.match(/Ton[u]?:\s*(.+)/i);
+    const greetMatch = content.match(/Selamlama:\s*(.+)/i);
+    const descMatch = content.match(/Tanitim:\s*([\s\S]*?)(?:\n##|\n---|\n\n\n|$)/i);
+    const nameEl = $("easyPersonaName");
+    const toneEl = $("easyPersonaTone");
+    const greetEl = $("easyPersonaGreeting");
+    const descEl = $("easyPersonaDescription");
+    if (nameMatch && nameEl) nameEl.value = nameMatch[1].trim();
+    if (toneMatch && toneEl) {
+      const t = toneMatch[1].trim().toLowerCase();
+      if (["profesyonel", "samimi", "resmi"].includes(t)) toneEl.value = t;
+    }
+    if (greetMatch && greetEl) greetEl.value = greetMatch[1].trim();
+    if (descMatch && descEl) descEl.value = descMatch[1].trim();
+  } catch (_) {
+    // persona.md may not exist yet, that's ok
+  }
+}
+
+(function initEasyPersonaSave() {
+  const btn = $("easyPersonaSaveBtn");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const name = ($("easyPersonaName") || {}).value || "";
+    const tone = ($("easyPersonaTone") || {}).value || "profesyonel";
+    const greeting = ($("easyPersonaGreeting") || {}).value || "";
+    const description = ($("easyPersonaDescription") || {}).value || "";
+
+    if (!name.trim()) {
+      showToast("Bot adi zorunludur.", "error");
+      return;
+    }
+
+    const content = "# Persona\n\n" +
+      "## Temel Bilgiler\n" +
+      "- Adi: " + name.trim() + "\n" +
+      "- Tonu: " + tone + "\n" +
+      "- Selamlama: " + (greeting.trim() || "Merhaba! Size nasil yardimci olabilirim?") + "\n\n" +
+      "## Tanitim\n" +
+      (description.trim() || "Ben " + name.trim() + ", musteri destek asistaniyim.") + "\n\n" +
+      "## Davranis Kurallari\n" +
+      "- Her zaman " + tone + " bir dil kullan.\n" +
+      "- Kullaniciya ismiyle hitap et (biliniyorsa).\n" +
+      "- Bilmedigin konularda \"Sizi canli destek temsilcimize aktariyorum\" de.\n" +
+      "- Kisa ve net yanitlar ver.\n";
+
+    btn.disabled = true;
+    btn.textContent = "Kaydediliyor...";
+    try {
+      await apiPut("admin/agent/files/persona.md", { content });
+      showToast("Kisilik kaydedildi.", "success");
+    } catch (err) {
+      showToast("Hata: " + err.message, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Kaydet";
+    }
+  });
+})();
+
 // ── Topics ─────────────────────────────────────────────────────────────────
 async function loadTopics() {
   try {
@@ -939,9 +1119,45 @@ function renderTopicsTable(topics) {
   }
 }
 
+// ── Topic Wizard State ──────────────────────────────────────────────────
+let topicWizardStep = 1;
+const TOPIC_WIZARD_TOTAL = 4;
+const topicWizardPrevBtn = $("topicWizardPrevBtn");
+const topicWizardNextBtn = $("topicWizardNextBtn");
+const topicSuggestKeywordsBtn = $("topicSuggestKeywordsBtn");
+const topicKeywordSuggestion = $("topicKeywordSuggestion");
+const topicModalHeader = $("topicModalHeader");
+const topicWizardSteps = $("topicWizardSteps");
+
+function showTopicWizardStep(step) {
+  topicWizardStep = step;
+  const panels = topicModal.querySelectorAll(".wizard-panel");
+  panels.forEach(p => {
+    p.style.display = p.dataset.wizard === String(step) ? "" : "none";
+  });
+  const stepEls = topicModal.querySelectorAll(".wizard-step");
+  stepEls.forEach(s => {
+    const n = Number(s.dataset.step);
+    s.classList.toggle("active", n === step);
+    s.classList.toggle("done", n < step);
+  });
+  topicWizardPrevBtn.style.display = step > 1 ? "" : "none";
+  topicWizardNextBtn.style.display = step < TOPIC_WIZARD_TOTAL ? "" : "none";
+  topicModalSaveBtn.style.display = step === TOPIC_WIZARD_TOTAL ? "" : "none";
+}
+
+function generateSlug(title) {
+  return title.toLowerCase()
+    .replace(/[ğ]/g, "g").replace(/[ü]/g, "u").replace(/[ş]/g, "s")
+    .replace(/[ı]/g, "i").replace(/[ö]/g, "o").replace(/[ç]/g, "c")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 async function openTopicModal(topicId) {
   state.editingTopicId = topicId;
   if (topicId) {
+    topicModalHeader.textContent = "Konu Duzenle";
+    topicWizardSteps.style.display = "none";
     try {
       const payload = await apiGet("admin/agent/topics/" + encodeURIComponent(topicId));
       const t = payload.topic || {};
@@ -957,7 +1173,14 @@ async function openTopicModal(topicId) {
       showToast("Konu alinamadi: " + error.message, "error");
       return;
     }
+    // Show all panels for edit mode
+    topicModal.querySelectorAll(".wizard-panel").forEach(p => p.style.display = "");
+    topicWizardPrevBtn.style.display = "none";
+    topicWizardNextBtn.style.display = "none";
+    topicModalSaveBtn.style.display = "";
   } else {
+    topicModalHeader.textContent = "Yeni Konu Olustur";
+    topicWizardSteps.style.display = "";
     topicModalId.value = "";
     topicModalId.disabled = false;
     topicModalTitle.value = "";
@@ -966,6 +1189,8 @@ async function openTopicModal(topicId) {
     topicModalCanResolveDirectly.checked = false;
     topicModalRequiredInfo.value = "";
     topicModalContent.value = "";
+    if (topicKeywordSuggestion) topicKeywordSuggestion.style.display = "none";
+    showTopicWizardStep(1);
   }
   topicModal.style.display = "";
 }
@@ -973,6 +1198,7 @@ async function openTopicModal(topicId) {
 function closeTopicModal() {
   topicModal.style.display = "none";
   state.editingTopicId = null;
+  topicWizardStep = 1;
 }
 
 async function saveTopic() {
@@ -1024,6 +1250,62 @@ async function deleteTopic(topicId) {
 topicAddBtn.addEventListener("click", () => openTopicModal(null));
 topicModalCancelBtn.addEventListener("click", closeTopicModal);
 topicModalSaveBtn.addEventListener("click", () => { void saveTopic(); });
+
+// Wizard navigation
+if (topicWizardNextBtn) {
+  topicWizardNextBtn.addEventListener("click", () => {
+    if (topicWizardStep === 1) {
+      const title = topicModalTitle.value.trim();
+      if (!title) { showToast("Konu basligi zorunludur.", "error"); return; }
+      if (!topicModalId.value.trim()) {
+        topicModalId.value = generateSlug(title);
+      }
+    }
+    if (topicWizardStep < TOPIC_WIZARD_TOTAL) {
+      showTopicWizardStep(topicWizardStep + 1);
+    }
+  });
+}
+if (topicWizardPrevBtn) {
+  topicWizardPrevBtn.addEventListener("click", () => {
+    if (topicWizardStep > 1) showTopicWizardStep(topicWizardStep - 1);
+  });
+}
+
+// Auto-generate slug from title
+if (topicModalTitle) {
+  topicModalTitle.addEventListener("input", () => {
+    if (!state.editingTopicId && topicModalTitle.value.trim()) {
+      topicModalId.value = generateSlug(topicModalTitle.value.trim());
+    }
+  });
+}
+
+// Keyword suggestion
+if (topicSuggestKeywordsBtn) {
+  topicSuggestKeywordsBtn.addEventListener("click", async () => {
+    const title = topicModalTitle.value.trim();
+    if (!title) { showToast("Once konu basligini girin.", "error"); return; }
+    topicSuggestKeywordsBtn.disabled = true;
+    topicSuggestKeywordsBtn.textContent = "Oneriliyor...";
+    try {
+      const payload = await apiPost("admin/topics/suggest-keywords", { title });
+      const suggested = payload.keywords || "";
+      if (topicKeywordSuggestion) {
+        topicKeywordSuggestion.textContent = suggested;
+        topicKeywordSuggestion.style.display = "";
+      }
+      if (!topicModalKeywords.value.trim()) {
+        topicModalKeywords.value = suggested;
+      }
+    } catch (err) {
+      showToast("Oneri alinamadi: " + err.message, "error");
+    } finally {
+      topicSuggestKeywordsBtn.disabled = false;
+      topicSuggestKeywordsBtn.textContent = "AI ile Oner";
+    }
+  });
+}
 
 topicsTableBody.addEventListener("click", (event) => {
   const editBtn = event.target.closest(".topic-edit-btn");
@@ -1692,27 +1974,50 @@ $("ticketNoteBtn").addEventListener("click", async () => {
 // ══════════════════════════════════════════════════════════════════════════
 
 $("kbFileUpload").addEventListener("change", async (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
+  const files = event.target.files;
+  if (!files || !files.length) return;
   const uploadStatus = $("kbUploadStatus");
-  uploadStatus.textContent = "Yükleniyor...";
 
-  const formData = new FormData();
-  formData.append("file", file);
+  // Multiple files: use batch endpoint
+  if (files.length > 1) {
+    uploadStatus.textContent = `${files.length} dosya yukleniyor...`;
+    const formData = new FormData();
+    for (const file of files) formData.append("files", file);
 
-  try {
-    const headers = { "Bypass-Tunnel-Reminder": "true" };
-    if (state.token) headers["x-admin-token"] = state.token;
-    const resp = await fetch("api/admin/knowledge/upload", { method: "POST", headers, body: formData });
-    const payload = await resp.json();
-    if (!resp.ok) throw new Error(payload.error || "Upload hatasi");
-    uploadStatus.textContent = "Tamamlandi: " + (payload.chunksAdded || 0) + " parca eklendi";
-    showToast("Dosya yüklendi ve işlendi.", "success");
-    setTimeout(() => { uploadStatus.textContent = ""; }, 5000);
-    await loadKnowledgeBase();
-  } catch (err) {
-    uploadStatus.textContent = "Hata!";
-    showToast("Upload hatasi: " + err.message, "error");
+    try {
+      const headers = { "Bypass-Tunnel-Reminder": "true" };
+      if (state.token) headers["x-admin-token"] = state.token;
+      const resp = await fetch("api/admin/knowledge/upload-batch", { method: "POST", headers, body: formData });
+      const payload = await resp.json();
+      if (!resp.ok) throw new Error(payload.error || "Upload hatasi");
+      uploadStatus.textContent = `Tamamlandi: ${payload.totalAdded || 0} parca eklendi (${files.length} dosya)`;
+      showToast("Dosyalar yuklendi ve islendi.", "success");
+      setTimeout(() => { uploadStatus.textContent = ""; }, 5000);
+      await loadKnowledgeBase();
+    } catch (err) {
+      uploadStatus.textContent = "Hata!";
+      showToast("Upload hatasi: " + err.message, "error");
+    }
+  } else {
+    // Single file: use original endpoint
+    uploadStatus.textContent = "Yukleniyor...";
+    const formData = new FormData();
+    formData.append("file", files[0]);
+
+    try {
+      const headers = { "Bypass-Tunnel-Reminder": "true" };
+      if (state.token) headers["x-admin-token"] = state.token;
+      const resp = await fetch("api/admin/knowledge/upload", { method: "POST", headers, body: formData });
+      const payload = await resp.json();
+      if (!resp.ok) throw new Error(payload.error || "Upload hatasi");
+      uploadStatus.textContent = "Tamamlandi: " + (payload.chunksAdded || 0) + " parca eklendi";
+      showToast("Dosya yuklendi ve islendi.", "success");
+      setTimeout(() => { uploadStatus.textContent = ""; }, 5000);
+      await loadKnowledgeBase();
+    } catch (err) {
+      uploadStatus.textContent = "Hata!";
+      showToast("Upload hatasi: " + err.message, "error");
+    }
   }
   event.target.value = "";
 });

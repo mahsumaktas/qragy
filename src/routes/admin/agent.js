@@ -15,6 +15,7 @@ function mount(app, deps) {
     savePromptVersion,
     invalidateTopicCache,
     safeError,
+    callLLM,
     AGENT_DIR,
     TOPICS_DIR,
     MEMORY_DIR,
@@ -172,6 +173,28 @@ function mount(app, deps) {
       loadAllAgentConfig();
       invalidateTopicCache(req.params.topicId);
       return res.json({ ok: true });
+    } catch (err) {
+      return res.status(500).json({ error: safeError(err, "api") });
+    }
+  });
+
+  // ── Topics: Suggest Keywords ────────────────────────────────────────────
+  app.post("/api/admin/topics/suggest-keywords", requireAdminAccess, async (req, res) => {
+    const { title } = req.body || {};
+    if (!title || typeof title !== "string") {
+      return res.status(400).json({ error: "title zorunludur." });
+    }
+    if (!callLLM) {
+      return res.status(500).json({ error: "LLM servisi yapilandirilmamis." });
+    }
+    try {
+      const result = await callLLM(
+        [{ role: "user", parts: [{ text: title }] }],
+        "Bir musteri destek konusu icin anahtar kelime onerisi yap. Konu basligini alacaksin. Kullanicilarin bu konuyu nasil sorabilecegini dusun ve 8-12 anahtar kelime/cümle oner. Virgülle ayrilmis tek satir halinde yaz. Sadece anahtar kelimeleri yaz, baska bir sey yazma. Turkce yaz.",
+        128
+      );
+      const keywords = (result.reply || "").trim();
+      return res.json({ ok: true, keywords });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });
     }

@@ -57,6 +57,7 @@ const { createReflexion } = require("./src/services/intelligence/reflexion");
 const { createGraphBuilder } = require("./src/services/intelligence/graphBuilder");
 const { createGraphQuery } = require("./src/services/intelligence/graphQuery");
 const { createChatPipeline } = require("./src/services/pipeline/chatPipeline");
+const { createUrlExtractor } = require("./src/services/urlExtractor");
 const ticketHelpersModule = require("./src/utils/ticketHelpers.js");
 const { nowIso } = ticketHelpersModule;
 const { createAdminHelpers } = require("./src/utils/adminHelpers");
@@ -343,6 +344,8 @@ const ngChatPipeline = createChatPipeline({
   getProviderConfig,
   logger,
 });
+const ngUrlExtractor = createUrlExtractor({ logger });
+
 // Expose NG services for admin routes and event hooks
 const ngServices = {
   chatPipeline: ngChatPipeline,
@@ -437,6 +440,9 @@ require("./src/routes/setup").mount(app, {
   getSiteConfig,
   getChatFlowConfig,
   loadTemplate: agentConfig.loadTemplate,
+  fs, agentDir: AGENT_DIR,
+  loadCSVData, saveCSVData, reingestKnowledgeBase,
+  logger,
 });
 
 // ── Health Route (src/routes/health.js) ─────────────────────────────────
@@ -488,6 +494,7 @@ const conversationLifecycle = require("./src/routes/conversation").mount(app, {
   recordAnalyticsEvent, recordCsatAnalytics, saveAnalyticsData,
   getAnalyticsData: () => analyticsData,
   FEEDBACK_FILE, UPLOADS_DIR,
+  ngReflexion, ngGraphBuilder,
 });
 
 // ── Web Chat Pipeline (src/services/webChatPipeline.js) ──────────────────
@@ -721,6 +728,8 @@ require("./src/routes/admin").mount(app, {
   logger, searchKnowledge,
   loadSiteConfig, loadSunshineConfig,
   ngServices,
+  contextualChunker: ngContextualChunker,
+  urlExtractor: ngUrlExtractor,
 });
 
 // ── WhatsApp Admin Route ─────────────────────────────────────────────

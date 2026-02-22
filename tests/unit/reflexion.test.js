@@ -86,6 +86,54 @@ describe("reflexion", () => {
     expect(result).toContain("Dogru bilgi: Ambalaj bozulmamis olmali");
   });
 
+  it("getWarnings finds partial topic matches via LIKE", async () => {
+    const searchReflexionByTopic = vi.fn().mockResolvedValue([
+      { id: 1, topic: "kargo takip sureci", analysis: "Yanlis bilgi", correctInfo: "Dogru bilgi" },
+    ]);
+
+    const reflexion = createReflexion(makeDeps({
+      sqliteDb: { saveReflexionLog: vi.fn(), searchReflexionByTopic },
+    }));
+
+    const result = await reflexion.getWarnings("kargo");
+
+    expect(searchReflexionByTopic).toHaveBeenCalledWith("kargo", 3);
+    expect(result).toContain("DIKKAT: Yanlis bilgi");
+  });
+
+  it("getWarnings searches both topic and standaloneQuery", async () => {
+    const searchReflexionByTopic = vi.fn()
+      .mockResolvedValueOnce([{ id: 1, topic: "iade", analysis: "A1", correctInfo: "" }])
+      .mockResolvedValueOnce([{ id: 2, topic: "geri gonder", analysis: "A2", correctInfo: "" }]);
+
+    const reflexion = createReflexion(makeDeps({
+      sqliteDb: { saveReflexionLog: vi.fn(), searchReflexionByTopic },
+    }));
+
+    const result = await reflexion.getWarnings("iade", { standaloneQuery: "urunu geri gonder" });
+
+    expect(searchReflexionByTopic).toHaveBeenCalledTimes(2);
+    expect(result).toContain("A1");
+    expect(result).toContain("A2");
+  });
+
+  it("getWarnings deduplicates results from topic and standaloneQuery", async () => {
+    const sharedResult = { id: 1, topic: "iade", analysis: "Ayni", correctInfo: "" };
+    const searchReflexionByTopic = vi.fn()
+      .mockResolvedValueOnce([sharedResult])
+      .mockResolvedValueOnce([sharedResult]);
+
+    const reflexion = createReflexion(makeDeps({
+      sqliteDb: { saveReflexionLog: vi.fn(), searchReflexionByTopic },
+    }));
+
+    const result = await reflexion.getWarnings("iade", { standaloneQuery: "iade islemi" });
+
+    // Should only appear once despite being returned by both searches
+    const matches = result.match(/DIKKAT: Ayni/g);
+    expect(matches).toHaveLength(1);
+  });
+
   it("getWarnings returns empty string when no past reflexion", async () => {
     const searchReflexionByTopic = vi.fn().mockResolvedValue([]);
 

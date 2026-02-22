@@ -36,13 +36,16 @@
   },
   "dependencies": {
     "@lancedb/lancedb": "^0.26.2",
+    "@mozilla/readability": "^0.6.0",
     "better-sqlite3": "^12.6.2",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
+    "jsdom": "^28.1.0",
     "mammoth": "^1.11.0",
     "multer": "^2.0.2",
     "papaparse": "^5.5.3",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "^2.4.5",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

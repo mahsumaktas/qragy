@@ -9,6 +9,12 @@ function mount(app, deps) {
     saveSiteConfig,
     saveChatFlowConfig,
     loadTemplate,
+    fs: fsModule,
+    agentDir,
+    loadCSVData,
+    saveCSVData,
+    reingestKnowledgeBase,
+    logger: log,
   } = deps;
 
   app.get("/api/setup/status", (_req, res) => {
@@ -49,6 +55,42 @@ function mount(app, deps) {
 
     // Load sector template if available
     const sectorTemplate = typeof loadTemplate === "function" ? loadTemplate(sector) : null;
+
+    // Apply template: write persona.md and sampleQA to CSV
+    if (sectorTemplate && fsModule && agentDir) {
+      try {
+        // Write persona.md
+        if (sectorTemplate.persona) {
+          const personaPath = require("path").join(agentDir, "persona.md");
+          const personaContent = `# ${companyName} Bot Kisiligi\n\n${sectorTemplate.persona}\n`;
+          fsModule.writeFileSync(personaPath, personaContent, "utf8");
+        }
+
+        // Add sampleQA to CSV knowledge base
+        if (Array.isArray(sectorTemplate.sampleQA) && sectorTemplate.sampleQA.length > 0 && loadCSVData && saveCSVData) {
+          const csvData = loadCSVData();
+          for (const qa of sectorTemplate.sampleQA) {
+            if (qa.q && qa.a) {
+              const exists = csvData.some(row =>
+                (row.question || row.soru || "").trim().toLowerCase() === qa.q.trim().toLowerCase()
+              );
+              if (!exists) {
+                csvData.push({ question: qa.q, answer: qa.a });
+              }
+            }
+          }
+          saveCSVData(csvData);
+
+          // Reingest knowledge base to include new QA pairs
+          if (reingestKnowledgeBase) {
+            Promise.resolve().then(() => reingestKnowledgeBase())
+              .catch(err => { if (log) log.warn("setup", "reingest hatasi", err); });
+          }
+        }
+      } catch (err) {
+        if (log) log.warn("setup", "Template uygulama hatasi", err);
+      }
+    }
 
     // Mark setup complete
     markSetupComplete({

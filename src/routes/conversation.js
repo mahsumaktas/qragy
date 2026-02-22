@@ -17,6 +17,7 @@ function mount(app, deps) {
     recordAnalyticsEvent, recordCsatAnalytics, saveAnalyticsData,
     getAnalyticsData,
     FEEDBACK_FILE, UPLOADS_DIR,
+    ngReflexion, ngGraphBuilder,
   } = deps;
 
   // ── Local helpers ──────────────────────────────────────────────────────
@@ -61,6 +62,13 @@ function mount(app, deps) {
     }
 
     fireWebhook("handoff_result", { ticketId, status, detail });
+
+    // Trigger knowledge graph extraction on resolved/completed tickets (fire-and-forget)
+    if (ngGraphBuilder && result.ticket && /^(resolved|completed)$/i.test(result.ticket.status)) {
+      Promise.resolve().then(() => ngGraphBuilder.extractAndStore(result.ticket))
+        .catch(err => logger.warn("conversation", "graphBuilder.extractAndStore hatasi", err));
+    }
+
     return res.json({ ok: true, ticket: sanitizeTicketForList(result.ticket) });
   });
 
@@ -148,6 +156,32 @@ function mount(app, deps) {
       timestamp: nowIso()
     });
     saveFeedback(data);
+
+    // Trigger reflexion analysis on negative feedback (fire-and-forget)
+    if (rating === "down" && ngReflexion && sessionId) {
+      const convData = loadConversations();
+      const conv = convData.conversations.find(c => c.sessionId === sessionId);
+      if (conv) {
+        const history = Array.isArray(conv.chatHistory) ? conv.chatHistory : [];
+        const idx = Number(messageIndex) || 0;
+        // Find the bot answer and the user query preceding it
+        const botMsg = history[idx] || history[history.length - 1];
+        let userQuery = "";
+        for (let i = (idx || history.length) - 1; i >= 0; i--) {
+          if (history[i]?.role === "user") {
+            userQuery = history[i].parts?.[0]?.text || history[i].content || "";
+            break;
+          }
+        }
+        const botAnswer = botMsg?.parts?.[0]?.text || botMsg?.content || "";
+        if (userQuery && botAnswer) {
+          Promise.resolve().then(() =>
+            ngReflexion.analyze({ sessionId, query: userQuery, answer: botAnswer, ragResults: [] })
+          ).catch(err => logger.warn("feedback", "reflexion.analyze hatasi", err));
+        }
+      }
+    }
+
     const analyticsData = getAnalyticsData();
     const dayKey = new Date().toISOString().slice(0, 10);
     if (!analyticsData.daily[dayKey]) {

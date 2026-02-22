@@ -84,12 +84,26 @@ function createReflexion(deps) {
 
   /**
    * Belirli bir konu icin gecmis reflexion uyarilarini formatla.
-   * @param {string} topic - Aranacak konu
-   * @param {number} limit - Maks sonuc sayisi
+   * @param {string} topic - Aranacak konu (intent)
+   * @param {Object} [opts] - Ek arama parametreleri
+   * @param {string} [opts.standaloneQuery] - standaloneQuery ile ek arama
+   * @param {number} [opts.limit] - Maks sonuc sayisi
    * @returns {string} Formatlenmis uyari metni veya bos string
    */
-  async function getWarnings(topic, limit = 3) {
-    const results = await sqliteDb.searchReflexionByTopic(topic, limit);
+  async function getWarnings(topic, opts = {}) {
+    const { standaloneQuery, limit = 3 } = typeof opts === "number" ? { limit: opts } : opts;
+
+    let results = await sqliteDb.searchReflexionByTopic(topic, limit);
+
+    // Also search by standaloneQuery if provided and different from topic
+    if (standaloneQuery && standaloneQuery !== topic) {
+      const extraResults = await sqliteDb.searchReflexionByTopic(standaloneQuery, limit);
+      const existingIds = new Set(results.map(r => r.id));
+      for (const r of extraResults) {
+        if (!existingIds.has(r.id)) results.push(r);
+      }
+      results = results.slice(0, limit);
+    }
 
     if (!Array.isArray(results) || results.length === 0) {
       return "";
