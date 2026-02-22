@@ -2471,6 +2471,13 @@ app.post("/api/chat", async (req, res) => {
       return res.status(400).json({ error: "messages alani bos olamaz." });
     }
 
+    // Message length limit
+    const MAX_MESSAGE_LENGTH = 1000;
+    const latestUserMsg = rawMessages[rawMessages.length - 1];
+    if (latestUserMsg && latestUserMsg.role === "user" && typeof latestUserMsg.content === "string" && latestUserMsg.content.length > MAX_MESSAGE_LENGTH) {
+      return res.status(400).json({ error: `Mesaj cok uzun. Maksimum ${MAX_MESSAGE_LENGTH} karakter gonderilebilir.` });
+    }
+
     // Injection Guard — Layer 1 (input sanitization)
     const latestMsg = rawMessages[rawMessages.length - 1];
     if (latestMsg && latestMsg.role === "user") {
@@ -4372,7 +4379,8 @@ app.post("/api/sunshine/webhook", express.json({ limit: "100kb" }), (req, res) =
         }
 
         const session = sessions[sessionKey];
-        session.messages.push({ role: "user", content: message.content.text });
+        const userText = (message.content.text || "").slice(0, 1000);
+        session.messages.push({ role: "user", content: userText });
         session.lastActivity = Date.now();
         session.nudge75Sent = false;
         session.nudge90Sent = false;
@@ -4424,7 +4432,7 @@ async function handleTelegramUpdate(update) {
   sessions[chatId].nudge90Sent = false;
   sessions[chatId].closed = false;
 
-  sessions[chatId].messages.push({ role: "user", content: msg.text });
+  sessions[chatId].messages.push({ role: "user", content: (msg.text || "").slice(0, 1000) });
   // Keep last 30 messages
   if (sessions[chatId].messages.length > 30) {
     sessions[chatId].messages = sessions[chatId].messages.slice(-30);

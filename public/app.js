@@ -1936,6 +1936,22 @@ chatForm.addEventListener("submit", (event) => {
 });
 
 chatInput.addEventListener("input", () => {
+  const MAX_MSG_LEN = 1000;
+  const len = chatInput.value.length;
+  let counter = document.getElementById("charCounter");
+  if (!counter) {
+    counter = document.createElement("span");
+    counter.id = "charCounter";
+    counter.style.cssText = "font-size:11px;color:#999;position:absolute;right:80px;bottom:14px;pointer-events:none;";
+    chatInput.parentElement.style.position = "relative";
+    chatInput.parentElement.appendChild(counter);
+  }
+  if (len > MAX_MSG_LEN * 0.8) {
+    counter.textContent = `${len}/${MAX_MSG_LEN}`;
+    counter.style.color = len >= MAX_MSG_LEN ? "#e53935" : "#999";
+  } else {
+    counter.textContent = "";
+  }
   if (state.flushTimer && chatInput.value.trim().length > 0) {
     scheduleUserFlush();
   }
