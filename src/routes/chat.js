@@ -42,6 +42,15 @@ function mount(app, deps) {
 
     // Pipeline service (injected)
     webChatPipeline,
+
+    // Adaptive pipeline (feature-flagged)
+    ngChatPipeline,
+    USE_ADAPTIVE_PIPELINE,
+    loadCSVData,
+    validateOutput,
+    maskCredentials,
+    getSoulText,
+    getPersonaText,
   } = deps;
 
   // ── Main Chat Handler ─────────────────────────────────────────────────
@@ -147,7 +156,60 @@ function mount(app, deps) {
       });
       if (deterministicResult) return res.json(deterministicResult);
 
-      // AI response generation
+      // AI response generation — adaptive pipeline or legacy
+      if (USE_ADAPTIVE_PIPELINE && ngChatPipeline) {
+        const knowledgeBase = typeof loadCSVData === "function" ? loadCSVData() : [];
+        const adaptiveResult = await ngChatPipeline.process({
+          userMessage: latestUserMessage,
+          chatHistory: chatHistorySnapshot,
+          sessionId,
+          userId: sessionId,
+          knowledgeBase,
+          kbSize: knowledgeBase.length,
+          memory,
+          conversationContext,
+        });
+
+        let reply = adaptiveResult.reply || "";
+
+        // Output validation (same as legacy pipeline)
+        if (typeof validateOutput === "function") {
+          const soulText = typeof getSoulText === "function" ? getSoulText() : "";
+          const personaText = typeof getPersonaText === "function" ? getPersonaText() : "";
+          const systemFragments = [
+            (typeof soulText === "string" ? soulText : "").slice(0, 50),
+            (typeof personaText === "string" ? personaText : "").slice(0, 50),
+          ].filter(Boolean);
+          const outputCheck = validateOutput(reply, systemFragments);
+          if (!outputCheck.safe) {
+            reply = GENERIC_REPLY;
+          }
+        }
+
+        // Credential masking
+        if (typeof maskCredentials === "function") {
+          reply = maskCredentials(reply);
+        }
+
+        recordAnalyticsEvent({
+          source: `adaptive-${adaptiveResult.route}`,
+          responseTimeMs: Date.now() - chatStartTime,
+        });
+
+        return res.json({
+          reply,
+          model: getGoogleModel(),
+          source: `adaptive-${adaptiveResult.route}`,
+          support: getSupportAvailability(),
+          memory,
+          conversationContext,
+          hasClosedTicketHistory,
+          handoffReady: false,
+          citations: adaptiveResult.citations || [],
+          finishReason: adaptiveResult.finishReason,
+        });
+      }
+
       const aiResult = await webChatPipeline.generateAIResponse({
         contents, latestUserMessage, memory, conversationContext,
         hasClosedTicketHistory, chatHistorySnapshot,

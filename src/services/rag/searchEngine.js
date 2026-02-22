@@ -152,10 +152,12 @@ function createSearchEngine(deps) {
     const textResults = fullTextSearch(knowledgeBase, query, fetchK);
 
     let vectorResults = [];
-    if (knowledgeTable && embedText) {
+    // Resolve knowledgeTable — supports both direct table and getter function
+    const resolvedTable = typeof knowledgeTable === "function" ? knowledgeTable() : knowledgeTable;
+    if (resolvedTable && embedText) {
       try {
         const queryVector = await embedText(query);
-        const raw = await knowledgeTable
+        const raw = await resolvedTable
           .vectorSearch(queryVector)
           .limit(fetchK)
           .toArray();

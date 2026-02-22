@@ -562,6 +562,14 @@ const chatLifecycle = require("./src/routes/chat").mount(app, {
   recordLLMError: llmHealth.recordLLMError,
   buildMissingFieldsReply: (memory, latestUserMessage) => chatEngine.buildMissingFieldsReply(memory, latestUserMessage, { chatFlowConfig: getChatFlowConfig() }),
   webChatPipeline,
+  // Adaptive pipeline (feature-flagged)
+  ngChatPipeline: USE_ADAPTIVE_PIPELINE ? ngChatPipeline : null,
+  USE_ADAPTIVE_PIPELINE,
+  loadCSVData,
+  validateOutput,
+  maskCredentials,
+  getSoulText: agentConfig.getSoulText,
+  getPersonaText: agentConfig.getPersonaText,
 });
 
 // ── Chat Processor Service (multi-channel) ─────────────────────────────
