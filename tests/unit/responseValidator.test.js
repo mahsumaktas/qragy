@@ -22,4 +22,15 @@ describe("Response Validator", () => {
   it("should accept Turkish", () => {
     expect(validateBotResponse("Yazici sorununuz icin yardimci olabilirim. Lutfen detay verir misiniz?", "tr").valid).toBe(true);
   });
+  it("should reject 'yapay zeka olarak' marker", () => {
+    expect(validateBotResponse("Yapay zeka olarak size bu konuda yardimci olabilirim bugun.").valid).toBe(false);
+  });
+  it("should reject 'google gemini' marker", () => {
+    expect(validateBotResponse("Ben Google Gemini tarafindan olusturuldum ve size yardim edebilirim.").valid).toBe(false);
+  });
+  it("should reject excessive hedging (2+ markers)", () => {
+    const r = validateBotResponse("Sanirim bu dogru olabilir ama galiba farkli bir yontem denemek lazim olabilir.");
+    expect(r.valid).toBe(false);
+    expect(r.reason).toBe("excessive_hedging");
+  });
 });

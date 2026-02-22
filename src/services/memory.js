@@ -4,10 +4,11 @@ const RECENT_KEEP_LARGE = 8;
 const LARGE_THRESHOLD = 40;
 const FIRST_KEEP = 3;
 const LAST_KEEP = 8;
+const CHARS_PER_TOKEN = 3;
 
 function estimateTokens(text) {
   if (!text) return 0;
-  return Math.ceil(String(text).length / 4);
+  return Math.ceil(String(text).length / CHARS_PER_TOKEN);
 }
 
 function shouldCompress(messages) {
@@ -56,7 +57,7 @@ function trimToTokenBudget(text, maxTokens) {
   if (!text) return "";
   const current = estimateTokens(text);
   if (current <= maxTokens) return text;
-  return String(text).slice(0, maxTokens * 4);
+  return String(text).slice(0, maxTokens * CHARS_PER_TOKEN);
 }
 
 const TOKEN_BUDGETS = {

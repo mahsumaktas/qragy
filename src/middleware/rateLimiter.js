@@ -1,6 +1,6 @@
 // src/middleware/rateLimiter.js
 
-function createRateLimiter({ maxRequests = 20, windowMs = 60000 } = {}) {
+function createRateLimiter({ maxRequests = 20, windowMs = 60000, maxEntries = 10000 } = {}) {
   const store = new Map();
 
   // Cleanup stale entries periodically
@@ -16,12 +16,20 @@ function createRateLimiter({ maxRequests = 20, windowMs = 60000 } = {}) {
   // Don't prevent Node from exiting
   if (cleanupInterval.unref) cleanupInterval.unref();
 
+  function evictOldest() {
+    if (store.size <= maxEntries) return;
+    // Delete oldest entry (first inserted in Map iteration order)
+    const firstKey = store.keys().next().value;
+    store.delete(firstKey);
+  }
+
   function check(ip) {
     const now = Date.now();
     const data = store.get(ip);
 
     if (!data || now - data.windowStart > windowMs) {
       store.set(ip, { count: 1, windowStart: now });
+      evictOldest();
       return true;
     }
 

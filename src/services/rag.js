@@ -1,5 +1,7 @@
 const { normalizeForMatching } = require("../utils/sanitizer.js");
 
+const RAG_DISTANCE_THRESHOLD = 0.8;
+
 function getAdaptiveTopK(kbSize) {
   if (kbSize < 50) return 3;
   if (kbSize < 500) return 5;
@@ -43,7 +45,7 @@ function filterByRelevance(vectorResults) {
   return vectorResults.filter((r) => {
     const d = r._distance;
     if (d == null) return true;
-    return d <= 1.2;
+    return d <= RAG_DISTANCE_THRESHOLD;
   });
 }
 
@@ -88,4 +90,4 @@ async function searchKnowledge(query, { knowledgeTable, embedFn, knowledgeBase, 
   return [];
 }
 
-module.exports = { fullTextSearch, reciprocalRankFusion, filterByRelevance, getAdaptiveTopK, phraseMatch, searchKnowledge };
+module.exports = { fullTextSearch, reciprocalRankFusion, filterByRelevance, getAdaptiveTopK, phraseMatch, searchKnowledge, RAG_DISTANCE_THRESHOLD };

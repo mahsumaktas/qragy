@@ -1,11 +1,15 @@
 const HALLUCINATION_MARKERS = [
   "ben bir yapay zeka", "ben bir ai", "ben bir dil modeli",
+  "yapay zeka olarak", "dil modeli olarak",
+  "google gemini", "gpt-4", "gpt-3", "claude",
   "as an ai", "i am an ai", "i'm a language model",
   "as a language model", "i don't have access",
   "my training data", "my knowledge cutoff",
   "i was trained", "openai", "chatgpt",
   "i cannot", "i'm sorry but",
 ];
+
+const HEDGING_MARKERS = ["sanirim", "galiba", "tahminimce", "belki de", "emin degilim"];
 
 const TURKISH_INDICATORS = /[çğıöşüÇĞİÖŞÜ]|(\b(bir|ve|ile|icin|nasil|ne|bu|su|olan|gibi|var|yok)\b)/i;
 
@@ -39,6 +43,13 @@ function validateBotResponse(reply, expectedLang = "tr") {
     if (lower.includes(marker)) return { valid: false, reason: "hallucination_marker" };
   }
 
+  // Hedging markers — 2+ in same response = flag
+  let hedgingCount = 0;
+  for (const marker of HEDGING_MARKERS) {
+    if (lower.includes(marker)) hedgingCount++;
+    if (hedgingCount >= 2) return { valid: false, reason: "excessive_hedging" };
+  }
+
   // Language check
   if (expectedLang === "tr" && trimmed.length > 50) {
     if (!TURKISH_INDICATORS.test(trimmed)) return { valid: false, reason: "language_mismatch" };
@@ -47,4 +58,4 @@ function validateBotResponse(reply, expectedLang = "tr") {
   return { valid: true };
 }
 
-module.exports = { validateBotResponse, HALLUCINATION_MARKERS };
+module.exports = { validateBotResponse, HALLUCINATION_MARKERS, HEDGING_MARKERS };
