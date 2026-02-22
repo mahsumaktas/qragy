@@ -427,8 +427,9 @@ app.use((req, res, next) => {
     return next();
   }
   // If setup not complete and accessing admin, redirect to setup
+  // Use relative redirect so reverse proxy subpath is preserved
   if (req.path === "/admin" && !isSetupComplete()) {
-    return res.redirect("/setup.html");
+    return res.redirect("setup");
   }
   next();
 });

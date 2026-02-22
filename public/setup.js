@@ -176,7 +176,7 @@ function completeSetup() {
     faqs: collectFaqs(),
   };
 
-  fetch("/api/setup/complete", {
+  fetch("api/setup/complete", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -190,7 +190,7 @@ function completeSetup() {
       return res.json();
     })
     .then(function () {
-      window.location.href = "/admin";
+      window.location.href = "admin";
     })
     .catch(function (err) {
       btn.disabled = false;
@@ -201,11 +201,11 @@ function completeSetup() {
 
 // ── Init ──
 // Check if setup already complete, redirect if so
-fetch("/api/setup/status")
+fetch("api/setup/status")
   .then(function (res) { return res.json(); })
   .then(function (data) {
     if (data.setupComplete) {
-      window.location.href = "/admin";
+      window.location.href = "admin";
     }
   })
   .catch(function () { /* ignore, continue with setup */ });
