@@ -1,8 +1,8 @@
 {
   "name": "qragy",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": false,
-  "description": "Qragy - AI-powered customer support bot with RAG, topic routing, and live agent handoff. Built on Gemini + LanceDB.",
+  "description": "Qragy - Self-hosted AI customer support chatbot with hybrid RAG, 7 LLM providers, HITL agent inbox, and admin panel. Runs on a Raspberry Pi.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

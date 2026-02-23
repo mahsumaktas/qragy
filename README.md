@@ -37,7 +37,7 @@
 
 **Dify needs Docker, Redis, and Postgres.** Botpress is cloud-only. Intercom costs $74/seat/month.
 
-**Qragy needs one command: `npm start`.** Multi-model support (Gemini, OpenAI, Ollama) with zero extra dependencies.
+**Qragy needs one command: `npm start`.** Multi-model support (Gemini, OpenAI, Anthropic, Groq, Mistral, DeepSeek, Ollama) with zero extra dependencies.
 
 It uses [LanceDB](https://lancedb.com) (embedded vector DB) and supports multiple AI providers, so you get a production-ready AI support chatbot with zero infrastructure cost — even on a **$35 Raspberry Pi**.
 
@@ -58,12 +58,14 @@ It uses [LanceDB](https://lancedb.com) (embedded vector DB) and supports multipl
 ## Features
 
 ### 🧠 RAG-Powered AI
-- **Vector search** over your knowledge base using LanceDB (embedded, serverless)
-- **Multi-model** — Gemini, OpenAI, Ollama (local LLM) out of the box
+- **Hybrid search** — vector + full-text search with RRF fusion and LLM reranker
+- **Multi-model** — Gemini, OpenAI, Anthropic, Groq, Mistral, DeepSeek, Ollama out of the box
 - **Topic routing** — keywords + AI classify issues into structured flows
 - **Deterministic collection** — bot gathers required info before escalating
-- **Model fallback** — automatic retry with a secondary model
-- **Smart chunking** — markdown, recursive, and sentence-based document splitting
+- **Model fallback** — automatic retry with configurable fallback chain
+- **Smart chunking** — markdown, recursive, sentence, and contextual document splitting
+- **Quality scoring** — automatic response quality evaluation with reflexion
+- **CRAG evaluation** — Corrective RAG checks relevance before answering
 
 ### 🎛️ Admin Panel (`/admin`)
 Manage everything from the browser — no code, no CLI:
@@ -71,10 +73,15 @@ Manage everything from the browser — no code, no CLI:
 | Tab | What You Can Do |
 |-----|----------------|
 | **Tickets** | Full chat histories, handoff status, assignment, priority, internal notes |
-| **Knowledge Base** | CRUD for Q&A entries, file upload (PDF/DOCX/TXT), one-click re-embed |
+| **Knowledge Base** | CRUD for Q&A entries, file upload (PDF/DOCX/XLSX/TXT), one-click re-embed |
 | **Bot Config** | Edit persona, topics, escalation rules, memory templates, env vars |
 | **Analytics** | Daily metrics, top topics, resolution rates, SVG charts |
-| **System** | Health monitoring, uptime, memory usage, hot-reload |
+| **Agent Inbox** | Human-in-the-loop: claim conversations, live SSE updates, agent replies |
+| **Bot Test** | Multi-chat test panel — open parallel sessions to test the bot |
+| **Admin Assistant** | AI-powered assistant that can read/update config, manage KB, execute actions |
+| **Feedback** | User satisfaction reports, CSAT tracking |
+| **Insights** | SLA monitoring, auto-FAQ generation, content gap detection |
+| **System** | Health monitoring, uptime, memory usage, audit log, backup |
 
 ### 📦 Zero Infrastructure
 - **LanceDB** — embedded vector DB, no separate server (unlike Pinecone/Weaviate/Qdrant)
@@ -83,10 +90,11 @@ Manage everything from the browser — no code, no CLI:
 - **No build step** — vanilla JS frontend, zero bundling
 
 ### 🔌 Integrations
-- **Zendesk** — automatic widget + Sunshine Conversations handoff
+- **Zendesk** — automatic widget + Sunshine Conversations two-way handoff
 - **Telegram** — bot channel via long polling
 - **Webhooks** — HMAC-SHA256 signed events to Slack, n8n, Zapier
 - **Embeddable widget** — one `<script>` tag on any website
+- **WhatsApp** — via Zendesk Sunshine Conversations
 
 ### 🆓 Free Embedding Models
 
@@ -97,14 +105,16 @@ Manage everything from the browser — no code, no CLI:
 | **Ollama** | `nomic-embed-text` | 768 | Free (local) |
 
 ### 🚀 v2 Highlights
-- **Multi-model support** — Gemini + OpenAI + Ollama via raw fetch() (zero new deps)
-- **Document chunking engine** — markdown, recursive, sentence strategies
-- **Docker support** — `docker run` and you're live
-- Rate limiting (per-IP, configurable)
-- File upload with auto-chunking (PDF, DOCX, TXT)
-- Team features: ticket assignment, priority levels, internal notes
-- Prompt versioning with auto-snapshot and rollback
-- Auto-deploy webhook support
+- **7 LLM providers** — Gemini, OpenAI, Anthropic, Groq, Mistral, DeepSeek, Ollama (zero new deps)
+- **Hybrid RAG** — vector + full-text search with RRF fusion and reranker
+- **Human-in-the-loop** — agent inbox with live SSE, claim/release, real-time replies
+- **Admin AI assistant** — action-capable assistant that manages config, KB, topics
+- **Bot test panel** — multi-chat grid for parallel testing
+- **SQLite backend** — tickets, conversations, analytics stored in SQLite
+- **Knowledge graph** — entity extraction and relationship mapping
+- **Core memory** — persistent user facts across conversations
+- Rate limiting, file upload, team features, prompt versioning
+- Docker support, auto-deploy webhook, Telegram integration
 
 ---
 
@@ -116,12 +126,15 @@ graph TB
         CW[Chat Widget]
         TG[Telegram Bot]
         EMB[Embed Script]
+        SC[Sunshine / WhatsApp]
     end
 
     subgraph "Qragy Server (single process)"
         EXP[Express.js API]
         TC[Topic Classifier]
-        RAG[RAG Engine]
+        RAG[Hybrid RAG Engine]
+        HITL[Agent Inbox / HITL]
+        AST[Admin Assistant]
         TKT[Ticket System]
         ADM[Admin Panel]
         WH[Webhook Dispatcher]
@@ -129,32 +142,33 @@ graph TB
 
     subgraph Storage["Local Storage (no external DB)"]
         LDB[(LanceDB<br/>Vector Index)]
+        SQL[(SQLite<br/>Tickets + Analytics)]
         CSV[(CSV + JSON<br/>Knowledge Base)]
-        TDB[(Tickets DB<br/>JSON)]
     end
 
     subgraph External
-        LLM[LLM Provider<br/>Gemini / OpenAI / Ollama]
+        LLM[LLM Provider<br/>Gemini / OpenAI / Claude<br/>Groq / Mistral / DeepSeek / Ollama]
         ZD[Zendesk<br/>Handoff]
     end
 
-    CW & TG & EMB -->|HTTP / Long Poll| EXP
+    CW & TG & EMB & SC -->|HTTP / Long Poll / Webhook| EXP
     EXP --> TC -->|topic match| RAG
-    RAG -->|vector search| LDB
+    RAG -->|vector + full-text| LDB
     RAG -->|read/write| CSV
     RAG -->|generate| LLM
-    EXP --> TKT --> TDB
+    EXP --> TKT --> SQL
+    EXP --> HITL -->|live SSE| ADM
     TKT -->|escalate| ZD
     TKT -->|notify| WH
-    EXP --> ADM
+    EXP --> AST -->|actions| ADM
 ```
 
 **Message flow:**
 
 1. User sends a message → **Topic detection** (keywords + AI classification)
-2. **RAG search** finds relevant Q&A from the knowledge base
-3. **LLM** generates a contextual reply using topic instructions + RAG results
-4. Bot collects required fields → **Escalation** to Zendesk when needed
+2. **Hybrid RAG** — vector + full-text search with RRF fusion, reranker, CRAG evaluation
+3. **LLM** generates a contextual reply with quality scoring and reflexion
+4. Bot collects required fields → **Escalation** to Zendesk or **HITL agent inbox**
 
 ---
 
@@ -191,11 +205,13 @@ npm start
 
 Open [localhost:3000](http://localhost:3000) for the chatbot, [localhost:3000/admin](http://localhost:3000/admin) for the admin panel.
 
+> **First run?** The setup wizard at `/admin` guides you through API key, bot name, persona, and knowledge base setup — no `.env` editing needed.
+
 ---
 
 ## Multi-Model Configuration
 
-Qragy supports **Gemini**, **OpenAI**, and **Ollama** (local LLM) out of the box. No extra dependencies needed.
+Qragy supports **7 LLM providers** out of the box via raw `fetch()` — zero extra dependencies.
 
 ### Gemini (Default, Free Tier)
 
@@ -211,6 +227,39 @@ LLM_API_KEY=sk-...
 LLM_MODEL=gpt-4o-mini
 EMBEDDING_PROVIDER=openai
 EMBEDDING_MODEL=text-embedding-3-small
+```
+
+### Anthropic (Claude)
+
+```env
+LLM_PROVIDER=anthropic
+LLM_API_KEY=sk-ant-...
+LLM_MODEL=claude-sonnet-4-6
+```
+
+### Groq (Fast Inference)
+
+```env
+LLM_PROVIDER=groq
+LLM_API_KEY=gsk_...
+LLM_MODEL=llama-3.3-70b-versatile
+```
+
+### Mistral
+
+```env
+LLM_PROVIDER=mistral
+LLM_API_KEY=...
+LLM_MODEL=mistral-large-latest
+```
+
+### DeepSeek
+
+```env
+LLM_PROVIDER=deepseek
+LLM_API_KEY=...
+LLM_MODEL=deepseek-chat
+LLM_BASE_URL=https://api.deepseek.com/v1
 ```
 
 ### Ollama (Fully Local, No API Key)
@@ -266,7 +315,7 @@ Works on any machine with Node.js 18+. No Docker required, but runs fine in a co
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GOOGLE_API_KEY` | Gemini API key **(required for Gemini)** | — |
-| `LLM_PROVIDER` | LLM provider (`gemini`, `openai`, `ollama`) | `gemini` |
+| `LLM_PROVIDER` | LLM provider (`gemini`, `openai`, `anthropic`, `groq`, `mistral`, `deepseek`, `ollama`) | `gemini` |
 | `LLM_API_KEY` | API key (falls back to GOOGLE_API_KEY) | — |
 | `LLM_MODEL` | Chat model (falls back to GOOGLE_MODEL) | — |
 | `LLM_BASE_URL` | Custom base URL (Ollama, etc.) | — |
@@ -332,7 +381,6 @@ qragy/
 │   ├── services/
 │   │   ├── agentConfig.js          # Agent prompt/config file loader with caching
 │   │   ├── analytics.js            # Event buffer, daily aggregation, CSAT tracking
-│   │   ├── chatEngine.js           # Core chat logic (LLM calls, field collection)
 │   │   ├── chatProcessor.js        # Chat message processing pipeline
 │   │   ├── configStore.js          # Runtime config file store (chat flow, site, etc.)
 │   │   ├── conversationManager.js  # Conversation CRUD + clarification tracking
@@ -340,16 +388,28 @@ qragy/
 │   │   ├── escalation.js           # Escalation rule evaluation
 │   │   ├── knowledge.js            # Knowledge base search + content gaps
 │   │   ├── llmHealth.js            # LLM error tracking + circuit breaker
-│   │   ├── memory.js               # Conversation memory extraction
 │   │   ├── promptBuilder.js        # Prompt builder service wrapper
-│   │   ├── rag.js                  # RAG retrieval via LanceDB
 │   │   ├── responseValidator.js    # Bot response safety validation
 │   │   ├── statemachine.js         # Conversation state machine
 │   │   ├── supportHours.js         # Business hours calculation
 │   │   ├── ticketStore.js          # Ticket CRUD + duplicate detection
 │   │   ├── topic.js                # Topic classification
+│   │   ├── urlExtractor.js         # URL content extraction for RAG
 │   │   ├── webChatPipeline.js      # Web chat orchestration pipeline
-│   │   └── webhooks.js             # HMAC-signed webhook delivery with retry
+│   │   ├── webhooks.js             # HMAC-signed webhook delivery with retry
+│   │   ├── pipeline/
+│   │   │   └── chatPipeline.js     # Adaptive chat pipeline (hybrid RAG)
+│   │   ├── rag/
+│   │   │   ├── queryAnalyzer.js    # Query intent analysis
+│   │   │   ├── reranker.js         # LLM + Cohere reranker
+│   │   │   ├── cragEvaluator.js    # Corrective RAG evaluation
+│   │   │   └── contextualChunker.js # Context-aware document chunking
+│   │   ├── intelligence/
+│   │   │   ├── qualityScorer.js    # Response quality scoring
+│   │   │   ├── reflexion.js        # Self-reflection on low-quality answers
+│   │   │   └── graphBuilder.js     # Knowledge graph builder
+│   │   └── memory/
+│   │       └── coreMemory.js       # Persistent user fact memory
 │   ├── prompt/
 │   │   └── builder.js              # System prompt assembly with token budgeting
 │   ├── middleware/
@@ -371,8 +431,8 @@ qragy/
 │   ├── chunker.js                  # Document chunking engine
 │   └── db.js                       # SQLite database layer
 ├── tests/
-│   ├── unit/                       # 190+ unit tests (23 test files)
-│   └── integration/                # Integration tests (supertest)
+│   ├── unit/                       # 440+ tests across 60 test files
+│   └── integration/                # Integration tests
 ├── agent/                          # Bot personality & rules
 │   ├── soul.md, persona.md         # Identity & tone
 │   ├── topics/                     # Structured support flows
@@ -411,7 +471,7 @@ cp .env.example .env  # add your API key
 ### Running Tests
 
 ```bash
-npm test                  # Run all tests (190+ tests)
+npm test                  # Run all tests (440+ tests)
 npm run test:coverage     # Run with coverage report
 ```
 
@@ -436,7 +496,9 @@ npx eslint . --fix        # Auto-fix fixable issues
 |---|:---:|:---:|:---:|:---:|
 | Fully self-hosted | ✅ | ⚠️ Partial | ❌ | ❌ |
 | Runs on Raspberry Pi | ✅ | ❌ | ❌ | ❌ |
-| Multi-model | ✅ | ✅ | ✅ | ❌ |
+| LLM providers | **7** | 10+ | 3 | 1 |
+| Hybrid RAG | ✅ | ✅ | ❌ | ❌ |
+| Human-in-the-loop | ✅ | ❌ | ✅ | ✅ |
 | Vector DB | Embedded | External | External | Managed |
 | Min RAM | **150MB** | 4GB+ | 2GB+ | N/A |
 | Monthly cost | **$0** | Free tier limited | Free tier limited | $74+/seat |
@@ -479,8 +541,22 @@ All admin endpoints require `x-admin-token` header when `ADMIN_TOKEN` is set.
 - `GET/PUT /api/admin/agent/memory/:name` — Memory templates
 - `GET/PUT /api/admin/env` — Environment variables
 
-### Analytics & System
+### Agent Inbox (HITL)
+- `GET /api/admin/inbox/stream` — SSE live updates
+- `GET /api/admin/inbox/conversations` — List claimable conversations
+- `POST /api/admin/inbox/:id/claim` — Claim conversation
+- `POST /api/admin/inbox/:id/message` — Send agent reply
+- `POST /api/admin/inbox/:id/release` — Release conversation
+
+### Admin Assistant
+- `POST /api/admin/assistant` — Send message (supports file upload)
+
+### Analytics & Insights
 - `GET /api/admin/analytics` — Metrics and charts
+- `GET /api/admin/insights/sla` — SLA monitoring
+- `GET /api/admin/insights/auto-faq` — Auto-generated FAQ
+- `GET /api/admin/insights/content-gaps` — Content gap detection
+- `GET /api/admin/insights/feedback` — Feedback reports
 - `GET /api/admin/system` — Health info
 - `POST /api/admin/agent/reload` — Hot-reload config
 
@@ -503,7 +579,7 @@ All admin endpoints require `x-admin-token` header when `ADMIN_TOKEN` is set.
 |-------|-----------|
 | Runtime | Node.js 18+ |
 | Framework | Express.js |
-| AI | Gemini, OpenAI, Ollama (multi-provider) |
+| AI | Gemini, OpenAI, Anthropic, Groq, Mistral, DeepSeek, Ollama |
 | Vector DB | LanceDB (embedded, serverless) |
 | Embeddings | Gemini / OpenAI / Ollama (configurable) |
 | Frontend | Vanilla JS — zero build step |
