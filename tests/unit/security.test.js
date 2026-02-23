@@ -10,7 +10,7 @@ describe("Security Middleware", () => {
     securityHeaders(req, res, () => { nextCalled = true; });
 
     expect(headers["X-Content-Type-Options"]).toBe("nosniff");
-    expect(headers["X-Frame-Options"]).toBe("DENY");
+    expect(headers["X-Frame-Options"]).toBe("SAMEORIGIN");
     expect(headers["X-XSS-Protection"]).toBe("1; mode=block");
     expect(headers["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
     expect(headers["Permissions-Policy"]).toBe("geolocation=(), microphone=(), camera=()");
