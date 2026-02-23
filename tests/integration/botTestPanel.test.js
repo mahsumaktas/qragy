@@ -12,13 +12,13 @@ describe("Bot Test Panel", () => {
       // Must set the test mode flag before app.js loads
       expect(html).toContain("window.__QRAGY_TEST_MODE__ = true");
       // Must load app.js
-      expect(html).toContain('src="/app.js"');
+      expect(html).toContain('src="app.js"');
       // Must have a reset button
       expect(html).toContain("resetTestSession");
       // Must have the TEST MODE badge
       expect(html).toContain("TEST MODE");
       // Must load widget styles
-      expect(html).toContain('href="/style.css"');
+      expect(html).toContain('href="style.css"');
     });
   });
 

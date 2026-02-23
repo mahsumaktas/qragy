@@ -2545,3 +2545,73 @@ tbody tr:hover {
     height: 400px;
   }
 }
+
+/* ==========================================================================
+   Bot Test (Multi-chat Grid)
+   ========================================================================== */
+.bot-test-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+.bot-test-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: auto;
+}
+.bot-test-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 12px;
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+.bot-test-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--card);
+  min-height: 500px;
+}
+.bot-test-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.bot-test-card-actions {
+  display: flex;
+  gap: 4px;
+}
+.btn-icon {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-icon:hover { background: var(--line); }
+.btn-icon-danger:hover { background: #fee2e2; color: var(--err); }
+.bot-test-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  min-height: 480px;
+}

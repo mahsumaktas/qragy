@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bot Test</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="style.css">
   <style>
     /* Override: auto-open chat, hide hero */
     #heroSection { display: none !important; }
@@ -24,14 +24,18 @@
     // Set test mode flag before app.js loads
     window.__QRAGY_TEST_MODE__ = true;
 
+    // Unique session prefix per iframe instance (prevents localStorage collisions)
+    var sid = new URLSearchParams(location.search).get("s") || "";
+    if (sid) window.__QRAGY_SESSION_PREFIX__ = sid;
+
     function resetTestSession() {
-      // Clear test session data
+      var prefix = sid ? sid + "_qragy_" : "qragy_";
       for (const key of Object.keys(localStorage)) {
-        if (key.startsWith("qragy_")) localStorage.removeItem(key);
+        if (key.startsWith(prefix) || key.startsWith("qragy_")) localStorage.removeItem(key);
       }
       location.reload();
     }
   </script>
-  <script src="/app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

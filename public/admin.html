@@ -1138,14 +1138,14 @@
             </div>
           </div>
 
-          <!-- PANEL: Bot Test -->
+          <!-- PANEL: Bot Test (Multi-chat) -->
           <div id="panelBotTest" class="panel">
-            <iframe
-              id="botTestIframe"
-              src="test-widget.html?testMode=true"
-              style="width:100%;height:100%;border:none;border-radius:8px"
-              title="Bot Test"
-            ></iframe>
+            <div class="bot-test-toolbar">
+              <button id="botTestNewChat" class="btn btn-primary btn-sm">+ Yeni Chat</button>
+              <button id="botTestCloseAll" class="btn btn-sm">Tumunu Kapat</button>
+              <span class="bot-test-hint">Ayni anda birden fazla chat acarak botu test edin</span>
+            </div>
+            <div id="botTestGrid" class="bot-test-grid"></div>
           </div>
 
           <!-- PANEL: Analitik Dashboard -->

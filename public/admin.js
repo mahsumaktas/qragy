@@ -253,7 +253,7 @@ const panelLoaders = {
   panelSearch: () => loadSearchTickets(),
   panelKB: () => loadKnowledgeBase(),
   panelAutoFAQ: () => loadAutoFAQs(),
-  panelBotTest: () => { /* iframe loads on its own */ },
+  panelBotTest: () => initBotTestPanel(),
   panelAgentFiles: () => loadAgentFiles(),
   panelTopics: () => loadTopics(),
   panelMemory: () => loadMemoryFiles(),
@@ -4162,6 +4162,86 @@ function connectInboxSSE() {
   } catch (_) {
     // SSE not supported or error
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// BOT TEST (Multi-chat Grid)
+// ══════════════════════════════════════════════════════════════════════════
+
+var botTestCounter = 0;
+
+function initBotTestPanel() {
+  var grid = $("botTestGrid");
+  var newBtn = $("botTestNewChat");
+  var closeAllBtn = $("botTestCloseAll");
+  if (!grid) return;
+
+  // Bind buttons only once
+  if (!newBtn._bound) {
+    newBtn.addEventListener("click", function () { addBotTestChat(); });
+    newBtn._bound = true;
+  }
+  if (!closeAllBtn._bound) {
+    closeAllBtn.addEventListener("click", function () {
+      while (grid.firstChild) grid.removeChild(grid.firstChild);
+      botTestCounter = 0;
+    });
+    closeAllBtn._bound = true;
+  }
+
+  // Auto-open one chat if grid is empty
+  if (grid.children.length === 0) addBotTestChat();
+}
+
+function addBotTestChat() {
+  var grid = $("botTestGrid");
+  if (!grid) return;
+
+  botTestCounter++;
+  var chatId = "bottest-" + Date.now() + "-" + botTestCounter;
+
+  var card = document.createElement("div");
+  card.className = "bot-test-card";
+  card.id = chatId;
+
+  var header = document.createElement("div");
+  header.className = "bot-test-card-header";
+
+  var label = document.createElement("span");
+  label.textContent = "Chat #" + botTestCounter;
+
+  var actions = document.createElement("div");
+  actions.className = "bot-test-card-actions";
+
+  var resetBtn = document.createElement("button");
+  resetBtn.className = "btn-icon";
+  resetBtn.title = "Sifirla";
+  resetBtn.textContent = "\u21BB";
+  resetBtn.addEventListener("click", function () {
+    var iframe = card.querySelector("iframe");
+    if (iframe) iframe.src = iframe.src;
+  });
+
+  var closeBtn = document.createElement("button");
+  closeBtn.className = "btn-icon btn-icon-danger";
+  closeBtn.title = "Kapat";
+  closeBtn.textContent = "\u2715";
+  closeBtn.addEventListener("click", function () {
+    card.remove();
+  });
+
+  actions.appendChild(resetBtn);
+  actions.appendChild(closeBtn);
+  header.appendChild(label);
+  header.appendChild(actions);
+
+  var iframe = document.createElement("iframe");
+  iframe.src = "test-widget.html?s=" + chatId;
+  iframe.className = "bot-test-iframe";
+
+  card.appendChild(header);
+  card.appendChild(iframe);
+  grid.appendChild(card);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
