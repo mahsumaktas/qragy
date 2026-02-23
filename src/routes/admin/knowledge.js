@@ -20,7 +20,6 @@ function mount(app, deps) {
     logger,
     contextualChunker,
     urlExtractor,
-    getProviderConfig,
   } = deps;
 
   const upload = multer({ dest: UPLOADS_DIR, limits: { fileSize: 10 * 1024 * 1024 } });
@@ -180,7 +179,7 @@ function mount(app, deps) {
       if (ext === ".xlsx" || ext === ".xls") {
         const pairs = extractQAFromXlsx(req.file.path);
         if (!pairs.length) {
-          try { fs.unlinkSync(req.file.path); } catch (_) {}
+          try { fs.unlinkSync(req.file.path); } catch (_) { /* cleanup */ }
           return res.status(400).json({ error: "XLSX dosyasindan soru-cevap cifti cikarilamadi." });
         }
 
@@ -198,7 +197,7 @@ function mount(app, deps) {
 
         saveCSVData(rows);
         await reingestKnowledgeBase();
-        try { fs.unlinkSync(req.file.path); } catch (_) {}
+        try { fs.unlinkSync(req.file.path); } catch (_) { /* cleanup */ }
         return res.json({ ok: true, chunksAdded: added, totalRecords: rows.length });
       }
 
@@ -368,7 +367,7 @@ function mount(app, deps) {
       } catch (err) {
         results.push({ file: file.originalname, ok: false, error: safeError(err, "api") });
       } finally {
-        try { fs.unlinkSync(file.path); } catch (_) {}
+        try { fs.unlinkSync(file.path); } catch (_) { /* cleanup */ }
       }
     }
 

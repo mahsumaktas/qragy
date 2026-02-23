@@ -102,7 +102,7 @@ let REMOTE_TOOL_NAME = config.remoteToolName;
 let RATE_LIMIT_ENABLED = config.rateLimitEnabled;
 let RATE_LIMIT_MAX = config.rateLimitMax;
 let RATE_LIMIT_WINDOW_MS = config.rateLimitWindowMs;
-let GOOGLE_FALLBACK_MODEL = config.googleFallbackModel;
+let _GOOGLE_FALLBACK_MODEL = config.googleFallbackModel;
 let TELEGRAM_ENABLED = config.telegramEnabled;
 let TELEGRAM_BOT_TOKEN = config.telegramBotToken;
 const TELEGRAM_POLLING_INTERVAL_MS = config.telegramPollingIntervalMs;
@@ -240,7 +240,7 @@ function reloadRuntimeEnv() {
   if (env.GOOGLE_MAX_OUTPUT_TOKENS) GOOGLE_MAX_OUTPUT_TOKENS = Number(env.GOOGLE_MAX_OUTPUT_TOKENS) || GOOGLE_MAX_OUTPUT_TOKENS;
   if (env.GOOGLE_THINKING_BUDGET !== undefined) GOOGLE_THINKING_BUDGET = Number(env.GOOGLE_THINKING_BUDGET);
   if (env.GOOGLE_REQUEST_TIMEOUT_MS) GOOGLE_REQUEST_TIMEOUT_MS = Number(env.GOOGLE_REQUEST_TIMEOUT_MS) || GOOGLE_REQUEST_TIMEOUT_MS;
-  if (env.GOOGLE_FALLBACK_MODEL !== undefined) GOOGLE_FALLBACK_MODEL = (env.GOOGLE_FALLBACK_MODEL || "").trim();
+  if (env.GOOGLE_FALLBACK_MODEL !== undefined) _GOOGLE_FALLBACK_MODEL = (env.GOOGLE_FALLBACK_MODEL || "").trim();
   if (env.BOT_NAME) BOT_NAME = env.BOT_NAME.trim();
   if (env.COMPANY_NAME !== undefined) COMPANY_NAME = (env.COMPANY_NAME || "").trim();
   if (env.REMOTE_TOOL_NAME !== undefined) REMOTE_TOOL_NAME = (env.REMOTE_TOOL_NAME || "").trim();

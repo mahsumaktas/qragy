@@ -27,7 +27,7 @@ describe("xlsx upload - extractQAFromXlsx", () => {
 
   // We test the extractQAFromXlsx function indirectly through the route
   // But since it's an internal function, let's require the module and test integration
-  function createMockApp() {
+  function _createMockApp() {
     const routes = {};
     return {
       get(p, ...handlers) { routes["GET " + p] = handlers; },

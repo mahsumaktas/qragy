@@ -219,7 +219,8 @@ function createChatPipeline(deps) {
     const maxTokens = cfg.maxOutputTokens || 2048;
     const llmResult = await callLLM(llmHistory, systemPrompt, maxTokens, cfg);
 
-    let { reply, finishReason } = llmResult;
+    let { reply } = llmResult;
+    const { finishReason } = llmResult;
 
     // 8. Quality scoring — await so we can act on low quality
     try {

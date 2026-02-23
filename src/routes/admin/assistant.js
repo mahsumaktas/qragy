@@ -87,7 +87,7 @@ async function executeAction(actionName, params, deps) {
     fs, path, AGENT_DIR, TOPICS_DIR,
     loadCSVData, saveCSVData, reingestKnowledgeBase,
     readTextFileSafe, readJsonFileSafe,
-    loadAllAgentConfig, isValidFilename, savePromptVersion, invalidateTopicCache,
+    loadAllAgentConfig, savePromptVersion, invalidateTopicCache,
     getChatFlowConfig, saveChatFlowConfig,
     getSiteConfig, saveSiteConfig,
     getSunshineConfig, saveSunshineConfig,
@@ -296,7 +296,7 @@ async function extractTextFromFile(filePath, mimetype, originalname, deps) {
 }
 
 // ── Extract Q/A pairs from XLSX (reused from knowledge.js) ──────────
-function extractQAFromXlsx(filePath, deps) {
+function extractQAFromXlsx(filePath, _deps) {
   const XLSX = require("xlsx");
   const workbook = XLSX.readFile(filePath);
   const sheetName = workbook.SheetNames[0];
@@ -387,8 +387,8 @@ function mount(app, deps) {
     try {
       // ── Parse request (supports both JSON and FormData) ─────────
       let message = req.body?.message;
-      let historyRaw = req.body?.history;
-      let pendingActionsRaw = req.body?.pendingActions;
+      const historyRaw = req.body?.history;
+      const pendingActionsRaw = req.body?.pendingActions;
 
       if (typeof message !== "string") message = "";
       message = message.trim();
@@ -513,7 +513,7 @@ function mount(app, deps) {
 
       // ── Agent Loop (max 3 iterations) ───────────────────────────
       let iterations = 0;
-      let allExecutedActions = [];
+      const allExecutedActions = [];
       let finalReply = "";
 
       while (iterations < MAX_ITERATIONS) {

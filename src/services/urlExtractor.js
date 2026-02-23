@@ -8,7 +8,7 @@
  */
 
 function createUrlExtractor(deps) {
-  const { logger } = deps;
+  const { logger: _logger } = deps;
 
   /**
    * Fetch a URL and extract readable text content.
