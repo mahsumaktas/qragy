@@ -19,6 +19,12 @@ describe("Bot Test Panel", () => {
       expect(html).toContain("TEST MODE");
       // Must load widget styles
       expect(html).toContain('href="style.css"');
+      // Must contain full chat widget HTML structure
+      expect(html).toContain('id="aiWidget"');
+      expect(html).toContain('id="chatMessages"');
+      expect(html).toContain('id="chatForm"');
+      expect(html).toContain('id="chatInput"');
+      expect(html).toContain('id="fabLauncher"');
     });
   });
 

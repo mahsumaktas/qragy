@@ -2,13 +2,29 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bot Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta id="metaThemeColor" name="theme-color" content="#2563EB">
+  <title id="pageTitle">Bot Test</title>
+  <link rel="icon" type="image/jpeg" href="qragy_logo.jpg" id="favicon" />
+  <link rel="apple-touch-icon" href="qragy_logo.jpg" id="appleTouchIcon" />
+  <meta property="og:image" content="qragy_logo.jpg" id="ogImage" />
   <link rel="stylesheet" href="style.css">
   <style>
-    /* Override: auto-open chat, hide hero */
-    #heroSection { display: none !important; }
-    #chatContainer { display: flex !important; height: 100vh !important; max-height: 100vh !important; border-radius: 0 !important; position: static !important; }
+    /* Test mode: hide hero, show widget full-screen */
+    .page-shell { display: none !important; }
+    .fab-launcher { display: none !important; }
+    #aiWidget {
+      display: flex !important;
+      position: static !important;
+      width: 100% !important;
+      height: 100vh !important;
+      max-height: 100vh !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      transform: none !important;
+      opacity: 1 !important;
+    }
+    #aiWidget[hidden] { display: flex !important; }
     .test-toolbar { position: fixed; top: 8px; right: 8px; z-index: 10000; display: flex; gap: 8px; }
     .test-toolbar button { padding: 4px 12px; border-radius: 4px; border: 1px solid #ccc; background: #fff; cursor: pointer; font-size: 12px; }
     .test-toolbar button:hover { background: #f0f0f0; }
@@ -20,6 +36,99 @@
   <div class="test-toolbar">
     <button onclick="resetTestSession()">Sifirla</button>
   </div>
+
+  <!-- Hero (hidden by CSS but needed for app.js element refs) -->
+  <main class="page-shell">
+    <section class="hero-card">
+      <img id="heroLogo" src="qragy_logo.jpg" alt="Logo" style="width:80px;height:80px;object-fit:contain;margin-bottom:12px;border-radius:12px" />
+      <h1 id="heroTitle">Bot Test</h1>
+      <p id="heroDescription"></p>
+      <button id="launchSupportButton" class="launch-button" type="button">Canli Destek</button>
+      <small id="launchHint" class="launch-hint"></small>
+    </section>
+  </main>
+
+  <!-- FAB (hidden) -->
+  <button id="fabLauncher" class="fab-launcher" type="button" aria-label="Sohbet ac" hidden>
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/>
+    </svg>
+  </button>
+
+  <!-- Chat Widget (forced visible by CSS) -->
+  <section id="aiWidget" class="ai-widget" role="dialog" aria-modal="true" aria-label="Test sohbet penceresi" hidden>
+    <header class="ai-widget-header">
+      <div class="header-left">
+        <div class="header-avatar" aria-hidden="true">
+          <img id="headerLogo" src="qragy_logo.jpg" alt="Logo" style="width:100%;height:100%;object-fit:contain;border-radius:50%" />
+        </div>
+        <div class="header-info">
+          <h2 id="headerTitle">Bot Test</h2>
+          <div class="header-status">
+            <span id="statusDot" class="status-dot" aria-hidden="true"></span>
+            <span id="statusText">Aktif</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="darkModeToggle" class="icon-button" type="button" aria-label="Tema degistir" title="Tema degistir">
+          <svg id="darkModeIcon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 3a9 9 0 1 0 9 9c0-.5-.04-.99-.12-1.47a5.5 5.5 0 0 1-7.41-7.41A9.06 9.06 0 0 0 12 3z"/>
+          </svg>
+        </button>
+        <button id="soundToggle" class="icon-button" type="button" aria-label="Ses bildirimini ac/kapat" title="Ses bildirimi">
+          <svg id="soundIcon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8.5v7a4.47 4.47 0 0 0 2.5-3.5zM14 3.23v2.06a6.51 6.51 0 0 1 0 13.42v2.06A8.5 8.5 0 0 0 14 3.23z"/>
+          </svg>
+        </button>
+        <button id="exportBtn" class="icon-button" type="button" aria-label="Sohbeti disa aktar" title="Sohbeti disa aktar">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+          </svg>
+        </button>
+        <button id="endSessionBtn" class="icon-button" type="button" aria-label="Sohbeti sonlandir" title="Sohbeti sonlandir">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42A6.92 6.92 0 0 1 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.27 1.08-4.28 2.76-5.56L6.34 5.02A8.94 8.94 0 0 0 3 12a9 9 0 0 0 18 0c0-2.74-1.23-5.18-3.17-6.83z"/>
+          </svg>
+        </button>
+        <button id="closeWidgetButton" class="icon-button" type="button" aria-label="Sohbet penceresini kapat">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div id="connectionBanner" class="connection-banner" hidden>Baglanti kesildi. Yeniden baglaniliyor...</div>
+
+    <section id="chatMessages" class="chat-messages" role="log" aria-live="polite" aria-label="Sohbet mesajlari"></section>
+
+    <button id="scrollDownBtn" class="scroll-down-btn" hidden aria-label="En alta in">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="18" height="18">
+        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z" fill="currentColor"/>
+      </svg>
+    </button>
+
+    <div id="quickReplies" class="quick-replies" hidden></div>
+    <div id="composeStatus" class="compose-status" hidden></div>
+    <div id="handoffStatus" class="handoff-status" hidden></div>
+    <div id="handoffActions" class="handoff-actions" hidden>
+      <button id="manualHandoffButton" class="handoff-button" type="button">Temsilciye Baglan</button>
+    </div>
+
+    <form id="chatForm" class="chat-form">
+      <button id="attachBtn" class="attach-btn" type="button" aria-label="Dosya ekle" title="Dosya ekle">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+          <path d="M16.5 6v11.5a4 4 0 0 1-8 0V5a2.5 2.5 0 0 1 5 0v10.5a1 1 0 0 1-2 0V6h-1.5v9.5a2.5 2.5 0 0 0 5 0V5a4 4 0 0 0-8 0v12.5a5.5 5.5 0 0 0 11 0V6H16.5z" fill="currentColor"/>
+        </svg>
+      </button>
+      <input type="file" id="fileInput" hidden />
+      <input id="chatInput" type="text" autocomplete="off" placeholder="Mesajinizi yazin..." aria-label="Mesaj girin" maxlength="1000" required />
+      <button id="sendButton" type="submit" aria-label="Mesaj gonder">Gonder</button>
+    </form>
+  </section>
+
   <script>
     // Set test mode flag before app.js loads
     window.__QRAGY_TEST_MODE__ = true;
@@ -29,9 +138,8 @@
     if (sid) window.__QRAGY_SESSION_PREFIX__ = sid;
 
     function resetTestSession() {
-      var prefix = sid ? sid + "_qragy_" : "qragy_";
       for (const key of Object.keys(localStorage)) {
-        if (key.startsWith(prefix) || key.startsWith("qragy_")) localStorage.removeItem(key);
+        if (key.startsWith("qragy_")) localStorage.removeItem(key);
       }
       location.reload();
     }
