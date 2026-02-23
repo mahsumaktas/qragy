@@ -36,22 +36,22 @@
             <!-- TALEPLER group -->
             <div class="nav-group">
               <div class="nav-group-label">TALEPLER</div>
-              <a class="nav-item active" data-panel="panelSummary">Ozet</a>
-              <a class="nav-item" data-panel="panelLiveChats">Canli Sohbetler <span id="convCount" class="nav-badge">0</span></a>
-              <a class="nav-item" data-panel="panelClosedChats">Kapali Sohbetler</a>
+              <a class="nav-item active" data-panel="panelSummary">Özet</a>
+              <a class="nav-item" data-panel="panelLiveChats">Canlı Sohbetler <span id="convCount" class="nav-badge">0</span></a>
+              <a class="nav-item" data-panel="panelClosedChats">Kapalı Sohbetler</a>
               <a class="nav-item" data-panel="panelSearch">Arama</a>
               <a class="nav-item" data-panel="panelInbox">Agent Inbox <span id="inboxCount" class="nav-badge">0</span></a>
             </div>
 
             <!-- DUZENLEMELER group -->
             <div class="nav-group">
-              <div class="nav-group-label">DUZENLEMELER</div>
-              <a class="nav-item" data-panel="panelBotSetup">Bot Ayarlari</a>
+              <div class="nav-group-label">DÜZENLEMELER</div>
+              <a class="nav-item" data-panel="panelBotSetup">Bot Ayarları</a>
               <a class="nav-item" data-panel="panelBotTest">Bot Test</a>
-              <a class="nav-item" data-panel="panelKB">Bilgi Tabani</a>
+              <a class="nav-item" data-panel="panelKB">Bilgi Tabanı</a>
               <a class="nav-item" data-panel="panelTopics">Konular</a>
-              <a class="nav-item" data-panel="panelChatFlow">Sohbet Akisi</a>
-              <a class="nav-item" data-panel="panelSiteConfig">Site Ayarlari</a>
+              <a class="nav-item" data-panel="panelChatFlow">Sohbet Akışı</a>
+              <a class="nav-item" data-panel="panelSiteConfig">Site Ayarları</a>
             </div>
 
             <!-- ENTEGRASYONLAR group -->
@@ -65,15 +65,15 @@
             <div class="nav-group">
               <div id="advancedToggle" class="nav-advanced-toggle">Sistem &#9662;</div>
               <a class="nav-item advanced" data-panel="panelAnalytics">Dashboard</a>
-              <a class="nav-item advanced" data-panel="panelEnv">Ortam Degiskenleri</a>
+              <a class="nav-item advanced" data-panel="panelEnv">Ortam Değişkenleri</a>
               <a class="nav-item advanced" data-panel="panelWebhooks">Webhooks</a>
-              <a class="nav-item advanced" data-panel="panelAutoFAQ">FAQ Onerileri</a>
-              <a class="nav-item advanced" data-panel="panelPromptVersions">Prompt Gecmisi</a>
+              <a class="nav-item advanced" data-panel="panelAutoFAQ">FAQ Önerileri</a>
+              <a class="nav-item advanced" data-panel="panelPromptVersions">Prompt Geçmişi</a>
               <a class="nav-item advanced" data-panel="panelFeedbackReport">Feedback Raporu</a>
               <a class="nav-item advanced" data-panel="panelContentGaps">Content Gaps</a>
               <a class="nav-item advanced" data-panel="panelSystem">Sistem Durumu</a>
-              <a class="nav-item advanced" data-panel="panelAgentFiles">Agent Dosyalari</a>
-              <a class="nav-item advanced" data-panel="panelMemory">Bellek Sablonlari</a>
+              <a class="nav-item advanced" data-panel="panelAgentFiles">Agent Dosyaları</a>
+              <a class="nav-item advanced" data-panel="panelMemory">Bellek Şablonları</a>
             </div>
           </nav>
         </aside>
@@ -86,12 +86,12 @@
             <!-- Onboarding Checklist -->
             <div id="onboardingChecklist" class="onboarding-checklist" style="display:none;">
               <div class="checklist-header">
-                <h3>Baslangic Rehberi</h3>
+                <h3>Başlangıç Rehberi</h3>
                 <button id="onboardingDismiss" class="btn btn-sm" title="Kapat">&times;</button>
               </div>
               <ul id="onboardingItems"></ul>
               <div id="onboardingComplete" style="display:none;" class="checklist-complete">
-                Tebrikler! Tum adimlari tamamladiniz.
+                Tebrikler! Tüm adımları tamamladınız.
               </div>
             </div>
             <section class="summary-grid" id="summaryGrid"></section>
@@ -309,23 +309,23 @@
                 <div id="inboxPendingList" class="inbox-list">
                   <p class="empty">Kuyrukta kimse yok.</p>
                 </div>
-                <h4 style="margin:16px 0 8px">Aktif Gorusmeler <span id="inboxActiveCount" class="badge">0</span></h4>
+                <h4 style="margin:16px 0 8px">Aktif Görüşmeler <span id="inboxActiveCount" class="badge">0</span></h4>
                 <div id="inboxActiveList" class="inbox-list">
-                  <p class="empty">Aktif gorusme yok.</p>
+                  <p class="empty">Aktif görüşme yok.</p>
                 </div>
               </div>
               <!-- Right: Chat view -->
               <div class="inbox-chat-panel">
                 <div id="inboxChatHeader" class="inbox-chat-header">
-                  <span>Bir gorusme secin</span>
+                  <span>Bir görüşme seçin</span>
                 </div>
                 <div id="inboxChatMessages" class="inbox-chat-messages">
-                  <p class="empty">Gorusme secilmedi.</p>
+                  <p class="empty">Görüşme seçilmedi.</p>
                 </div>
                 <div id="inboxChatActions" class="inbox-chat-actions" style="display:none">
-                  <input id="inboxMessageInput" type="text" placeholder="Mesaj yazin..." class="inbox-message-input" />
-                  <button id="inboxSendBtn" class="btn btn-primary">Gonder</button>
-                  <button id="inboxReleaseBtn" class="btn btn-secondary">Birak</button>
+                  <input id="inboxMessageInput" type="text" placeholder="Mesaj yazın..." class="inbox-message-input" />
+                  <button id="inboxSendBtn" class="btn btn-primary">Gönder</button>
+                  <button id="inboxReleaseBtn" class="btn btn-secondary">Bırak</button>
                 </div>
               </div>
             </div>
@@ -334,7 +334,7 @@
           <!-- PANEL: Bilgi Tabani Kayitlar -->
           <div id="panelKB" class="panel">
             <div class="section-header">
-              <h2>Bilgi Tabani <span id="kbRecordCount" class="badge">0</span></h2>
+              <h2>Bilgi Tabanı <span id="kbRecordCount" class="badge">0</span></h2>
               <div class="section-actions">
                 <button id="kbAddBtn" class="btn btn-primary">+ Yeni Kayıt</button>
                 <label class="btn btn-secondary file-upload-label">
@@ -380,11 +380,11 @@
           <!-- PANEL: Agent Dosyalari -->
           <div id="panelAgentFiles" class="panel">
             <div style="padding:8px 12px;margin-bottom:12px;background:rgba(12,93,102,0.06);border:1px solid rgba(12,93,102,0.15);border-radius:6px;font-size:0.82rem;color:var(--primary)">
-              Bu dosyalar <a href="#" onclick="switchPanel('panelBotSetup');return false" style="font-weight:600;color:var(--primary)">Duzenlemeler &gt; Bot Ayarlari</a> bolumunden form olarak da duzenlenebilir.
+              Bu dosyalar <a href="#" onclick="switchPanel('panelBotSetup');return false" style="font-weight:600;color:var(--primary)">Düzenlemeler &gt; Bot Ayarları</a> bölümünden form olarak da düzenlenebilir.
             </div>
             <div class="agent-tabs">
               <button class="agent-tab active" data-agent-tab="editor">Dosyalar</button>
-              <button class="agent-tab" data-agent-tab="easyEdit">Kolay Duzenle</button>
+              <button class="agent-tab" data-agent-tab="easyEdit">Kolay Düzenle</button>
             </div>
 
             <!-- Tab: File Editor -->
@@ -396,13 +396,13 @@
                 </div>
                 <div class="editor-panel">
                   <div class="editor-header">
-                    <span id="agentEditorFilename" class="editor-filename">Dosya seciniz</span>
+                    <span id="agentEditorFilename" class="editor-filename">Dosya seçiniz</span>
                     <div class="editor-actions">
                       <button id="agentEditorRevertBtn" class="btn btn-secondary" disabled>Geri Al</button>
                       <button id="agentEditorSaveBtn" class="btn btn-primary" disabled>Kaydet</button>
                     </div>
                   </div>
-                  <textarea id="agentEditorTextarea" class="code-editor" placeholder="Dosya seciniz..." disabled></textarea>
+                  <textarea id="agentEditorTextarea" class="code-editor" placeholder="Dosya seçiniz..." disabled></textarea>
                 </div>
               </div>
             </div>
@@ -410,11 +410,11 @@
             <!-- Tab: Easy Persona Editor -->
             <div id="agentTabEasyEdit" class="agent-tab-content" style="display:none">
               <div class="easy-persona-form">
-                <h3>Bot Kisiligini Ozellestiriniz</h3>
-                <p class="field-hint" style="margin-bottom:16px">Asagidaki formu doldurarak bot kisiligini hizlica ayarlayin. Kaydet'e bastiginizda persona.md otomatik olusturulur.</p>
+                <h3>Bot Kişiliğini Özelleştiriniz</h3>
+                <p class="field-hint" style="margin-bottom:16px">Aşağıdaki formu doldurarak bot kişiliğini hızlıca ayarlayın. Kaydet'e bastığınızda persona.md otomatik oluşturulur.</p>
                 <div class="form-grid">
-                  <label>Bot Adi<input id="easyPersonaName" type="text" placeholder="Ornek: Asistan" /></label>
-                  <label>Konusma Tonu
+                  <label>Bot Adı<input id="easyPersonaName" type="text" placeholder="Örnek: Asistan" /></label>
+                  <label>Konuşma Tonu
                     <select id="easyPersonaTone">
                       <option value="profesyonel">Profesyonel</option>
                       <option value="samimi">Samimi</option>
@@ -422,8 +422,8 @@
                     </select>
                   </label>
                 </div>
-                <label>Selamlama Ornegi<input id="easyPersonaGreeting" type="text" placeholder="Ornek: Merhaba! Size nasil yardimci olabilirim?" /></label>
-                <label>Kisa Tanitim<textarea id="easyPersonaDescription" rows="4" placeholder="Ornek: Ben XYZ firmasinin musteri destek asistaniyim. Urunler, siparisler ve teknik konularda yardimci olabilirim."></textarea></label>
+                <label>Selamlama Örneği<input id="easyPersonaGreeting" type="text" placeholder="Örnek: Merhaba! Size nasıl yardımcı olabilirim?" /></label>
+                <label>Kısa Tanıtım<textarea id="easyPersonaDescription" rows="4" placeholder="Örnek: Ben XYZ firmasının müşteri destek asistanıyım. Ürünler, siparişler ve teknik konularda yardımcı olabilirim."></textarea></label>
                 <button id="easyPersonaSaveBtn" class="btn btn-primary" style="margin-top:12px">Kaydet</button>
               </div>
             </div>
@@ -434,12 +434,12 @@
             <div class="bot-setup-layout">
               <div class="bot-setup-nav">
                 <a class="bot-setup-nav-item active" data-setup-tab="company"><span class="status-dot inactive"></span>Firma Bilgileri</a>
-                <a class="bot-setup-nav-item" data-setup-tab="persona"><span class="status-dot inactive"></span>Bot Kisiligi</a>
+                <a class="bot-setup-nav-item" data-setup-tab="persona"><span class="status-dot inactive"></span>Bot Kişiliği</a>
                 <a class="bot-setup-nav-item" data-setup-tab="skills"><span class="status-dot inactive"></span>Yetenekler</a>
                 <a class="bot-setup-nav-item" data-setup-tab="bans"><span class="status-dot inactive"></span>Yasaklar</a>
-                <a class="bot-setup-nav-item" data-setup-tab="escalation"><span class="status-dot inactive"></span>Eskalasyon Kurallari</a>
-                <a class="bot-setup-nav-item" data-setup-tab="chatflow"><span class="status-dot inactive"></span>Sohbet Akisi</a>
-                <a class="bot-setup-nav-item" data-setup-tab="appearance"><span class="status-dot inactive"></span>Gorunum</a>
+                <a class="bot-setup-nav-item" data-setup-tab="escalation"><span class="status-dot inactive"></span>Eskalasyon Kuralları</a>
+                <a class="bot-setup-nav-item" data-setup-tab="chatflow"><span class="status-dot inactive"></span>Sohbet Akışı</a>
+                <a class="bot-setup-nav-item" data-setup-tab="appearance"><span class="status-dot inactive"></span>Görünüm</a>
                 <a class="bot-setup-nav-item" data-setup-tab="ticket"><span class="status-dot inactive"></span>Talep Bilgileri</a>
               </div>
               <div class="bot-setup-content">
@@ -447,41 +447,41 @@
                 <div id="botSetupTab-company" class="bot-setup-tab active">
                   <div class="bot-setup-form">
                     <h3>Firma Bilgileri</h3>
-                    <p class="section-desc">Botun kullanacagi temel firma ve platform bilgilerini tanitin.</p>
+                    <p class="section-desc">Botun kullanacağı temel firma ve platform bilgilerini tanıtın.</p>
 
-                    <label for="bsCompanyName">Firma Adi</label>
-                    <span class="field-hint">Botun kullanacagi firma adi</span>
-                    <input id="bsCompanyName" type="text" placeholder="Ornek: ABC Teknoloji" />
+                    <label for="bsCompanyName">Firma Adı</label>
+                    <span class="field-hint">Botun kullanacağı firma adı</span>
+                    <input id="bsCompanyName" type="text" placeholder="Örnek: ABC Teknoloji" />
 
-                    <label for="bsSector">Sektor</label>
-                    <span class="field-hint">Sektorunuz</span>
+                    <label for="bsSector">Sektör</label>
+                    <span class="field-hint">Sektörünüz</span>
                     <select id="bsSector">
                       <option value="teknik-destek">Teknik Destek</option>
                       <option value="e-ticaret">E-Ticaret</option>
                       <option value="restoran">Restoran / Yemek</option>
-                      <option value="saglik">Saglik</option>
-                      <option value="egitim">Egitim</option>
-                      <option value="diger">Diger</option>
+                      <option value="saglik">Sağlık</option>
+                      <option value="egitim">Eğitim</option>
+                      <option value="diger">Diğer</option>
                     </select>
 
                     <label for="bsMission">Misyon</label>
-                    <span class="field-hint">Botun temel gorevi. Ornek: Kullanicinin sorununu mumkunse kendi basina cozmek</span>
-                    <textarea id="bsMission" rows="2" placeholder="Botun temel gorevi nedir?"></textarea>
+                    <span class="field-hint">Botun temel görevi. Örnek: Kullanıcının sorununu mümkünse kendi başına çözmek</span>
+                    <textarea id="bsMission" rows="2" placeholder="Botun temel görevi nedir?"></textarea>
 
-                    <label for="bsValues">Degerler</label>
-                    <span class="field-hint">Virgul ile. Ornek: Cozum odaklilik, dogruluk, sabir</span>
-                    <input id="bsValues" type="text" placeholder="Cozum odaklilik, dogruluk, sabir" />
+                    <label for="bsValues">Değerler</label>
+                    <span class="field-hint">Virgül ile. Örnek: Çözüm odaklılık, doğruluk, sabır</span>
+                    <input id="bsValues" type="text" placeholder="Çözüm odaklılık, doğruluk, sabır" />
 
-                    <label for="bsPlatformDesc">Platform Aciklamasi</label>
-                    <span class="field-hint">Firmaniz ne yapar? Bot bu bilgiyi kullanir</span>
-                    <textarea id="bsPlatformDesc" rows="4" placeholder="Ornek: ABC Platform, B2B SaaS operasyon yonetim sistemidir."></textarea>
+                    <label for="bsPlatformDesc">Platform Açıklaması</label>
+                    <span class="field-hint">Firmanız ne yapar? Bot bu bilgiyi kullanır</span>
+                    <textarea id="bsPlatformDesc" rows="4" placeholder="Örnek: ABC Platform, B2B SaaS operasyon yönetim sistemidir."></textarea>
 
-                    <label for="bsProducts">Urunler / Hizmetler</label>
-                    <span class="field-hint">Sundugunuz urunler veya hizmetler</span>
-                    <textarea id="bsProducts" rows="3" placeholder="Her satira bir urun/hizmet yazin"></textarea>
+                    <label for="bsProducts">Ürünler / Hizmetler</label>
+                    <span class="field-hint">Sunduğunuz ürünler veya hizmetler</span>
+                    <textarea id="bsProducts" rows="3" placeholder="Her satıra bir ürün/hizmet yazın"></textarea>
 
-                    <label>Ozel Terimler</label>
-                    <span class="field-hint">Sektore ozel terimler ve aciklamalari</span>
+                    <label>Özel Terimler</label>
+                    <span class="field-hint">Sektöre özel terimler ve açıklamaları</span>
                     <div id="bsTermsContainer" class="repeating-group"></div>
                     <button type="button" id="bsAddTermBtn" class="btn btn-sm btn-secondary">+ Terim Ekle</button>
 
@@ -490,22 +490,22 @@
                       <span id="bsCompanySaveStatus" class="status-text"></span>
                     </div>
 
-                    <a class="shortcut-link" data-shortcut-panel="panelKB">Bilgi Tabanini Yonet &rarr;</a>
+                    <a class="shortcut-link" data-shortcut-panel="panelKB">Bilgi Tabanını Yönet &rarr;</a>
                   </div>
                 </div>
                 <!-- Tab: Bot Kisiligi -->
                 <div id="botSetupTab-persona" class="bot-setup-tab">
                   <div class="bot-setup-form">
-                    <h3>Bot Kisiligi</h3>
-                    <p class="section-desc">Botun konusma tarzi, tonu ve ornek diyaloglari. Kaydet'e bastiginizda persona.md otomatik guncellenir.</p>
+                    <h3>Bot Kişiliği</h3>
+                    <p class="section-desc">Botun konuşma tarzı, tonu ve örnek diyalogları. Kaydet'e bastığınızda persona.md otomatik güncellenir.</p>
 
-                    <label for="bsPersonaName">Bot Adi</label>
-                    <span class="field-hint">Botun kendini tanittigi isim</span>
-                    <input id="bsPersonaName" type="text" placeholder="Ornek: Asistan" />
+                    <label for="bsPersonaName">Bot Adı</label>
+                    <span class="field-hint">Botun kendini tanıttığı isim</span>
+                    <input id="bsPersonaName" type="text" placeholder="Örnek: Asistan" />
 
                     <div class="form-grid">
                       <div>
-                        <label for="bsPersonaTone">Konusma Tonu</label>
+                        <label for="bsPersonaTone">Konuşma Tonu</label>
                         <select id="bsPersonaTone">
                           <option value="profesyonel">Profesyonel</option>
                           <option value="samimi">Samimi</option>
@@ -514,33 +514,33 @@
                       </div>
                       <div>
                         <label for="bsPersonaEmpathy">Empati Seviyesi</label>
-                        <span class="field-hint">Bot ne kadar duygusal katilim gostersin</span>
+                        <span class="field-hint">Bot ne kadar duygusal katılım göstersin</span>
                         <select id="bsPersonaEmpathy">
-                          <option value="dusuk">Dusuk</option>
+                          <option value="dusuk">Düşük</option>
                           <option value="orta" selected>Orta</option>
-                          <option value="yuksek">Yuksek</option>
+                          <option value="yuksek">Yüksek</option>
                         </select>
                       </div>
                     </div>
 
-                    <label for="bsPersonaLength">Yanit Uzunlugu</label>
-                    <span class="field-hint">Kisa: 1-2 cumle, Orta: 3-4 cumle, Uzun: detayli paragraf</span>
+                    <label for="bsPersonaLength">Yanıt Uzunluğu</label>
+                    <span class="field-hint">Kısa: 1-2 cümle, Orta: 3-4 cümle, Uzun: detaylı paragraf</span>
                     <select id="bsPersonaLength">
-                      <option value="kisa">Kisa (1-2 cumle)</option>
-                      <option value="orta" selected>Orta (3-4 cumle)</option>
-                      <option value="uzun">Uzun (detayli paragraf)</option>
+                      <option value="kisa">Kısa (1-2 cümle)</option>
+                      <option value="orta" selected>Orta (3-4 cümle)</option>
+                      <option value="uzun">Uzun (detaylı paragraf)</option>
                     </select>
 
-                    <label for="bsPersonaGreeting">Selamlama Mesaji</label>
-                    <input id="bsPersonaGreeting" type="text" placeholder="Ornek: Merhaba! Size nasil yardimci olabilirim?" />
+                    <label for="bsPersonaGreeting">Selamlama Mesajı</label>
+                    <input id="bsPersonaGreeting" type="text" placeholder="Örnek: Merhaba! Size nasıl yardımcı olabilirim?" />
 
-                    <label for="bsPersonaDesc">Kisa Tanitim</label>
-                    <textarea id="bsPersonaDesc" rows="3" placeholder="Ornek: Ben XYZ firmasinin musteri destek asistaniyim."></textarea>
+                    <label for="bsPersonaDesc">Kısa Tanıtım</label>
+                    <textarea id="bsPersonaDesc" rows="3" placeholder="Örnek: Ben XYZ firmasının müşteri destek asistanıyım."></textarea>
 
-                    <label>Ornek Diyaloglar</label>
-                    <span class="field-hint">Tipik kullanici sorusu ve ideal bot yaniti ciftleri (max 5)</span>
+                    <label>Örnek Diyaloglar</label>
+                    <span class="field-hint">Tipik kullanıcı sorusu ve ideal bot yanıtı çiftleri (max 5)</span>
                     <div id="bsDialogsContainer" class="repeating-group"></div>
-                    <button type="button" id="bsAddDialogBtn" class="btn btn-sm btn-secondary">+ Ornek Ekle</button>
+                    <button type="button" id="bsAddDialogBtn" class="btn btn-sm btn-secondary">+ Örnek Ekle</button>
 
                     <div class="form-actions">
                       <button type="button" id="bsPersonaSaveBtn" class="btn btn-primary">Kaydet</button>
@@ -552,24 +552,24 @@
                 <div id="botSetupTab-skills" class="bot-setup-tab">
                   <div class="bot-setup-form">
                     <h3>Yetenekler</h3>
-                    <p class="section-desc">Botun yapabilecegi ve toplayabilecegi bilgileri secin.</p>
+                    <p class="section-desc">Botun yapabileceği ve toplayabileceği bilgileri seçin.</p>
 
                     <div class="checkbox-list">
                       <h4>Bot Yapabilir</h4>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill="troubleshoot" checked /> Adim adim sorun giderme rehberligi</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill="kb-answer" checked /> Bilgi tabanindan cevap bulma</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill="topic-guide" checked /> Konu bazli troubleshooting</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill="escalation" checked /> Canli destek temsilcisine aktarim</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill="status-query" /> Randevu/islem durumu sorgulama</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill="faq" checked /> Sik sorulan sorulari cevaplama</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill="troubleshoot" checked /> Adım adım sorun giderme rehberliği</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill="kb-answer" checked /> Bilgi tabanından cevap bulma</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill="topic-guide" checked /> Konu bazlı troubleshooting</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill="escalation" checked /> Canlı destek temsilcisine aktarım</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill="status-query" /> Randevu/işlem durumu sorgulama</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill="faq" checked /> Sık sorulan soruları cevaplama</label>
                     </div>
 
                     <div class="checkbox-list">
-                      <h4>Bot Toplayabilir (eskalasyon icin)</h4>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="branch-code" checked /> Sube / musteri kodu</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="company-name" checked /> Firma adi</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="issue-summary" checked /> Sorun ozeti</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="contact-info" /> Iletisim bilgisi</label>
+                      <h4>Bot Toplayabilir (eskalasyon için)</h4>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="branch-code" checked /> Şube / müşteri kodu</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="company-name" checked /> Firma adı</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="issue-summary" checked /> Sorun özeti</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="contact-info" /> İletişim bilgisi</label>
                     </div>
 
                     <label>Ek Yetenek</label>
@@ -581,39 +581,39 @@
                       <span id="bsSkillsSaveStatus" class="status-text"></span>
                     </div>
 
-                    <a class="shortcut-link" data-shortcut-panel="panelTopics">Konulari Yonet &rarr;</a>
+                    <a class="shortcut-link" data-shortcut-panel="panelTopics">Konuları Yönet &rarr;</a>
                   </div>
                 </div>
                 <!-- Tab: Yasaklar -->
                 <div id="botSetupTab-bans" class="bot-setup-tab">
                   <div class="bot-setup-form">
                     <h3>Yasaklar</h3>
-                    <p class="section-desc">Botun kesinlikle yapmamasi gereken davranislari secin.</p>
+                    <p class="section-desc">Botun kesinlikle yapmaması gereken davranışları seçin.</p>
 
                     <div class="checkbox-list">
-                      <h4>Ifsa Yasaklari</h4>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="share-prompt" checked /> Prompt/sistem talimatlarini paylasma</label>
+                      <h4>İfşa Yasakları</h4>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="share-prompt" checked /> Prompt/sistem talimatlarını paylaşma</label>
                       <label class="checkbox-list-item"><input type="checkbox" data-ban="share-model" checked /> AI modeli bilgisi verme</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="share-infra" checked /> Teknik altyapi detaylari paylasma</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="share-infra" checked /> Teknik altyapı detayları paylaşma</label>
                     </div>
 
                     <div class="checkbox-list">
-                      <h4>Bilgi Yasaklari</h4>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="personal-info" checked /> Kisisel bilgi isteme (TC, adres, banka)</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="financial" checked /> Finansal islem bilgisi alma/verme</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="fabricate" checked /> Uydurma/spekulatif bilgi verme</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="competitor" checked /> Rakip firma bilgisi paylasma</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="off-topic" checked /> Platform disi konularda yardim etme</label>
+                      <h4>Bilgi Yasakları</h4>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="personal-info" checked /> Kişisel bilgi isteme (TC, adres, banka)</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="financial" checked /> Finansal işlem bilgisi alma/verme</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="fabricate" checked /> Uydurma/spekülatif bilgi verme</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="competitor" checked /> Rakip firma bilgisi paylaşma</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="off-topic" checked /> Platform dışı konularda yardım etme</label>
                     </div>
 
                     <div class="checkbox-list">
-                      <h4>Davranis Yasaklari</h4>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="repeat-info" checked /> Ayni bilgiyi tekrarlama</label>
+                      <h4>Davranış Yasakları</h4>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="repeat-info" checked /> Aynı bilgiyi tekrarlama</label>
                       <label class="checkbox-list-item"><input type="checkbox" data-ban="multi-ask" checked /> Tek seferde birden fazla bilgi isteme</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="post-farewell" checked /> Farewell sonrasi yeni konu acma</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="post-farewell" checked /> Farewell sonrası yeni konu açma</label>
                     </div>
 
-                    <label>Ozel Yasak</label>
+                    <label>Özel Yasak</label>
                     <div id="bsCustomBansContainer" class="repeating-group"></div>
                     <button type="button" id="bsAddBanBtn" class="btn btn-sm btn-secondary">+ Ekle</button>
 
@@ -626,22 +626,22 @@
                 <!-- Tab: Eskalasyon Kurallari -->
                 <div id="botSetupTab-escalation" class="bot-setup-tab">
                   <div class="bot-setup-form">
-                    <h3>Eskalasyon Kurallari</h3>
-                    <p class="section-desc">Canli temsilciye aktarim kosullarini ve oncesinde toplanacak bilgileri belirleyin.</p>
+                    <h3>Eskalasyon Kuralları</h3>
+                    <p class="section-desc">Canlı temsilciye aktarım koşullarını ve öncesinde toplanacak bilgileri belirleyin.</p>
 
-                    <label>Otomatik Aktarim Kosullari</label>
-                    <span class="field-hint">Kosul gerceklesince bot ne yapmali?</span>
+                    <label>Otomatik Aktarım Koşulları</label>
+                    <span class="field-hint">Koşul gerçekleşince bot ne yapmalı?</span>
                     <div id="bsEscRulesContainer"></div>
                     <button type="button" id="bsAddEscRuleBtn" class="btn btn-sm btn-secondary" style="margin-bottom:16px">+ Kural Ekle</button>
 
-                    <label>Eskalasyon Oncesi Toplanacak Bilgiler</label>
-                    <span class="field-hint">Aktarim oncesi kullanicidan hangi bilgiler toplansin?</span>
+                    <label>Eskalasyon Öncesi Toplanacak Bilgiler</label>
+                    <span class="field-hint">Aktarım öncesi kullanıcıdan hangi bilgiler toplansın?</span>
                     <div class="checkbox-list">
-                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="branch-code" checked /> Sube kodu (zorunlu)</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="issue-summary" checked /> Sorun ozeti (zorunlu)</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="company-name" /> Firma adi</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="branch-code" checked /> Şube kodu (zorunlu)</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="issue-summary" checked /> Sorun özeti (zorunlu)</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="company-name" /> Firma adı</label>
                       <label class="checkbox-list-item"><input type="checkbox" data-esc-field="phone" /> Telefon</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="tried-steps" /> Denenen adimlar</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="tried-steps" /> Denenen adımlar</label>
                     </div>
                     <div id="bsEscCustomFieldsContainer" class="repeating-group"></div>
                     <button type="button" id="bsAddEscFieldBtn" class="btn btn-sm btn-secondary">+ Alan Ekle</button>
@@ -652,23 +652,23 @@
                     </div>
                   </div>
                 </div>
-                <!-- Tab: Sohbet Akisi -->
+                <!-- Tab: Sohbet Akışı -->
                 <div id="botSetupTab-chatflow" class="bot-setup-tab">
                   <div id="bsChatFlowContent">
-                    <p class="empty">Yukleniyor...</p>
+                    <p class="empty">Yükleniyor...</p>
                   </div>
                 </div>
-                <!-- Tab: Gorunum -->
+                <!-- Tab: Görünüm -->
                 <div id="botSetupTab-appearance" class="bot-setup-tab">
                   <div id="bsAppearanceContent">
-                    <p class="empty">Yukleniyor...</p>
+                    <p class="empty">Yükleniyor...</p>
                   </div>
                 </div>
                 <!-- Tab: Talep Bilgileri -->
                 <div id="botSetupTab-ticket" class="bot-setup-tab">
                   <div class="bot-setup-form">
                     <h3>Talep Bilgileri</h3>
-                    <p class="section-desc">Ticket olusturulurken toplanacak alan sablonunu duzenleyin.</p>
+                    <p class="section-desc">Ticket oluşturulurken toplanacak alan şablonunu düzenleyin.</p>
 
                     <label>Zorunlu Alanlar</label>
                     <div id="bsTicketRequiredContainer" class="repeating-group"></div>
@@ -678,9 +678,9 @@
                     <div id="bsTicketOptionalContainer" class="repeating-group"></div>
                     <button type="button" id="bsAddTicketOptBtn" class="btn btn-sm btn-secondary">+ Opsiyonel Alan Ekle</button>
 
-                    <label for="bsTicketConfirmMsg" style="margin-top:16px">Onay Mesaji Sablonu</label>
-                    <span class="field-hint">Ticket olusturulduktan sonra kullaniciya gosterilecek mesaj</span>
-                    <textarea id="bsTicketConfirmMsg" rows="3" placeholder="Talebiniz basariyla olusturuldu. Ticket numaraniz: {{ticket_id}}"></textarea>
+                    <label for="bsTicketConfirmMsg" style="margin-top:16px">Onay Mesajı Şablonu</label>
+                    <span class="field-hint">Ticket oluşturulduktan sonra kullanıcıya gösterilecek mesaj</span>
+                    <textarea id="bsTicketConfirmMsg" rows="3" placeholder="Talebiniz başarıyla oluşturuldu. Ticket numaranız: {{ticket_id}}"></textarea>
 
                     <div class="form-actions">
                       <button type="button" id="bsTicketSaveBtn" class="btn btn-primary">Kaydet</button>
@@ -1094,15 +1094,15 @@
           <div id="panelWhatsApp" class="panel">
             <div class="chat-flow-config">
               <h3>WhatsApp Entegrasyonu (Cloud API)</h3>
-              <p class="section-desc">WhatsApp Business Cloud API entegrasyonu ile WhatsApp uzerinden gelen mesajlari Qragy ile karsilayin.</p>
+              <p class="section-desc">WhatsApp Business Cloud API entegrasyonu ile WhatsApp üzerinden gelen mesajları Qragy ile karşılayın.</p>
 
               <div class="cf-group">
-                <h4>Baglanti Ayarlari</h4>
+                <h4>Bağlantı Ayarları</h4>
                 <div class="cf-field">
                   <label for="waEnabled">Entegrasyon Durumu</label>
                   <select id="waEnabled" class="cf-textarea" style="height:auto">
-                    <option value="false">Kapali</option>
-                    <option value="true">Acik</option>
+                    <option value="false">Kapalı</option>
+                    <option value="true">Açık</option>
                   </select>
                 </div>
                 <div class="cf-field">
@@ -1115,13 +1115,13 @@
                 </div>
                 <div class="cf-field">
                   <label for="waVerifyToken">Verify Token</label>
-                  <input id="waVerifyToken" type="text" class="cf-textarea" style="height:auto" placeholder="Webhook dogrulama tokeni (sizin belirlediginiz)" />
+                  <input id="waVerifyToken" type="text" class="cf-textarea" style="height:auto" placeholder="Webhook doğrulama tokeni (sizin belirlediğiniz)" />
                 </div>
               </div>
 
               <div class="cf-group">
                 <h4>Webhook URL</h4>
-                <p class="section-desc">Meta Developer Portal'dan asagidaki URL'yi webhook olarak ekleyin. Subscriptions: <code>messages</code></p>
+                <p class="section-desc">Meta Developer Portal'dan aşağıdaki URL'yi webhook olarak ekleyin. Subscriptions: <code>messages</code></p>
                 <div class="cf-field">
                   <label>Webhook Endpoint</label>
                   <div style="display:flex;align-items:center;gap:8px">
@@ -1142,8 +1142,8 @@
           <div id="panelBotTest" class="panel">
             <div class="bot-test-toolbar">
               <button id="botTestNewChat" class="btn btn-primary btn-sm">+ Yeni Chat</button>
-              <button id="botTestCloseAll" class="btn btn-sm">Tumunu Kapat</button>
-              <span class="bot-test-hint">Ayni anda birden fazla chat acarak botu test edin</span>
+              <button id="botTestCloseAll" class="btn btn-sm">Tümünü Kapat</button>
+              <span class="bot-test-hint">Aynı anda birden fazla chat açarak botu test edin</span>
             </div>
             <div id="botTestGrid" class="bot-test-grid"></div>
           </div>
@@ -1164,22 +1164,22 @@
             <!-- KPI Dashboard Cards -->
             <div id="dashboardKpi" class="kpi-grid">
               <div class="kpi-card">
-                <div class="kpi-label">Bugun Sohbet</div>
+                <div class="kpi-label">Bugün Sohbet</div>
                 <div class="kpi-value" id="kpiTodayChats">-</div>
                 <div class="kpi-sub" id="kpiTodayResolution"></div>
               </div>
               <div class="kpi-card">
-                <div class="kpi-label">Haftalik Sohbet</div>
+                <div class="kpi-label">Haftalık Sohbet</div>
                 <div class="kpi-value" id="kpiWeeklyChats">-</div>
                 <div class="kpi-trend" id="kpiWeeklyTrend"></div>
               </div>
               <div class="kpi-card">
-                <div class="kpi-label">Haftalik CSAT</div>
+                <div class="kpi-label">Haftalık CSAT</div>
                 <div class="kpi-value" id="kpiWeeklyCsat">-</div>
                 <div class="kpi-trend" id="kpiCsatTrend"></div>
               </div>
               <div class="kpi-card">
-                <div class="kpi-label">Aylik Cozum Orani</div>
+                <div class="kpi-label">Aylık Çözüm Oranı</div>
                 <div class="kpi-value" id="kpiMonthlyResolution">-</div>
                 <div class="kpi-trend" id="kpiMonthlyTrend"></div>
               </div>
@@ -1187,7 +1187,7 @@
 
             <!-- Top Topics (from dashboard-stats) -->
             <div id="dashboardTopTopics" class="kpi-topics" style="display:none">
-              <h4>Bu Haftanin En Cok Konusulan 5 Konusu</h4>
+              <h4>Bu Haftanın En Çok Konuşulan 5 Konusu</h4>
               <div id="kpiTopTopicsList" class="kpi-topics-list"></div>
             </div>
 
@@ -1223,15 +1223,15 @@
               <h2>Feedback Raporu</h2>
               <div class="section-actions">
                 <select id="feedbackDaysRange">
-                  <option value="7" selected>Son 7 Gun</option>
-                  <option value="30">Son 30 Gun</option>
-                  <option value="90">Son 90 Gun</option>
+                  <option value="7" selected>Son 7 Gün</option>
+                  <option value="30">Son 30 Gün</option>
+                  <option value="90">Son 90 Gün</option>
                 </select>
               </div>
             </div>
             <div id="feedbackSummary" class="summary-grid"></div>
             <div class="analytics-topics-section" style="margin-top:16px">
-              <h3>En Cok Tekrarlanan Sorunlar</h3>
+              <h3>En Çok Tekrarlanan Sorunlar</h3>
               <div class="table-section">
                 <table>
                   <thead>
@@ -1239,28 +1239,28 @@
                       <th>#</th>
                       <th>Konu (Anahtar Kelimeler)</th>
                       <th>Tekrar</th>
-                      <th>Ornek Mesajlar</th>
+                      <th>Örnek Mesajlar</th>
                     </tr>
                   </thead>
                   <tbody id="feedbackTopIssuesBody">
-                    <tr><td colspan="4" class="empty">Yukleniyor...</td></tr>
+                    <tr><td colspan="4" class="empty">Yükleniyor...</td></tr>
                   </tbody>
                 </table>
               </div>
             </div>
             <div class="analytics-topics-section" style="margin-top:16px">
-              <h3>Negatif Feedback Detaylari</h3>
+              <h3>Negatif Feedback Detayları</h3>
               <div class="table-section">
                 <table>
                   <thead>
                     <tr>
-                      <th>Kullanici Mesaji</th>
-                      <th>Bot Yaniti</th>
+                      <th>Kullanıcı Mesajı</th>
+                      <th>Bot Yanıtı</th>
                       <th>Tarih</th>
                     </tr>
                   </thead>
                   <tbody id="feedbackNegativeBody">
-                    <tr><td colspan="3" class="empty">Yukleniyor...</td></tr>
+                    <tr><td colspan="3" class="empty">Yükleniyor...</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1271,6 +1271,7 @@
           <div id="panelContentGaps" class="panel">
             <div class="section-header">
               <h2>Cevaplanamayan Sorular (Content Gaps)</h2>
+
             </div>
             <div id="contentGapsSection" class="table-section">
               <p class="empty">Yükleniyor...</p>
@@ -1346,53 +1347,53 @@
           <div class="modal-body">
             <!-- Wizard Steps Indicator -->
             <div id="topicWizardSteps" class="wizard-steps">
-              <span class="wizard-step active" data-step="1">1. Konu Adi</span>
+              <span class="wizard-step active" data-step="1">1. Konu Adı</span>
               <span class="wizard-step" data-step="2">2. Anahtar Kelimeler</span>
-              <span class="wizard-step" data-step="3">3. Bot Yaniti</span>
+              <span class="wizard-step" data-step="3">3. Bot Yanıtı</span>
               <span class="wizard-step" data-step="4">4. Eskalasyon</span>
             </div>
 
             <!-- Step 1: Name & ID -->
             <div class="wizard-panel" data-wizard="1">
               <div class="form-grid">
-                <label>Başlık<span class="field-hint">Admin icin konu adi. Ornek: Bilet Yazdiramiyorum</span><input id="topicModalTitle" type="text" placeholder="Konu basligi" /></label>
-                <label>ID (Slug)<span class="field-hint">Otomatik olusturulur, isterseniz degistirebilirsiniz.</span><input id="topicModalId" type="text" placeholder="konu-slug" /></label>
+                <label>Başlık<span class="field-hint">Admin için konu adı. Örnek: Bilet Yazdıramıyorum</span><input id="topicModalTitle" type="text" placeholder="Konu başlığı" /></label>
+                <label>ID (Slug)<span class="field-hint">Otomatik oluşturulur, isterseniz değiştirebilirsiniz.</span><input id="topicModalId" type="text" placeholder="konu-slug" /></label>
               </div>
             </div>
 
             <!-- Step 2: Keywords -->
             <div class="wizard-panel" data-wizard="2" style="display:none">
-              <label>Kullanici bu konuyu nasil sorar?<span class="field-hint">Virgul ile ayrilmis anahtar kelimeler. Ne kadar cok varyasyon eklerseniz tespit o kadar iyi olur.</span></label>
-              <input id="topicModalKeywords" type="text" placeholder="bilet yazdiramiyorum, bilet cikmiyor, yazici basmiyor" />
+              <label>Kullanıcı bu konuyu nasıl sorar?<span class="field-hint">Virgül ile ayrılmış anahtar kelimeler. Ne kadar çok varyasyon eklerseniz tespit o kadar iyi olur.</span></label>
+              <input id="topicModalKeywords" type="text" placeholder="bilet yazdıramıyorum, bilet çıkmıyor, yazıcı basmıyor" />
               <button id="topicSuggestKeywordsBtn" class="btn btn-sm" style="margin-top:8px">AI ile Oner</button>
               <div id="topicKeywordSuggestion" style="display:none;margin-top:8px;padding:8px;background:var(--bg-secondary);border-radius:6px;font-size:13px"></div>
             </div>
 
             <!-- Step 3: Content -->
             <div class="wizard-panel" data-wizard="3" style="display:none">
-              <label>Bot ne yanit vermeli?<span class="field-hint">AI'a bu konuda nasil davranacagini anlatan talimat. Troubleshoot adimlari, bilgilendirme metni yazabilirsiniz.</span></label>
-              <textarea id="topicModalContent" rows="10" class="code-editor" placeholder="Bu konuda su adimlari izle:&#10;1. ...&#10;2. ..."></textarea>
+              <label>Bot ne yanıt vermeli?<span class="field-hint">AI'a bu konuda nasıl davranacağını anlatan talimat. Troubleshoot adımları, bilgilendirme metni yazabilirsiniz.</span></label>
+              <textarea id="topicModalContent" rows="10" class="code-editor" placeholder="Bu konuda şu adımları izle:&#10;1. ...&#10;2. ..."></textarea>
             </div>
 
             <!-- Step 4: Escalation -->
             <div class="wizard-panel" data-wizard="4" style="display:none">
               <div class="form-row">
                 <div class="checkbox-group">
-                  <label class="checkbox-label"><input id="topicModalRequiresEscalation" type="checkbox" /> Canli destege aktarilsin mi?</label>
-                  <span class="field-hint">Isaretlenirse bu konu sonunda canli temsilciye aktarim yapilir.</span>
+                  <label class="checkbox-label"><input id="topicModalRequiresEscalation" type="checkbox" /> Canlı desteğe aktarılsın mı?</label>
+                  <span class="field-hint">İşaretlenirse bu konu sonunda canlı temsilciye aktarım yapılır.</span>
                 </div>
                 <div class="checkbox-group">
-                  <label class="checkbox-label"><input id="topicModalCanResolveDirectly" type="checkbox" /> AI dogrudan cozebilir mi?</label>
-                  <span class="field-hint">Isaretlenirse AI bilgilendirme yapip konuyu kapatabilir.</span>
+                  <label class="checkbox-label"><input id="topicModalCanResolveDirectly" type="checkbox" /> AI doğrudan çözebilir mi?</label>
+                  <span class="field-hint">İşaretlenirse AI bilgilendirme yapıp konuyu kapatabilir.</span>
                 </div>
               </div>
-              <label>Gerekli Bilgiler (virgul ile)<span class="field-hint">Eskalasyon oncesi kullanicidan toplanmasi gereken alanlar.</span><input id="topicModalRequiredInfo" type="text" placeholder="firma_adi, sefer_guzergah, sefer_tarih_saat" /></label>
+              <label>Gerekli Bilgiler (virgül ile)<span class="field-hint">Eskalasyon öncesi kullanıcıdan toplanması gereken alanlar.</span><input id="topicModalRequiredInfo" type="text" placeholder="firma_adi, sefer_guzergah, sefer_tarih_saat" /></label>
             </div>
           </div>
           <div class="modal-footer" style="justify-content:space-between">
             <button id="topicWizardPrevBtn" class="btn" style="display:none">Geri</button>
             <div>
-              <button id="topicWizardNextBtn" class="btn btn-primary">Ileri</button>
+              <button id="topicWizardNextBtn" class="btn btn-primary">İleri</button>
               <button id="topicModalSaveBtn" class="btn btn-primary" style="display:none">Kaydet</button>
             </div>
           </div>
