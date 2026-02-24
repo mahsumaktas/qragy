@@ -105,13 +105,15 @@ function createPromptBuilder(deps) {
     parts.push(ctxLines.join("\n"));
 
     // Toplanan bilgiler — LLM'in hangi alanlarin eksik oldugunu gormesi icin
+    // Topic tespit edilip ilk turda ise (zorunlu) etiketi gosterme — KB-first davranis icin
     const allFields = [...(MEMORY_TEMPLATE.requiredFields || []), ...(MEMORY_TEMPLATE.optionalFields || [])];
     const memLines = ["## Toplanan Bilgiler"];
     const requiredSet = new Set(MEMORY_TEMPLATE.requiredFields || []);
+    const suppressRequired = conversationContext?.currentTopic && turnCount <= 1;
     for (const field of allFields) {
       const label = MEMORY_LABELS[field] || field;
       const value = memory?.[field];
-      const tag = requiredSet.has(field) ? " (zorunlu)" : "";
+      const tag = (!suppressRequired && requiredSet.has(field)) ? " (zorunlu)" : "";
       memLines.push(`- ${label}${tag}: ${value || "[bilinmiyor]"}`);
     }
     parts.push(memLines.join("\n"));
