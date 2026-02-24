@@ -176,12 +176,30 @@ function createSearchEngine(deps) {
 
     const maxFinal = Math.min(topK, 5);
 
+    let fusionMethod = "none";
+    let finalResults = [];
     if (vectorResults.length && textResults.length) {
-      return reciprocalRankFusion(vectorResults, textResults).slice(0, maxFinal);
+      fusionMethod = "RRF";
+      finalResults = reciprocalRankFusion(vectorResults, textResults).slice(0, maxFinal);
+    } else if (vectorResults.length) {
+      fusionMethod = "vector-only";
+      finalResults = vectorResults.slice(0, maxFinal);
+    } else if (textResults.length) {
+      fusionMethod = "text-only";
+      finalResults = textResults.slice(0, maxFinal);
     }
-    if (vectorResults.length) return vectorResults.slice(0, maxFinal);
-    if (textResults.length) return textResults.slice(0, maxFinal);
-    return [];
+
+    logger.info("searchEngine", "Hybrid arama tamamlandi", {
+      query: query.slice(0, 80),
+      vectorHits: vectorResults.length,
+      textHits: textResults.length,
+      fusionMethod,
+      finalCount: finalResults.length,
+      topRRF: finalResults[0] ? (finalResults[0].rrfScore || 0).toFixed(4) : "N/A",
+      topQ: finalResults[0] ? (finalResults[0].question || "").slice(0, 60) : "N/A",
+    });
+
+    return finalResults;
   }
 
   return {

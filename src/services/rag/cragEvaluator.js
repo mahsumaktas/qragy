@@ -83,6 +83,17 @@ function createCragEvaluator(deps) {
       }
 
       const insufficient = relevant.length === 0 && partial.length === 0;
+
+      logger.info("cragEvaluator", "Degerlendirme tamamlandi", {
+        query: query.slice(0, 80),
+        totalResults: results.length,
+        relevant: relevant.length,
+        partial: partial.length,
+        irrelevant: irrelevant.length,
+        insufficient,
+        verdicts: verdicts.map(v => `[${v.index}]=${v.verdict}`).join(", "),
+      });
+
       return { relevant, partial, irrelevant, insufficient };
     } catch (err) {
       logger.warn("cragEvaluator", "LLM degerlendirme hatasi, tum sonuclar relevant kabul ediliyor", err);
@@ -115,6 +126,11 @@ function createCragEvaluator(deps) {
       let rewritten = (response.reply || "").trim();
       // Strip quotes from LLM reply
       rewritten = rewritten.replace(/^["']+|["']+$/g, "");
+
+      logger.info("cragEvaluator", "Sorgu yeniden yazildi", {
+        original: query.slice(0, 80),
+        rewritten: (rewritten || query).slice(0, 80),
+      });
 
       return rewritten || query;
     } catch (err) {

@@ -16,6 +16,7 @@ function createPromptBuilder(deps) {
     loadTopicFile,
     getTopicMeta,
     getMemoryTemplate,
+    logger = { info() {}, debug() {} },
   } = deps;
 
   function buildSystemPrompt(memory, conversationContext, knowledgeResults, options) {
@@ -146,7 +147,21 @@ function createPromptBuilder(deps) {
       parts.push(trimToTokenBudget(ragText, TOKEN_BUDGETS.ragContext));
     }
 
-    return parts.join("\n\n");
+    const finalPrompt = parts.join("\n\n");
+
+    logger.info("promptBuilder", "Prompt olusturuldu", {
+      state,
+      turnCount,
+      topic: conversationContext?.currentTopic || null,
+      escalation: !!conversationContext?.escalationTriggered,
+      ragResults: Array.isArray(knowledgeResults) ? knowledgeResults.length : 0,
+      hasCoreMemory: !!options?.coreMemoryText,
+      hasReflexion: !!options?.reflexionWarnings,
+      hasGraph: !!options?.graphContext,
+      promptLen: finalPrompt.length,
+    });
+
+    return finalPrompt;
   }
 
   return { buildSystemPrompt };

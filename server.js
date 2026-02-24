@@ -301,6 +301,7 @@ const promptBuilder = createPromptBuilder({
   loadTopicFile,
   getTopicMeta,
   getMemoryTemplate: agentConfig.getMemoryTemplate,
+  logger,
 });
 const { buildSystemPrompt } = promptBuilder;
 
@@ -553,6 +554,7 @@ const webChatPipeline = createWebChatPipeline({
   questionExtractor,
   getUserMemory: userMemory,
   conversationSummarizer,
+  logger,
 });
 
 // ── Chat Routes (src/routes/chat.js) ────────────────────────────────────

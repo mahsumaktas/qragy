@@ -89,6 +89,9 @@ function createWebChatPipeline(deps) {
 
     // Citations
     formatCitations,
+
+    // Logger
+    logger = { info() {}, warn() {} },
   } = deps;
 
   // Optional dependency — question extraction for better RAG search
@@ -127,6 +130,7 @@ function createWebChatPipeline(deps) {
 
     // Gibberish
     if (isGibberishMessage(latestUserMessage)) {
+      logger.info("webChatPipeline:earlyCheck", "Gibberish tespit edildi", { sessionId, msgPreview: latestUserMessage.slice(0, 80) });
       recordAnalyticsEvent({ source: "gibberish", responseTimeMs: Date.now() - chatStartTime });
       return webResponse({
         reply: chatFlowConfig.gibberishMessage,
@@ -139,6 +143,7 @@ function createWebChatPipeline(deps) {
     const convData = loadConversations();
     const existingConv = convData.conversations.find(c => c.sessionId === sessionId);
     if (existingConv?.farewellOffered && activeUserMessages.length > 0) {
+      logger.info("webChatPipeline:earlyCheck", "Farewell sonrasi yeni mesaj, konusma yeniden acildi", { sessionId });
       existingConv.farewellOffered = false;
       saveConversations(convData);
       return webResponse({
@@ -150,6 +155,7 @@ function createWebChatPipeline(deps) {
 
     // Farewell / closing flow
     if (isFarewellMessage(latestUserMessage, activeUserMessages.length)) {
+      logger.info("webChatPipeline:earlyCheck", "Farewell mesaji tespit edildi", { sessionId, msgPreview: latestUserMessage.slice(0, 80) });
       const hasTicket = hasRequiredFields(memory);
       if (existingConv) {
         existingConv.farewellOffered = true;
@@ -211,6 +217,7 @@ function createWebChatPipeline(deps) {
       maintainClosedTicketContext &&
       !NEW_TICKET_INTENT_REGEX.test(normalizeForMatching(latestUserMessage))
     ) {
+      logger.info("webChatPipeline:earlyCheck", "Ticket status followup", { sessionId, closedBranch: lastClosedTicketMemory.branchCode || "N/A" });
       recordAnalyticsEvent({ source: "ticket-status", responseTimeMs: Date.now() - chatStartTime });
       return webResponse({
         reply: getStatusFollowupMessage(),
@@ -227,6 +234,7 @@ function createWebChatPipeline(deps) {
       const isNewIssue = ISSUE_HINT_REGEX.test(normalizeForMatching(latestUserMessage)) &&
         !isStatusFollowupMessage(latestUserMessage);
       if (!isNewIssue) {
+        logger.info("webChatPipeline:earlyCheck", "Post-escalation followup (yeni konu degil)", { sessionId });
         recordAnalyticsEvent({ source: "post-escalation", responseTimeMs: Date.now() - chatStartTime });
         return webResponse({
           reply: POST_ESCALATION_FOLLOWUP_MESSAGE,
@@ -248,7 +256,14 @@ function createWebChatPipeline(deps) {
     contents, memory, conversationContext, sessionId,
     chatHistorySnapshot, hasClosedTicketHistory, chatStartTime
   }) {
-    if (!hasRequiredFields(memory) || conversationContext.currentTopic) return null;
+    if (!hasRequiredFields(memory) || conversationContext.currentTopic) {
+      logger.info("webChatPipeline:ticket", "Ticket olusturma atlanildi", {
+        sessionId,
+        hasRequired: hasRequiredFields(memory),
+        hasTopic: !!conversationContext.currentTopic,
+      });
+      return null;
+    }
 
     const supportAvailability = getSupportAvailability();
     const aiSummary = await generateEscalationSummary(contents, memory, conversationContext);
@@ -344,7 +359,13 @@ function createWebChatPipeline(deps) {
        conversationContext.conversationState !== "topic_guided_support" &&
        !conversationContext.currentTopic);
 
-    if (!shouldUseDeterministicReply) return null;
+    if (!shouldUseDeterministicReply) {
+      logger.info("webChatPipeline:deterministic", "Deterministic reply kullanilmiyor", {
+        state: conversationContext.conversationState,
+        topic: conversationContext.currentTopic || null,
+      });
+      return null;
+    }
 
     const chatFlowConfig = getChatFlowConfig();
     const deterministicReply = buildDeterministicCollectionReply(
@@ -352,12 +373,16 @@ function createWebChatPipeline(deps) {
       activeUserMessages,
       hasClosedTicketHistory
     );
-    if (!deterministicReply) return null;
+    if (!deterministicReply) {
+      logger.info("webChatPipeline:deterministic", "buildDeterministicCollectionReply null dondu, LLM'ye gidilecek");
+      return null;
+    }
 
     // Max clarification retry check
     const sessionKey = getClarificationKey(rawMessages);
     const retryCount = incrementClarificationCount(sessionKey);
     if (retryCount > chatFlowConfig.maxClarificationRetries) {
+      logger.warn("webChatPipeline:deterministic", "Max clarification retries asildi, escalation", { retryCount, max: chatFlowConfig.maxClarificationRetries });
       resetClarificationCount(sessionKey);
       recordAnalyticsEvent({ source: "max-retries", responseTimeMs: Date.now() - chatStartTime });
       return webResponse({
@@ -428,13 +453,21 @@ function createWebChatPipeline(deps) {
         const detectedId = (classifyResult.reply || "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
         const matchedTopic = TOPIC_INDEX.topics.find((t) => t.id === detectedId);
 
+        logger.info("webChatPipeline:topicDetect", "LLM konu siniflandirma", {
+          sessionId,
+          detectedId: detectedId || "(bos)",
+          matched: !!matchedTopic,
+          matchedTitle: matchedTopic ? matchedTopic.title : "N/A",
+          rawReply: (classifyResult.reply || "").slice(0, 80),
+        });
+
         if (matchedTopic) {
           conversationContext.currentTopic = matchedTopic.id;
           conversationContext.topicConfidence = 0.8;
           conversationContext.conversationState = "topic_guided_support";
         }
       } catch (_classifyError) {
-        // Classification error — fall through to normal flow
+        logger.warn("webChatPipeline:topicDetect", "Konu siniflandirma hatasi", { sessionId, error: _classifyError.message });
       }
     }
 
@@ -449,7 +482,18 @@ function createWebChatPipeline(deps) {
       searchQuery = await questionExtractor.extractQuestion(chatHistorySnapshot, latestUserMessage);
     }
     const knowledgeResults = await searchKnowledge(searchQuery);
+
+    logger.info("webChatPipeline:RAG", "KB arama sonucu", {
+      sessionId,
+      searchQuery: searchQuery.slice(0, 100),
+      queryChanged: searchQuery !== latestUserMessage,
+      resultCount: knowledgeResults.length,
+      topScore: knowledgeResults[0] ? (knowledgeResults[0].rrfScore || knowledgeResults[0].distance || 0).toFixed(3) : "N/A",
+      topQ: knowledgeResults[0] ? (knowledgeResults[0].question || "").slice(0, 80) : "N/A",
+    });
+
     if (knowledgeResults.length === 0 && latestUserMessage.length > 10) {
+      logger.info("webChatPipeline:RAG", "Content gap kaydedildi", { sessionId, query: latestUserMessage.slice(0, 80) });
       recordContentGap(latestUserMessage);
     }
     const sources = knowledgeResults.map(r => ({
@@ -460,16 +504,35 @@ function createWebChatPipeline(deps) {
     const citations = formatCitations ? formatCitations(knowledgeResults) : [];
 
     const systemPrompt = buildSystemPrompt(memory, conversationContext, knowledgeResults);
+
+    logger.info("webChatPipeline", "LLM cagrisi", {
+      sessionId,
+      state: conversationContext?.conversationState,
+      topic: conversationContext?.currentTopic || null,
+      kbResults: knowledgeResults.length,
+      promptLen: systemPrompt.length,
+      historyMsgs: contents.length,
+    });
+
     let geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
 
     if (geminiResult.finishReason === "MAX_TOKENS") {
+      logger.warn("webChatPipeline", "MAX_TOKENS, retry 2x", { sessionId });
       geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2);
     }
     if (geminiResult.fallbackUsed) {
+      logger.warn("webChatPipeline", "Fallback model kullanildi", { sessionId });
       recordLLMError({ message: "Primary model failed, fallback used", status: 429 }, "web-chat-fallback");
     }
 
     let reply = sanitizeAssistantReply(geminiResult.reply);
+
+    logger.info("webChatPipeline", "LLM cevabi", {
+      sessionId,
+      finishReason: geminiResult.finishReason,
+      replyLen: reply.length,
+      replyPreview: reply.slice(0, 150),
+    });
 
     // Injection Guard — Layer 3 (output validation)
     const SOUL_TEXT = getSoulText();
@@ -480,20 +543,24 @@ function createWebChatPipeline(deps) {
     ].filter(Boolean);
     const outputCheck = validateOutput(reply, systemFragments);
     if (!outputCheck.safe) {
+      logger.warn("webChatPipeline", "Injection guard tetiklendi, genel cevap", { sessionId });
       reply = GENERIC_REPLY;
     }
 
     // Response quality validation
     const qualityCheck = validateBotResponse(reply, sources);
     if (!qualityCheck.valid) {
+      logger.warn("webChatPipeline", "Kalite dogrulama basarisiz", { sessionId, reason: qualityCheck.reason, replyPreview: reply.slice(0, 100) });
       reply = buildMissingFieldsReply(memory, latestUserMessage);
     }
 
     if (!conversationContext.currentTopic && !hasRequiredFields(memory) && CONFIRMATION_PREFIX_REGEX.test(reply)) {
+      logger.warn("webChatPipeline", "LLM onay mesaji uretti ama required fields eksik, fallback", { sessionId, replyPreview: reply.slice(0, 80) });
       reply = buildMissingFieldsReply(memory, latestUserMessage);
     }
 
     if (!reply) {
+      logger.warn("webChatPipeline", "Reply bos, fallback", { sessionId });
       reply = buildMissingFieldsReply(memory, latestUserMessage);
     }
 

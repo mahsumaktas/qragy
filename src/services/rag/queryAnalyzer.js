@@ -158,6 +158,17 @@ function createQueryAnalyzer(deps) {
       const analysis = validateAnalysis(parsed, userMessage);
       analysis.route = determineRoute(analysis.complexity, analysis.intent);
 
+      logger.info("queryAnalyzer", "Analiz tamamlandi", {
+        complexity: analysis.complexity,
+        intent: analysis.intent,
+        route: analysis.route,
+        requiresMemory: analysis.requiresMemory,
+        requiresGraph: analysis.requiresGraph,
+        subQueries: analysis.subQueries.length,
+        standaloneChanged: analysis.standaloneQuery !== userMessage,
+        standalonePreview: analysis.standaloneQuery.slice(0, 80),
+      });
+
       return analysis;
     } catch (err) {
       logger.error("queryAnalyzer", "Analiz hatasi, fallback kullaniliyor", err);

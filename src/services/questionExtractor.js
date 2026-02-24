@@ -46,9 +46,18 @@ function createQuestionExtractor(deps) {
 
       const extracted = (result || "").trim();
       if (!extracted || extracted.length > latestMessage.length * 3) {
-        // Sanity check: if extraction is way longer, use original
+        logger.info("questionExtractor", "Sanity check basarisiz, orijinal kullaniliyor", {
+          originalLen: latestMessage.length,
+          extractedLen: extracted ? extracted.length : 0,
+        });
         return latestMessage;
       }
+
+      logger.info("questionExtractor", "Soru cikarildi", {
+        original: latestMessage.slice(0, 80),
+        extracted: extracted.slice(0, 80),
+        changed: extracted !== latestMessage,
+      });
 
       return extracted;
     } catch (err) {

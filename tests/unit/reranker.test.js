@@ -160,7 +160,9 @@ describe("Reranker", () => {
     expect(result[0]._rerankScore).toBe(0.8);
     expect(result[0].question).toContain("Sifre");
     expect(mockLogger.warn).toHaveBeenCalledWith(
-      expect.stringContaining("Cohere basarisiz")
+      "reranker",
+      "Cohere basarisiz, LLM fallback",
+      expect.objectContaining({ error: expect.any(String) })
     );
 
     globalThis.fetch = originalFetch;

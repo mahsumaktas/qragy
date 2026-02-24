@@ -120,26 +120,47 @@ function createReranker(deps) {
     if (cohereApiKey) {
       try {
         const reranked = await cohereRerank(query, results, cohereApiKey, logger);
-        logger.info(`[Reranker] Cohere rerank basarili (${reranked.length} sonuc)`);
-        return reranked.sort((a, b) => b._rerankScore - a._rerankScore);
+        const sorted = reranked.sort((a, b) => b._rerankScore - a._rerankScore);
+        logger.info("reranker", "Cohere rerank basarili", {
+          strategy: "cohere",
+          inputCount: results.length,
+          outputCount: sorted.length,
+          topScore: sorted[0]?._rerankScore?.toFixed(3) || "N/A",
+          bottomScore: sorted[sorted.length - 1]?._rerankScore?.toFixed(3) || "N/A",
+          query: query.slice(0, 80),
+        });
+        return sorted;
       } catch (err) {
-        logger.warn(`[Reranker] Cohere basarisiz, LLM fallback: ${err.message}`);
+        logger.warn("reranker", "Cohere basarisiz, LLM fallback", { error: err.message, status: err.status || "N/A" });
       }
     }
 
     // Strategy 2: LLM-as-reranker
     try {
       const reranked = await llmRerank(query, results, callLLM, getProviderConfig, logger);
-      logger.info(`[Reranker] LLM rerank basarili (${reranked.length} sonuc)`);
-      return reranked.sort((a, b) => b._rerankScore - a._rerankScore);
+      const sorted = reranked.sort((a, b) => b._rerankScore - a._rerankScore);
+      logger.info("reranker", "LLM rerank basarili", {
+        strategy: "llm",
+        inputCount: results.length,
+        outputCount: sorted.length,
+        topScore: sorted[0]?._rerankScore?.toFixed(3) || "N/A",
+        bottomScore: sorted[sorted.length - 1]?._rerankScore?.toFixed(3) || "N/A",
+        query: query.slice(0, 80),
+      });
+      return sorted;
     } catch (err) {
-      logger.warn(`[Reranker] LLM rerank basarisiz, RRF fallback: ${err.message}`);
+      logger.warn("reranker", "LLM rerank basarisiz, RRF fallback", { error: err.message });
     }
 
     // Strategy 3: RRF fallback
     const reranked = rrfFallback(results);
-    logger.info(`[Reranker] RRF fallback kullanildi (${reranked.length} sonuc)`);
-    return reranked.sort((a, b) => b._rerankScore - a._rerankScore);
+    const sorted = reranked.sort((a, b) => b._rerankScore - a._rerankScore);
+    logger.info("reranker", "RRF fallback kullanildi", {
+      strategy: "rrf-fallback",
+      count: sorted.length,
+      topScore: sorted[0]?._rerankScore?.toFixed(3) || "N/A",
+    });
+    return sorted;
   }
 
   return { rerank };
