@@ -342,6 +342,11 @@ const ngQualityScorer = createQualityScorer({ callLLM, getProviderConfig, sqlite
 const ngReflexion = createReflexion({ callLLM, getProviderConfig, sqliteDb, logger });
 const ngGraphBuilder = createGraphBuilder({ callLLM, getProviderConfig, sqliteDb, logger });
 const ngGraphQuery = createGraphQuery({ sqliteDb, logger });
+
+// ── Chat Audit Logger ────────────────────────────────────────────────────
+const { createChatAuditLogger } = require("./src/utils/chatAuditLog");
+const chatAuditLog = createChatAuditLogger({ logDir: path.join(DATA_DIR, "chat-logs") });
+
 const ngChatPipeline = createChatPipeline({
   queryAnalyzer: ngQueryAnalyzer,
   searchEngine: ngSearchEngine,
@@ -501,10 +506,6 @@ const conversationLifecycle = require("./src/routes/conversation").mount(app, {
   FEEDBACK_FILE, UPLOADS_DIR,
   ngReflexion, ngGraphBuilder,
 });
-
-// ── Chat Audit Logger ────────────────────────────────────────────────────
-const { createChatAuditLogger } = require("./src/utils/chatAuditLog");
-const chatAuditLog = createChatAuditLogger({ logDir: path.join(DATA_DIR, "chat-logs") });
 
 // ── Web Chat Pipeline (src/services/webChatPipeline.js) ──────────────────
 const { createWebChatPipeline } = require("./src/services/webChatPipeline");
