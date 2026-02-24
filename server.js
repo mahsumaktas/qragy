@@ -759,7 +759,7 @@ require("./src/routes/agentInbox").mount(app, {
 
 // ── Admin Routes (src/routes/admin.js) ──────────────────────────────────
 require("./src/routes/admin").mount(app, {
-  requireAdminAccess, express, fs, path, crypto,
+  requireAdminAccess, express, fs, path, crypto, PORT,
   sqliteDb, loadTicketsDb, saveTicketsDb,
   getAdminSummary, sanitizeTicketForList,
   TICKET_STATUS, HANDOFF_RESULT_STATUS_MAP, ACTIVE_TICKET_STATUSES,

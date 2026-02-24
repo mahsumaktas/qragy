@@ -2615,3 +2615,67 @@ tbody tr:hover {
   border: none;
   min-height: 480px;
 }
+
+/* ==========================================================================
+   Eval Panel
+   ========================================================================== */
+.eval-progress-bar {
+  height: 6px;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.eval-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  width: 0%;
+  transition: width 0.3s;
+}
+.eval-turn-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
+  background: var(--card);
+}
+.eval-turn-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.eval-assertion-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+.eval-assertion-row select { width: 180px; }
+.eval-assertion-row input { flex: 1; }
+.eval-result-pass { color: var(--ok); font-weight: 600; }
+.eval-result-fail { color: var(--err); font-weight: 600; }
+.eval-inline-result {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--bg);
+}
+.eval-inline-result .eval-turn-detail {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.eval-inline-result .eval-turn-detail:last-child {
+  border-bottom: none;
+}
+.eval-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: rgba(12, 93, 102, 0.08);
+  color: var(--primary);
+  margin-right: 3px;
+}

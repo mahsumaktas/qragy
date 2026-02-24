@@ -51,6 +51,7 @@
               <a class="nav-item" data-panel="panelKB">Bilgi Tabanı</a>
               <a class="nav-item" data-panel="panelTopics">Konular</a>
               <a class="nav-item" data-panel="panelChatFlow">Sohbet Akışı</a>
+              <a class="nav-item" data-panel="panelEval">Eval Yönetimi</a>
               <a class="nav-item" data-panel="panelSiteConfig">Site Ayarları</a>
             </div>
 
@@ -870,6 +871,86 @@
                 <button id="cfSaveBtn" class="btn btn-primary">Kaydet</button>
                 <button id="cfResetBtn" class="btn btn-secondary">Varsayılana Dön</button>
                 <span id="cfSaveStatus" class="status-text"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- PANEL: Eval Yonetimi -->
+          <section id="panelEval" class="panel">
+            <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <h2>Eval Yönetimi</h2>
+              <div style="display:flex;gap:8px">
+                <button id="evalRunAllBtn" class="btn btn-primary btn-sm">Tümünü Çalıştır</button>
+                <button id="evalAddBtn" class="btn btn-sm">+ Senaryo Ekle</button>
+              </div>
+            </div>
+
+            <!-- Progress bar -->
+            <div id="evalProgressWrap" style="display:none;margin-bottom:12px">
+              <div class="eval-progress-bar"><div id="evalProgressFill" class="eval-progress-fill"></div></div>
+              <p id="evalProgressText" style="font-size:12px;color:var(--muted);margin-top:4px"></p>
+            </div>
+
+            <!-- Senaryo tablosu -->
+            <div class="table-section">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Başlık</th>
+                    <th>Turn</th>
+                    <th>Etiketler</th>
+                    <th>Son Sonuç</th>
+                    <th>İşlem</th>
+                  </tr>
+                </thead>
+                <tbody id="evalTableBody">
+                  <tr><td colspan="6" class="empty">Yükleniyor...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Gecmis -->
+            <div style="margin-top:24px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <h3>Çalıştırma Geçmişi</h3>
+                <button id="evalClearHistoryBtn" class="btn btn-sm">Geçmişi Temizle</button>
+              </div>
+              <div class="table-section">
+                <table>
+                  <thead>
+                    <tr><th>Tarih</th><th>Toplam</th><th>Geçti</th><th>Kaldı</th><th>Süre</th></tr>
+                  </thead>
+                  <tbody id="evalHistoryBody">
+                    <tr><td colspan="5" class="empty">Henüz geçmiş yok</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- Eval Modal -->
+          <div id="evalModal" class="modal-overlay" style="display:none">
+            <div class="modal" style="max-width:700px">
+              <div class="modal-header">
+                <h3 id="evalModalTitle">Senaryo Ekle</h3>
+                <button id="evalModalCancelBtn" class="modal-close">&times;</button>
+              </div>
+              <div class="modal-body">
+                <label>ID <input id="evalModalId" type="text" placeholder="S16-konu-adi" /></label>
+                <label>Başlık <input id="evalModalTitleInput" type="text" placeholder="Senaryo başlığı" /></label>
+                <label>Etiketler (virgül ile) <input id="evalModalTags" type="text" placeholder="escalation, multi-turn" /></label>
+
+                <div style="margin-top:12px">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <strong>Turn'lar</strong>
+                    <button id="evalModalAddTurn" class="btn btn-sm">+ Turn Ekle</button>
+                  </div>
+                  <div id="evalModalTurns"></div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button id="evalModalSaveBtn" class="btn btn-primary">Kaydet</button>
               </div>
             </div>
           </div>

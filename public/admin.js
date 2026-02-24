@@ -14,7 +14,10 @@ const state = {
   editingWebhookId: null,
   confirmResolve: null,
   searchDebounceTimer: null,
-  currentTicketId: null
+  currentTicketId: null,
+  editingEvalId: null,
+  evalScenarios: [],
+  evalLastResults: {}
 };
 
 // ── DOM References ─────────────────────────────────────────────────────────
@@ -269,7 +272,8 @@ const panelLoaders = {
   panelFeedbackReport: () => loadFeedbackReport(),
   panelContentGaps: () => loadContentGaps(),
   panelSystem: () => loadSystemInfo(),
-  panelBotSetup: () => loadBotSetup()
+  panelBotSetup: () => loadBotSetup(),
+  panelEval: () => loadEvalPanel()
 };
 
 function switchPanel(panelId) {
@@ -4487,6 +4491,535 @@ function addBotTestChat() {
       }
     });
   }
+})();
+
+// ══════════════════════════════════════════════════════════════════════════
+// EVAL YONETIMI
+// ══════════════════════════════════════════════════════════════════════════
+
+const ASSERTION_TYPES = [
+  { value: "shouldContainAny", label: "İçermeli (any)", valueType: "array" },
+  { value: "shouldNotContain", label: "İçermemeli", valueType: "array" },
+  { value: "shouldNotContainAny", label: "İçermemeli (any)", valueType: "array" },
+  { value: "stateShouldBe", label: "State olmalı", valueType: "string" },
+  { value: "topicShouldBe", label: "Topic olmalı", valueType: "string" },
+  { value: "handoffReady", label: "Handoff Ready", valueType: "boolean" },
+  { value: "earlyEscalation", label: "Early Escalation", valueType: "boolean" },
+  { value: "branchCodeShouldBe", label: "Şube Kodu olmalı", valueType: "string" },
+  { value: "isFarewell", label: "Vedalaşma mı", valueType: "boolean" },
+  { value: "shouldNotRepeatPrevious", label: "Tekrar etmemeli", valueType: "boolean" },
+];
+
+async function loadEvalPanel() {
+  try {
+    const data = await apiGet("admin/eval/scenarios");
+    state.evalScenarios = data.scenarios || [];
+    renderEvalTable();
+    loadEvalHistory();
+  } catch (err) {
+    showToast("Senaryolar yüklenemedi: " + err.message, "error");
+  }
+}
+
+function renderEvalTable() {
+  const tbody = $("evalTableBody");
+  if (!tbody) return;
+  if (state.evalScenarios.length === 0) {
+    tbody.textContent = "";
+    var emptyRow = document.createElement("tr");
+    var emptyCell = document.createElement("td");
+    emptyCell.colSpan = 6;
+    emptyCell.className = "empty";
+    emptyCell.textContent = "Senaryo bulunamadı";
+    emptyRow.appendChild(emptyCell);
+    tbody.appendChild(emptyRow);
+    return;
+  }
+
+  tbody.textContent = "";
+  state.evalScenarios.forEach(function(s) {
+    var tr = document.createElement("tr");
+
+    // ID
+    var tdId = document.createElement("td");
+    tdId.textContent = s.id;
+    tr.appendChild(tdId);
+
+    // Title
+    var tdTitle = document.createElement("td");
+    tdTitle.textContent = s.title || "";
+    tr.appendChild(tdTitle);
+
+    // Turn count
+    var tdTurn = document.createElement("td");
+    tdTurn.textContent = s.turns ? s.turns.length : 0;
+    tr.appendChild(tdTurn);
+
+    // Tags
+    var tdTags = document.createElement("td");
+    (s.tags || []).forEach(function(t) {
+      var span = document.createElement("span");
+      span.className = "eval-tag";
+      span.textContent = t;
+      tdTags.appendChild(span);
+    });
+    tr.appendChild(tdTags);
+
+    // Last result
+    var tdResult = document.createElement("td");
+    var lastResult = state.evalLastResults[s.id];
+    if (lastResult) {
+      var rSpan = document.createElement("span");
+      rSpan.className = lastResult.pass ? "eval-result-pass" : "eval-result-fail";
+      rSpan.textContent = lastResult.pass ? "GEÇTİ" : "KALDI";
+      tdResult.appendChild(rSpan);
+    } else {
+      tdResult.textContent = "—";
+    }
+    tr.appendChild(tdResult);
+
+    // Actions
+    var tdActions = document.createElement("td");
+    var testBtn = document.createElement("button");
+    testBtn.className = "btn btn-sm btn-primary";
+    testBtn.setAttribute("data-eval-test", s.id);
+    testBtn.textContent = "Test";
+    var editBtn = document.createElement("button");
+    editBtn.className = "btn btn-sm";
+    editBtn.setAttribute("data-eval-edit", s.id);
+    editBtn.textContent = "Düzenle";
+    var delBtn = document.createElement("button");
+    delBtn.className = "btn btn-sm";
+    delBtn.style.color = "var(--err)";
+    delBtn.setAttribute("data-eval-delete", s.id);
+    delBtn.textContent = "Sil";
+    tdActions.appendChild(testBtn);
+    tdActions.appendChild(document.createTextNode(" "));
+    tdActions.appendChild(editBtn);
+    tdActions.appendChild(document.createTextNode(" "));
+    tdActions.appendChild(delBtn);
+    tr.appendChild(tdActions);
+
+    tbody.appendChild(tr);
+
+    // Inline result row
+    var inlineRow = document.createElement("tr");
+    inlineRow.id = "evalInline-" + s.id;
+    inlineRow.style.display = "none";
+    var inlineCell = document.createElement("td");
+    inlineCell.colSpan = 6;
+    inlineRow.appendChild(inlineCell);
+    tbody.appendChild(inlineRow);
+  });
+
+  // Event delegation
+  tbody.onclick = function(e) {
+    var btn = e.target.closest("button");
+    if (!btn) return;
+    var testId = btn.getAttribute("data-eval-test");
+    var editId = btn.getAttribute("data-eval-edit");
+    var deleteId = btn.getAttribute("data-eval-delete");
+    if (testId) runSingleScenario(testId);
+    if (editId) {
+      var sc = state.evalScenarios.find(function(s) { return s.id === editId; });
+      if (sc) openEvalModal(sc);
+    }
+    if (deleteId) deleteEvalScenario(deleteId);
+  };
+}
+
+// ── Eval Modal (CRUD) ──────────────────────────────────────────────────
+
+function openEvalModal(scenario) {
+  var isEdit = !!scenario;
+  state.editingEvalId = isEdit ? scenario.id : null;
+  $("evalModalTitle").textContent = isEdit ? "Senaryo Düzenle" : "Senaryo Ekle";
+  $("evalModalId").value = isEdit ? scenario.id : "";
+  $("evalModalId").disabled = isEdit;
+  $("evalModalTitleInput").value = isEdit ? (scenario.title || "") : "";
+  $("evalModalTags").value = isEdit ? (scenario.tags || []).join(", ") : "";
+
+  var turnsContainer = $("evalModalTurns");
+  turnsContainer.textContent = "";
+
+  if (isEdit && scenario.turns) {
+    scenario.turns.forEach(function(t, idx) { addTurnToModal(t, idx); });
+  } else {
+    addTurnToModal(null, 0);
+  }
+
+  $("evalModal").style.display = "";
+}
+
+function addTurnToModal(turnData, idx) {
+  var container = $("evalModalTurns");
+  var turnIdx = idx !== undefined ? idx : container.children.length;
+  var card = document.createElement("div");
+  card.className = "eval-turn-card";
+  card.setAttribute("data-turn-idx", turnIdx);
+
+  // Header
+  var header = document.createElement("div");
+  header.className = "eval-turn-header";
+  var headerLabel = document.createElement("span");
+  headerLabel.textContent = "Turn " + (turnIdx + 1);
+  var removeBtn = document.createElement("button");
+  removeBtn.className = "btn btn-sm";
+  removeBtn.style.cssText = "color:var(--err);font-size:11px";
+  removeBtn.textContent = "Sil";
+  removeBtn.onclick = function() { card.remove(); };
+  header.appendChild(headerLabel);
+  header.appendChild(removeBtn);
+  card.appendChild(header);
+
+  // User input
+  var userLabel = document.createElement("label");
+  userLabel.style.marginBottom = "6px";
+  userLabel.textContent = "Kullanıcı Mesajı";
+  var userInput = document.createElement("input");
+  userInput.type = "text";
+  userInput.className = "eval-turn-user";
+  userInput.value = (turnData && turnData.user) || "";
+  userInput.placeholder = "Kullanıcı mesajı...";
+  userLabel.appendChild(userInput);
+  card.appendChild(userLabel);
+
+  // Assertions container
+  var assertDiv = document.createElement("div");
+  assertDiv.className = "eval-assertions";
+  var assertHeader = document.createElement("div");
+  assertHeader.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-top:6px";
+  var assertLabel = document.createElement("small");
+  assertLabel.style.fontWeight = "600";
+  assertLabel.textContent = "Assertion'lar";
+  var addAssertBtn = document.createElement("button");
+  addAssertBtn.className = "btn btn-sm";
+  addAssertBtn.style.fontSize = "11px";
+  addAssertBtn.textContent = "+ Assertion";
+  addAssertBtn.onclick = function() { addAssertionRow(assertDiv, null, null); };
+  assertHeader.appendChild(assertLabel);
+  assertHeader.appendChild(addAssertBtn);
+  assertDiv.appendChild(assertHeader);
+  card.appendChild(assertDiv);
+
+  container.appendChild(card);
+
+  // Mevcut assertion'lari ekle
+  if (turnData && turnData.expect) {
+    Object.keys(turnData.expect).forEach(function(key) {
+      addAssertionRow(assertDiv, key, turnData.expect[key]);
+    });
+  }
+}
+
+function addAssertionRow(container, type, value) {
+  var row = document.createElement("div");
+  row.className = "eval-assertion-row";
+
+  var select = document.createElement("select");
+  select.className = "eval-assertion-type";
+  ASSERTION_TYPES.forEach(function(a) {
+    var opt = document.createElement("option");
+    opt.value = a.value;
+    opt.textContent = a.label;
+    if (a.value === type) opt.selected = true;
+    select.appendChild(opt);
+  });
+
+  var input = document.createElement("input");
+  input.type = "text";
+  input.className = "eval-assertion-value";
+  input.placeholder = "Değer (array: virgül ile)";
+  if (value !== null && value !== undefined) {
+    if (Array.isArray(value)) input.value = value.join(", ");
+    else input.value = String(value);
+  }
+
+  var removeBtn = document.createElement("button");
+  removeBtn.className = "btn btn-sm";
+  removeBtn.style.cssText = "color:var(--err);font-size:11px";
+  removeBtn.textContent = "\u00d7";
+  removeBtn.onclick = function() { row.remove(); };
+
+  row.appendChild(select);
+  row.appendChild(input);
+  row.appendChild(removeBtn);
+  container.appendChild(row);
+}
+
+function collectEvalModalData() {
+  var id = $("evalModalId").value.trim();
+  var title = $("evalModalTitleInput").value.trim();
+  var tagsStr = $("evalModalTags").value.trim();
+  var tags = tagsStr ? tagsStr.split(",").map(function(t) { return t.trim(); }).filter(Boolean) : [];
+
+  var turnCards = $("evalModalTurns").querySelectorAll(".eval-turn-card");
+  var turns = [];
+
+  turnCards.forEach(function(card) {
+    var user = card.querySelector(".eval-turn-user").value.trim();
+    if (!user) return;
+
+    var expect = {};
+    var rows = card.querySelectorAll(".eval-assertion-row");
+    rows.forEach(function(row) {
+      var aType = row.querySelector(".eval-assertion-type").value;
+      var aVal = row.querySelector(".eval-assertion-value").value.trim();
+      var typeDef = ASSERTION_TYPES.find(function(a) { return a.value === aType; });
+
+      if (typeDef) {
+        if (typeDef.valueType === "array") {
+          expect[aType] = aVal.split(",").map(function(v) { return v.trim(); }).filter(Boolean);
+        } else if (typeDef.valueType === "boolean") {
+          expect[aType] = aVal === "true";
+        } else {
+          expect[aType] = aVal;
+        }
+      }
+    });
+
+    turns.push({ user: user, expect: expect });
+  });
+
+  return { id: id, title: title, tags: tags, turns: turns };
+}
+
+async function saveEvalScenario() {
+  var data = collectEvalModalData();
+  if (!data.id) { showToast("ID gerekli", "error"); return; }
+  if (data.turns.length === 0) { showToast("En az bir turn gerekli", "error"); return; }
+
+  try {
+    if (state.editingEvalId) {
+      await apiPut("admin/eval/scenarios/" + encodeURIComponent(state.editingEvalId), data);
+      showToast("Senaryo güncellendi", "success");
+    } else {
+      await apiPost("admin/eval/scenarios", data);
+      showToast("Senaryo eklendi", "success");
+    }
+    $("evalModal").style.display = "none";
+    loadEvalPanel();
+  } catch (err) {
+    showToast("Kaydetme hatası: " + err.message, "error");
+  }
+}
+
+async function deleteEvalScenario(id) {
+  var ok = await confirmAction("'" + id + "' senaryosunu silmek istediğinize emin misiniz?");
+  if (!ok) return;
+  try {
+    await apiDelete("admin/eval/scenarios/" + encodeURIComponent(id));
+    showToast("Senaryo silindi", "success");
+    loadEvalPanel();
+  } catch (err) {
+    showToast("Silme hatası: " + err.message, "error");
+  }
+}
+
+// ── Eval Test Runner ───────────────────────────────────────────────────
+
+async function runSingleScenario(id) {
+  var btn = document.querySelector('[data-eval-test="' + id + '"]');
+  if (btn) { btn.disabled = true; btn.textContent = "..."; }
+
+  try {
+    var result = await apiPost("admin/eval/run/" + encodeURIComponent(id), {});
+    state.evalLastResults[id] = result;
+    renderEvalTable();
+    showEvalInlineResult(id, result);
+    showToast(result.pass ? "GEÇTİ" : "KALDI", result.pass ? "success" : "error");
+  } catch (err) {
+    showToast("Test hatası: " + err.message, "error");
+    if (btn) { btn.disabled = false; btn.textContent = "Test"; }
+  }
+}
+
+function showEvalInlineResult(id, result) {
+  var row = document.getElementById("evalInline-" + id);
+  if (!row) return;
+  row.style.display = "";
+  var cell = row.querySelector("td");
+  cell.textContent = "";
+
+  var wrapper = document.createElement("div");
+  wrapper.className = "eval-inline-result";
+
+  (result.turnResults || []).forEach(function(tr) {
+    var detail = document.createElement("div");
+    detail.className = "eval-turn-detail";
+
+    // Turn header line
+    var headerLine = document.createElement("div");
+    var strong = document.createElement("strong");
+    strong.textContent = "Turn " + (tr.turnIndex + 1) + " ";
+    headerLine.appendChild(strong);
+    var icon = document.createElement("span");
+    icon.className = tr.pass ? "eval-result-pass" : "eval-result-fail";
+    icon.textContent = tr.pass ? "PASS" : "FAIL";
+    headerLine.appendChild(icon);
+    var userEm = document.createElement("em");
+    userEm.textContent = " — " + (tr.user || "").slice(0, 60);
+    headerLine.appendChild(userEm);
+    detail.appendChild(headerLine);
+
+    // Bot reply
+    if (tr.botReply) {
+      var botDiv = document.createElement("div");
+      botDiv.style.cssText = "color:var(--muted);font-size:11px;margin:2px 0";
+      botDiv.textContent = "Bot: " + tr.botReply.slice(0, 150);
+      detail.appendChild(botDiv);
+    }
+
+    // Checks
+    (tr.checks || []).forEach(function(c) {
+      var checkDiv = document.createElement("div");
+      checkDiv.style.cssText = "font-size:11px;padding-left:12px";
+      var badge = document.createElement("span");
+      badge.className = c.pass ? "eval-result-pass" : "eval-result-fail";
+      badge.textContent = c.pass ? "+" : "x";
+      checkDiv.appendChild(badge);
+      checkDiv.appendChild(document.createTextNode(" " + c.check + ": " + (c.message || "")));
+      detail.appendChild(checkDiv);
+    });
+
+    wrapper.appendChild(detail);
+  });
+
+  cell.appendChild(wrapper);
+}
+
+function runAllScenarios() {
+  var progressWrap = $("evalProgressWrap");
+  var progressFill = $("evalProgressFill");
+  var progressText = $("evalProgressText");
+  var runAllBtn = $("evalRunAllBtn");
+
+  progressWrap.style.display = "";
+  progressFill.style.width = "0%";
+  progressText.textContent = "Başlatılıyor...";
+  if (runAllBtn) runAllBtn.disabled = true;
+
+  var total = state.evalScenarios.length;
+  var completed = 0;
+
+  var evtSource = new EventSource("api/admin/eval/run-all?" + new URLSearchParams({ token: state.token }));
+
+  evtSource.onmessage = function(e) {
+    var data = JSON.parse(e.data);
+    if (data.type === "progress") {
+      completed++;
+      var pct = Math.round((completed / total) * 100);
+      progressFill.style.width = pct + "%";
+      progressText.textContent = completed + "/" + total + " — " + data.scenarioId + ": " + (data.pass ? "GEÇTİ" : "KALDI");
+      state.evalLastResults[data.scenarioId] = data;
+      renderEvalTable();
+    }
+    if (data.type === "done") {
+      evtSource.close();
+      progressText.textContent = "Tamamlandı: " + data.summary.passed + "/" + data.summary.total + " geçti (" + (data.summary.durationMs / 1000).toFixed(1) + "s)";
+      loadEvalHistory();
+      if (runAllBtn) runAllBtn.disabled = false;
+      showToast(data.summary.passed + "/" + data.summary.total + " senaryo geçti", data.summary.failed === 0 ? "success" : "warning");
+    }
+    if (data.type === "error") {
+      evtSource.close();
+      progressText.textContent = "Hata: " + data.message;
+      if (runAllBtn) runAllBtn.disabled = false;
+      showToast("Eval hatası: " + data.message, "error");
+    }
+  };
+
+  evtSource.onerror = function() {
+    evtSource.close();
+    progressText.textContent = "Bağlantı hatası";
+    if (runAllBtn) runAllBtn.disabled = false;
+    showToast("SSE bağlantı hatası", "error");
+  };
+}
+
+// ── Eval History ───────────────────────────────────────────────────────
+
+async function loadEvalHistory() {
+  try {
+    var history = await apiGet("admin/eval/history");
+    renderEvalHistory(history);
+  } catch (_) { /* silent */ }
+}
+
+function renderEvalHistory(history) {
+  var tbody = $("evalHistoryBody");
+  if (!tbody) return;
+  tbody.textContent = "";
+
+  if (!Array.isArray(history) || history.length === 0) {
+    var emptyRow = document.createElement("tr");
+    var emptyCell = document.createElement("td");
+    emptyCell.colSpan = 5;
+    emptyCell.className = "empty";
+    emptyCell.textContent = "Henüz geçmiş yok";
+    emptyRow.appendChild(emptyCell);
+    tbody.appendChild(emptyRow);
+    return;
+  }
+
+  history.forEach(function(h) {
+    var tr = document.createElement("tr");
+    var date = new Date(h.timestamp);
+    var dateStr = date.toLocaleDateString("tr-TR") + " " + date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+
+    var tdDate = document.createElement("td");
+    tdDate.textContent = dateStr;
+    tr.appendChild(tdDate);
+
+    var tdTotal = document.createElement("td");
+    tdTotal.textContent = h.total;
+    tr.appendChild(tdTotal);
+
+    var tdPassed = document.createElement("td");
+    tdPassed.className = "eval-result-pass";
+    tdPassed.textContent = h.passed;
+    tr.appendChild(tdPassed);
+
+    var tdFailed = document.createElement("td");
+    if (h.failed > 0) tdFailed.className = "eval-result-fail";
+    tdFailed.textContent = h.failed;
+    tr.appendChild(tdFailed);
+
+    var tdDur = document.createElement("td");
+    tdDur.textContent = h.durationMs ? (h.durationMs / 1000).toFixed(1) + "s" : "—";
+    tr.appendChild(tdDur);
+
+    tbody.appendChild(tr);
+  });
+}
+
+async function clearEvalHistory() {
+  var ok = await confirmAction("Eval geçmişini temizlemek istediğinize emin misiniz?");
+  if (!ok) return;
+  try {
+    await apiDelete("admin/eval/history");
+    showToast("Geçmiş temizlendi", "success");
+    loadEvalHistory();
+  } catch (err) {
+    showToast("Temizleme hatası: " + err.message, "error");
+  }
+}
+
+// ── Eval Event Listeners ───────────────────────────────────────────────
+(function initEvalListeners() {
+  var runAllBtn = $("evalRunAllBtn");
+  var addBtn = $("evalAddBtn");
+  var saveBtn = $("evalModalSaveBtn");
+  var cancelBtn = $("evalModalCancelBtn");
+  var addTurnBtn = $("evalModalAddTurn");
+  var clearHistBtn = $("evalClearHistoryBtn");
+
+  if (runAllBtn) runAllBtn.addEventListener("click", runAllScenarios);
+  if (addBtn) addBtn.addEventListener("click", function() { openEvalModal(null); });
+  if (saveBtn) saveBtn.addEventListener("click", saveEvalScenario);
+  if (cancelBtn) cancelBtn.addEventListener("click", function() { $("evalModal").style.display = "none"; });
+  if (addTurnBtn) addTurnBtn.addEventListener("click", function() { addTurnToModal(null); });
+  if (clearHistBtn) clearHistBtn.addEventListener("click", clearEvalHistory);
 })();
 
 // ── Initialization ─────────────────────────────────────────────────────────
