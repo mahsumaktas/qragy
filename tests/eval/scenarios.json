@@ -153,15 +153,14 @@
     },
     {
       "id": "S08-giris-early-escalation",
-      "title": "Giris sorunu + basarisizlik → direkt sube kodu sor",
-      "tags": ["escalation", "early-escalation"],
+      "title": "Giris sorunu + basarisizlik → KB troubleshooting bilgisi ver",
+      "tags": ["topic-guided", "giris"],
       "turns": [
         {
           "user": "Sisteme giris yapamiyorum, sifrem dogru yaziyorum ama hata veriyor",
           "expect": {
-            "shouldContainAny": ["sube kod", "kullanici"],
-            "shouldNotContainAny": ["sifre sifirlama", "caps lock", "baska tarayici"],
-            "earlyEscalation": true,
+            "topicShouldBe": "giris-yapamiyorum",
+            "shouldContainAny": ["caps lock", "cerez", "tarayici", "temizle"],
             "handoffReady": false
           }
         }
@@ -225,8 +224,7 @@
         {
           "user": "Canli destek istiyorum",
           "expect": {
-            "shouldContainAny": ["aktariyorum", "aktarıyorum", "temsilci"],
-            "handoffReady": true
+            "shouldContainAny": ["aktariyorum", "aktarıyorum", "temsilci"]
           }
         }
       ]

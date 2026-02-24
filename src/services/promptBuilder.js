@@ -74,6 +74,8 @@ function createPromptBuilder(deps) {
         }
         if (topicMeta?.canResolveDirectly) {
           parts.push("## Not: Bu konu doğrudan çözülebilir. Bilgi tabanı ve konu dosyasındaki adımları kullanarak HEMEN bilgilendir. Firma/şube/kullanıcı kodu SORMA. Bilgilendirme sonrası uğurlama prosedürüne geç.");
+        } else {
+          parts.push("## ONEMLI: Bilgi tabaninda bu konuyla ilgili yardim adimlari varsa ONCE bunlari paylas. Sube kodu, kullanici adi veya diger bilgileri ilk turda SORMA. Kullanici bu adimlarla sorununu cozemezse sonraki turda escalation icin bilgi topla.");
         }
       }
     }
