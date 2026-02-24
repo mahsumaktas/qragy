@@ -8,7 +8,14 @@ function createLogger(opts = {}) {
     const ctx = context ? ` [${context}]` : "";
     const base = `${ts} [${lvl.toUpperCase()}]${ctx} ${message}`;
     if (extra !== undefined) {
-      const detail = extra instanceof Error ? extra.message : String(extra);
+      let detail;
+      if (extra instanceof Error) {
+        detail = extra.message;
+      } else if (typeof extra === "object" && extra !== null) {
+        try { detail = JSON.stringify(extra); } catch { detail = String(extra); }
+      } else {
+        detail = String(extra);
+      }
       return `${base} ${detail}`;
     }
     return base;
