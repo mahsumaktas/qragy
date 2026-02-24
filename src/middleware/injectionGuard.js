@@ -48,4 +48,38 @@ function validateOutput(reply, systemPromptFragments = []) {
 
 const GENERIC_REPLY = "Size teknik destek konusunda yardimci olmak icin buradayim. Nasil yardimci olabilirim?";
 
-module.exports = { detectInjection, validateOutput, INJECTION_PATTERNS, SUSPICIOUS_KEYWORDS, GENERIC_REPLY };
+// ── LLM-based Relevance Guardrail ─────────────────────────────────────
+const RELEVANCE_SYSTEM_PROMPT = [
+  "Sen musteri destek sistemi icin ilgililik kontrol modulusun.",
+  "Kullanicinin mesaji teknik destek veya musteri hizmetleri ile ilgili mi belirle.",
+  "",
+  "ILGILI: Yazilim/sistem sorunu, hesap sorunu, sifre, yazici, rapor, baglanti, iletisim bilgisi, selamlama, vedalasmalar, temsilci istegi, onay/ret (evet/hayir), kisa sayisal kodlar (sube kodu olabilir), firma islemleri (sefer, bilet, fatura vb).",
+  "ILGISIZ: Siyaset, spor, genel kultur, matematik, yaratici yazim, AI/model hakkinda sorular, tamamen alakasiz konular.",
+  "",
+  'Sadece JSON cevap ver: {"relevant":true} veya {"relevant":false,"reason":"kisa aciklama"}',
+].join("\n");
+
+/**
+ * LLM-based relevance check — off-topic mesajlari ucuz model ile yakala.
+ * Fail-open: LLM hatasi veya parse hatasi durumunda mesaj gecerli sayilir.
+ * @param {string} userMessage
+ * @param {Function} callLLMFn - callLLM(messages, systemPrompt, maxTokens, options)
+ * @returns {Promise<{relevant: boolean, reason: string}>}
+ */
+async function checkRelevanceLLM(userMessage, callLLMFn) {
+  try {
+    const messages = [{ role: "user", parts: [{ text: userMessage }] }];
+    const result = await callLLMFn(messages, RELEVANCE_SYSTEM_PROMPT, 64, { thinkingBudget: 0 });
+    const raw = (result.reply || "").trim();
+    const jsonMatch = raw.match(/\{[\s\S]*?\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return { relevant: parsed.relevant !== false, reason: parsed.reason || "" };
+    }
+    return { relevant: true, reason: "parse_fallback" };
+  } catch {
+    return { relevant: true, reason: "error_fallback" };
+  }
+}
+
+module.exports = { detectInjection, validateOutput, checkRelevanceLLM, INJECTION_PATTERNS, SUSPICIOUS_KEYWORDS, GENERIC_REPLY };

@@ -20,6 +20,8 @@ function mount(app, deps) {
 
     // Injection guard
     detectInjection,
+    checkRelevanceLLM,
+    callLLM,
     GENERIC_REPLY,
 
     // Conversation tracking
@@ -155,6 +157,15 @@ function mount(app, deps) {
         hasClosedTicketHistory, chatStartTime
       });
       if (deterministicResult) return res.json(deterministicResult);
+
+      // Relevance guardrail — off-topic mesajlari LLM ile yakala (sadece konu tespit edilemediginde)
+      if (!conversationContext.currentTopic && typeof checkRelevanceLLM === "function" && callLLM) {
+        const relevanceCheck = await checkRelevanceLLM(latestUserMessage, callLLM);
+        if (!relevanceCheck.relevant) {
+          recordAnalyticsEvent({ source: "relevance-blocked", reason: relevanceCheck.reason, responseTimeMs: Date.now() - chatStartTime });
+          return res.json({ reply: GENERIC_REPLY, source: "relevance-blocked", sessionId, memory, handoffReady: false });
+        }
+      }
 
       // AI response generation — adaptive pipeline or legacy
       if (USE_ADAPTIVE_PIPELINE && ngChatPipeline) {

@@ -29,8 +29,9 @@ const TURKISH_DIACRITICS = { "ç":"c","ğ":"g","ı":"i","ö":"o","ş":"s","ü":"
 function normalizeForMatching(text) {
   if (!text || typeof text !== "string") return "";
   return text
-    .toLowerCase()
     .replace(/[çğıöşüÇĞİÖŞÜ]/g, (ch) => TURKISH_DIACRITICS[ch] || ch)
+    .toLowerCase()
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }

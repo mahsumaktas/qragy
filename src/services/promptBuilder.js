@@ -77,13 +77,48 @@ function createPromptBuilder(deps) {
       }
     }
 
+    if (conversationContext?.earlyEscalation) {
+      parts.push(`## ERKEN ESCALATION — TROUBLESHOOTING ATLANDI\nKullanıcı ilk mesajında zaten sorunun çözülemediğini belirtti. Adım adım troubleshooting VERME.\nDoğrudan şube kodunu sor: "Anlıyorum, size yardımcı olabilmem için şube kodunuzu iletebilir misiniz?"\nBilgilendirme adımlarını ATLAYIP direkt şube kodu topla.`);
+    }
+
     if (conversationContext?.escalationTriggered) {
       parts.push(`## ESCALATION TETİKLENDİ\nSebep: ${conversationContext.escalationReason}\nEscalation mesajı gönder: "Sizi canlı destek temsilcimize aktarıyorum. Kısa sürede yardımcı olacaktır."`);
     }
 
-    parts.push(`Memory schema: ${JSON.stringify(MEMORY_TEMPLATE)}`);
-    parts.push(`Current memory: ${JSON.stringify(memory)}`);
-    parts.push(`Conversation state: ${JSON.stringify(conversationContext || {})}`);
+    // Structured context — human-readable for LLM
+    const MEMORY_LABELS = {
+      branchCode: "Sube Kodu",
+      issueSummary: "Sorun Ozeti",
+      companyName: "Firma Adi",
+      fullName: "Ad Soyad",
+      phone: "Telefon",
+    };
+
+    const ctxLines = ["## Konusma Durumu"];
+    ctxLines.push(`- Asama: ${state}`);
+    ctxLines.push(`- Tur sayisi: ${turnCount}`);
+    if (conversationContext?.currentTopic) {
+      ctxLines.push(`- Aktif konu: ${conversationContext.currentTopic}`);
+    }
+    if (conversationContext?.earlyEscalation) {
+      ctxLines.push("- ERKEN ESCALATION: EVET — Troubleshooting YAPMA, direkt sube kodu sor");
+    }
+    if (conversationContext?.escalationTriggered) {
+      ctxLines.push("- ESCALATION TETIKLENDI — Aktarim mesaji gonder");
+    }
+    parts.push(ctxLines.join("\n"));
+
+    // Toplanan bilgiler — LLM'in hangi alanlarin eksik oldugunu gormesi icin
+    const allFields = [...(MEMORY_TEMPLATE.requiredFields || []), ...(MEMORY_TEMPLATE.optionalFields || [])];
+    const memLines = ["## Toplanan Bilgiler"];
+    const requiredSet = new Set(MEMORY_TEMPLATE.requiredFields || []);
+    for (const field of allFields) {
+      const label = MEMORY_LABELS[field] || field;
+      const value = memory?.[field];
+      const tag = requiredSet.has(field) ? " (zorunlu)" : "";
+      memLines.push(`- ${label}${tag}: ${value || "[bilinmiyor]"}`);
+    }
+    parts.push(memLines.join("\n"));
     parts.push("Onay metni (SADECE escalation/ticket toplama sonrası kullan): Talebinizi aldım. Şube kodu: <KOD>. Kısa açıklama: <ÖZET>. Destek ekibi en kısa sürede dönüş yapacaktır.");
     parts.push("Uygun olduğunda yanıtının sonuna hızlı yanıt seçenekleri ekle: [QUICK_REPLIES: secenek1 | secenek2 | secenek3]. Maks 3 seçenek. Yalnızca kullanıcıyı yönlendirmek mantıklıysa ekle.");
 

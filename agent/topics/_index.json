@@ -66,7 +66,7 @@
     {
       "id": "hesap-yetkilendirme",
       "title": "Hesap ve Yetki Sorunu",
-      "keywords": ["yetki sorunu", "erisim yok", "izin hatasi", "yetkim yok", "gorunmuyor", "erisemiyorum", "yetkilendirme", "izin verilmedi", "forbidden", "unauthorized", "rol degisikligi", "kullanici ekleme", "hesap acma", "hesap kapatma", "yetki tanimlama"],
+      "keywords": ["yetki sorunu", "erisim yok", "izin hatasi", "yetkim yok", "erisemiyorum", "yetkilendirme", "izin verilmedi", "forbidden", "unauthorized", "rol degisikligi", "kullanici ekleme", "hesap acma", "hesap kapatma", "yetki tanimlama"],
       "file": "hesap-yetkilendirme.md",
       "requiresEscalation": true,
       "requiredInfo": ["kullanici_adi"],

@@ -15,8 +15,6 @@ function createWebChatPipeline(deps) {
     getGoogleMaxOutputTokens,
     getSupportAvailability,
     getProviderConfig,
-    getTopicIndex,
-    getTopicIndexSummary,
     getSoulText,
     getPersonaText,
 
@@ -144,6 +142,18 @@ function createWebChatPipeline(deps) {
     const convData = loadConversations();
     const existingConv = convData.conversations.find(c => c.sessionId === sessionId);
     if (existingConv?.farewellOffered && activeUserMessages.length > 0) {
+      // Farewell sonrasi gelen mesaj da farewell ise → konusmayi kapat, uzatma
+      if (isFarewellMessage(latestUserMessage, activeUserMessages.length) || isNonIssueMessage(latestUserMessage)) {
+        logger.info("webChatPipeline:earlyCheck", "Farewell sonrasi tekrar farewell, konusma kapatiliyor", { sessionId });
+        recordAnalyticsEvent({ source: "closing-flow", responseTimeMs: Date.now() - chatStartTime });
+        return webResponse({
+          reply: chatFlowConfig.farewellMessage,
+          source: "closing-flow",
+          memory,
+          closingFlow: true,
+          csatTrigger: chatFlowConfig.csatEnabled,
+        });
+      }
       logger.info("webChatPipeline:earlyCheck", "Farewell sonrasi yeni mesaj, konusma yeniden acildi", { sessionId });
       existingConv.farewellOffered = false;
       saveConversations(convData);
@@ -162,9 +172,17 @@ function createWebChatPipeline(deps) {
         existingConv.farewellOffered = true;
         saveConversations(convData);
       }
-      if (hasTicket) {
+
+      // Onceki bot mesaji zaten farewell-like ise (rica, yardimci, baska konu) → konusmayi kapat
+      const lastBotMsgObj = getLastAssistantMessage(rawMessages);
+      const lastBotText = lastBotMsgObj?.content || "";
+      const botAlreadyFarewelled = lastBotText && /(?:rica|iyi gunler|yardimci olabileceg|baska.*konu|baska.*soru)/i.test(
+        normalizeForMatching(lastBotText)
+      );
+
+      if (hasTicket || botAlreadyFarewelled) {
         const ticketsDb = loadTicketsDb();
-        const recentTicket = findRecentDuplicateTicket(ticketsDb.tickets, memory);
+        const recentTicket = hasTicket ? findRecentDuplicateTicket(ticketsDb.tickets, memory) : null;
         recordAnalyticsEvent({ source: "closing-flow", responseTimeMs: Date.now() - chatStartTime });
         return webResponse({
           reply: chatFlowConfig.farewellMessage,
@@ -257,12 +275,19 @@ function createWebChatPipeline(deps) {
     contents, memory, conversationContext, sessionId,
     chatHistorySnapshot, hasClosedTicketHistory, chatStartTime
   }) {
-    if (!hasRequiredFields(memory) || conversationContext.currentTopic) {
-      logger.info("webChatPipeline:ticket", "Ticket olusturma atlanildi", {
-        sessionId,
-        hasRequired: hasRequiredFields(memory),
-        hasTopic: !!conversationContext.currentTopic,
-      });
+    if (!hasRequiredFields(memory)) {
+      return null;
+    }
+
+    // Topic-guided escalation: topic varken de required fields doluysa ticket olustur
+    // (kullanici sube kodu verdikten sonra direkt aktarim)
+    // turnCount > 1 kosulu: ilk mesajda sube kodu gecse bile troubleshooting once yapilsin
+    const isTopicEscalation = conversationContext.currentTopic
+      && hasRequiredFields(memory)
+      && conversationContext.turnCount > 1;
+
+    // Topic var ama henuz escalation degil (ilk turda sube kodu gecmis olabilir) → atla
+    if (conversationContext.currentTopic && !isTopicEscalation) {
       return null;
     }
 
@@ -270,7 +295,7 @@ function createWebChatPipeline(deps) {
     const aiSummary = await generateEscalationSummary(contents, memory, conversationContext);
     memory.issueSummary = aiSummary;
     const ticketResult = createOrReuseTicket(memory, supportAvailability, {
-      source: "chat-api",
+      source: isTopicEscalation ? "topic-escalation" : "chat-api",
       model: getGoogleModel(),
       chatHistory: chatHistorySnapshot
     });
@@ -283,14 +308,22 @@ function createWebChatPipeline(deps) {
       (t) => ACTIVE_TICKET_STATUSES.has(t.status) && t.id !== ticket.id
     ).length;
 
-    recordAnalyticsEvent({ source: "memory-template", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null });
+    recordAnalyticsEvent({ source: isTopicEscalation ? "topic-escalation" : "memory-template", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null });
     if (ticketResult.created) {
-      fireWebhook("ticket_created", { ticketId: ticket.id, memory, source: "memory-template" });
+      fireWebhook("ticket_created", { ticketId: ticket.id, memory, source: isTopicEscalation ? "topic-escalation" : "memory-template" });
+    }
+    if (isTopicEscalation && ticketResult.created) {
+      fireWebhook("escalation", { ticketId: ticket.id, memory, source: "topic-escalation" });
     }
 
+    // Topic-guided escalation icin ozel reply: "Sizi aktariyorum"
+    const reply = isTopicEscalation
+      ? "Teşekkür ederim, sizi canlı destek temsilcimize aktarıyorum. Lütfen bekleyiniz."
+      : buildConfirmationMessage(memory);
+
     return webResponse({
-      reply: buildConfirmationMessage(memory),
-      source: "memory-template",
+      reply,
+      source: isTopicEscalation ? "topic-escalation" : "memory-template",
       memory,
       conversationContext,
       ticketId: ticket.id,
@@ -437,40 +470,7 @@ function createWebChatPipeline(deps) {
       });
     }
 
-    // LLM topic classification (when keyword match didn't find a topic)
-    const TOPIC_INDEX = getTopicIndex();
-    const TOPIC_INDEX_SUMMARY = getTopicIndexSummary();
-    if (!conversationContext.currentTopic && conversationContext.conversationState === "topic_detection") {
-      const classifyPrompt = [
-        "Kullan\u0131c\u0131n\u0131n mesaj\u0131n\u0131 analiz et. A\u015fa\u011f\u0131daki konu listesinden EN UYGUN konunun id'sini yaz.",
-        "Sadece id yaz, ba\u015fka bir \u015fey yazma. Hi\u00e7bir konuyla e\u015fle\u015fmiyor ise sadece NONE yaz.",
-        "",
-        TOPIC_INDEX_SUMMARY
-      ].join("\n");
-
-      try {
-        const recentUserContents = contents.filter(c => c.role === "user").slice(-2);
-        const classifyResult = await callLLM(recentUserContents, classifyPrompt, 64);
-        const detectedId = (classifyResult.reply || "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
-        const matchedTopic = TOPIC_INDEX.topics.find((t) => t.id === detectedId);
-
-        logger.info("webChatPipeline:topicDetect", "LLM konu siniflandirma", {
-          sessionId,
-          detectedId: detectedId || "(bos)",
-          matched: !!matchedTopic,
-          matchedTitle: matchedTopic ? matchedTopic.title : "N/A",
-          rawReply: (classifyResult.reply || "").slice(0, 80),
-        });
-
-        if (matchedTopic) {
-          conversationContext.currentTopic = matchedTopic.id;
-          conversationContext.topicConfidence = 0.8;
-          conversationContext.conversationState = "topic_guided_support";
-        }
-      } catch (_classifyError) {
-        logger.warn("webChatPipeline:topicDetect", "Konu siniflandirma hatasi", { sessionId, error: _classifyError.message });
-      }
-    }
+    // LLM topic classification artik buildConversationContext icinde yapiliyor (classifyTopicWithLLM callback)
 
     // Sentiment analysis
     const sentiment = analyzeSentiment(latestUserMessage);

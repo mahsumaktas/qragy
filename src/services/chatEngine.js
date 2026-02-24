@@ -249,6 +249,12 @@ function extractBranchCodeFromText(text) {
     return standaloneCandidate;
   }
 
+  // Standalone pure numeric (2-6 hane) — sube kodu olarak kabul et
+  // (Kullanici direkt "1234" gibi bir sayi yazdiysa ve baska bir sey yazmadiysa)
+  if (standaloneCandidate && /^\d{2,6}$/.test(standaloneCandidate)) {
+    return standaloneCandidate;
+  }
+
   const hasIssueContext = ISSUE_HINT_REGEX.test(normalizeForMatching(text));
   if (hasIssueContext) {
     const tokens = text.match(/[A-Za-z0-9-]{2,20}/g) || [];
@@ -615,9 +621,9 @@ async function buildConversationContext(memory, userMessages, opts = {}) {
   } else if (isGreetingOnlyMessage(latestMessage)) {
     context.conversationState = "welcome_or_greet";
   } else {
-    // Keyword eslesmedi — LLM-based classification dene
+    // Keyword eslesmedi — LLM-based classification dene (tum mesajlari gonder, baglam icin)
     const llmTopicId = typeof classifyTopicWithLLM === "function"
-      ? await classifyTopicWithLLM(latestMessage)
+      ? await classifyTopicWithLLM(userMessages)
       : null;
     if (llmTopicId) {
       context.currentTopic = llmTopicId;
@@ -626,6 +632,13 @@ async function buildConversationContext(memory, userMessages, opts = {}) {
     } else {
       context.conversationState = "topic_detection";
     }
+  }
+
+  // Erken escalation: Ilk mesajda basarisizlik ifadesi varsa ve konu escalation gerektiriyorsa, troubleshooting'i atla
+  // canResolveDirectly=true konularda (yazici, baglanti vb.) erken escalation YAPMA — once troubleshooting dene
+  if (context.currentTopic && userMessages.length === 1 && _hasFailureIndicator(latestMessage)) {
+    context.earlyEscalation = true;
+    context.conversationState = "info_collection";
   }
 
   if (memory.branchCode) {
@@ -677,11 +690,45 @@ function _detectTopicFromMessages(userMessages, topicIndex) {
 }
 
 /**
+ * Kullanicinin mesajinda GUCLU basarisizlik ifadesi olup olmadigini tespit et.
+ * Guclu = kullanici denedigini ve basaramadigini acikca bildiriyor.
+ * Zayif belirtiler (hata veriyor, acilmiyor) buraya dahil DEGIL — bunlar sadece sorunu tanimlar.
+ */
+function _hasFailureIndicator(text) {
+  const normalized = normalizeForMatching(text);
+  const strongIndicators = [
+    "yapamiyorum", "yapamadim", "yapamiyor",
+    "olmuyor", "olmadi", "olmuyo",
+    "calismadi", "calismiyor",
+    "tekrar deneyiniz", "sonra tekrar",
+    "basarisiz", "basarili olamadi",
+    "cozemiyorum", "cozemedim",
+    "beceremedim", "beceremiyorum",
+  ];
+  return strongIndicators.some(ind => normalized.includes(ind));
+}
+
+/**
  * Inline escalation trigger detection (tool credential based).
  * Mirrors the original detectEscalationTriggers in server.js.
  */
 function _detectEscalationTriggersLocal(text, remoteToolName) {
   const normalized = normalizeForMatching(text);
+
+  // Direkt temsilci/canli destek istegi
+  const DIRECT_AGENT_PATTERNS = [
+    "canli destek", "canli destek istiyorum",
+    "temsilci istiyorum", "temsilci ile gorusmek", "temsilciye bagla",
+    "gercek kisi", "gercek birisi",
+    "insan ile", "insanla konusmak",
+    "yetkili ile", "yetkiliyle",
+    "operatore bagla",
+    "mudur ile gorusmek",
+  ];
+  if (DIRECT_AGENT_PATTERNS.some(p => normalized.includes(normalizeForMatching(p)))) {
+    return { shouldEscalate: true, reason: "direct_agent_request" };
+  }
+
   const toolName = remoteToolName || "remote_tool";
   const toolPattern = remoteToolName
     ? new RegExp(remoteToolName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")

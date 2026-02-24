@@ -375,6 +375,62 @@ const ngServices = {
 const { createAgentQueue } = require("./src/services/agentQueue");
 const agentQueue = createAgentQueue({ sqliteDb: { getDb: () => sqliteDb.db }, logger });
 
+// ── LLM Topic Classification ────────────────────────────────────────────
+/**
+ * AI agent: keyword eslesmediginde LLM ile konu siniflandirmasi yapar.
+ * buildConversationContext icinden callback olarak cagrilir.
+ * @param {string[]} userMessages - Tum kullanici mesajlari
+ * @returns {Promise<string|null>} topic id veya null
+ */
+async function classifyTopicWithLLM(userMessages) {
+  const topicIndexSummary = agentConfig.getTopicIndexSummary();
+  if (!topicIndexSummary) return null;
+
+  const cfg = getProviderConfig();
+  if (!cfg.apiKey && cfg.provider !== "ollama") return null;
+
+  const recentMessages = Array.isArray(userMessages) ? userMessages.slice(-3) : [String(userMessages)];
+  const userText = recentMessages.join("\n");
+
+  // Numarali konu listesi olustur — model sayi secsin (ID yazmak yerine)
+  const topicIndex = agentConfig.getTopicIndex();
+  const numberedList = topicIndex.topics.map((t, i) => `${i + 1}. ${t.title}`).join("\n");
+
+  const classifyPrompt = [
+    "Kullanicinin sorununa DOGRUDAN karsilik gelen konu numarasini sec.",
+    "ONEMLI: Sadece dogrudan eslesme say. Belirsiz veya dolayli baglanti yeterli degil — 0 yaz.",
+    "SADECE numara yaz. Hicbiri uygun degilse 0 yaz.",
+    "",
+    numberedList,
+  ].join("\n");
+
+  try {
+    const messages = [{ role: "user", parts: [{ text: userText }] }];
+    const result = await callLLM(messages, classifyPrompt, 256, { thinkingBudget: 0 });
+    const rawReply = (result.reply || "").trim();
+
+    // Numara cikart
+    const numMatch = rawReply.match(/(\d+)/);
+    const num = numMatch ? parseInt(numMatch[1], 10) : 0;
+
+    if (num < 1 || num > topicIndex.topics.length) return null;
+
+    const matched = topicIndex.topics[num - 1];
+
+    logger.info("classifyTopicWithLLM", "Sonuc", {
+      selectedNum: num,
+      topicId: matched.id,
+      topicTitle: matched.title,
+      userText: userText.slice(0, 100),
+    });
+
+    return matched.id;
+  } catch (err) {
+    logger.warn("classifyTopicWithLLM", "Hata", { error: err.message });
+    return null;
+  }
+}
+
 // ── Question Extractor Service ──────────────────────────────────────────
 const { createQuestionExtractor } = require("./src/services/questionExtractor");
 const questionExtractor = createQuestionExtractor({
@@ -542,7 +598,7 @@ const webChatPipeline = createWebChatPipeline({
   generateEscalationSummary,
   searchKnowledge, recordContentGap,
   buildSystemPrompt,
-  buildConversationContext: (memory, userMessages) => chatEngine.buildConversationContext(memory, userMessages, { topicIndex: agentConfig.getTopicIndex(), remoteToolName: REMOTE_TOOL_NAME, classifyTopicWithLLM: null }),
+  buildConversationContext: (memory, userMessages) => chatEngine.buildConversationContext(memory, userMessages, { topicIndex: agentConfig.getTopicIndex(), remoteToolName: REMOTE_TOOL_NAME, classifyTopicWithLLM }),
   buildDeterministicCollectionReply: (memory, activeUserMessages, hasClosedTicketHistory) => chatEngine.buildDeterministicCollectionReply(memory, activeUserMessages, hasClosedTicketHistory, { chatFlowConfig: getChatFlowConfig(), memoryTemplate: agentConfig.getMemoryTemplate(), companyName: COMPANY_NAME }),
   validateOutput, validateBotResponse, maskCredentials,
   recordAnalyticsEvent,
@@ -571,10 +627,10 @@ const chatLifecycle = require("./src/routes/chat").mount(app, {
   extractTicketMemory: chatEngine.extractTicketMemory,
   splitActiveTicketMessages: chatEngine.splitActiveTicketMessages,
   getUserMessages: chatEngine.getUserMessages,
-  detectInjection, GENERIC_REPLY,
+  detectInjection, checkRelevanceLLM: require("./src/middleware/injectionGuard").checkRelevanceLLM, callLLM, GENERIC_REPLY,
   upsertConversation, loadConversations, saveConversations,
   compressConversationHistory,
-  buildConversationContext: (memory, userMessages) => chatEngine.buildConversationContext(memory, userMessages, { topicIndex: agentConfig.getTopicIndex(), remoteToolName: REMOTE_TOOL_NAME, classifyTopicWithLLM: null }),
+  buildConversationContext: (memory, userMessages) => chatEngine.buildConversationContext(memory, userMessages, { topicIndex: agentConfig.getTopicIndex(), remoteToolName: REMOTE_TOOL_NAME, classifyTopicWithLLM }),
   getSupportAvailability,
   getGoogleModel: () => GOOGLE_MODEL,
   recordAnalyticsEvent,
@@ -605,7 +661,7 @@ const chatProcessor = createChatProcessor({
   isFarewellMessage: (text, turnCount) => chatEngine.isFarewellMessage(text, turnCount, { chatFlowConfig: getChatFlowConfig() }),
   hasRequiredFields: chatEngine.hasRequiredFields,
   analyzeSentiment,
-  buildConversationContext: (memory, userMessages) => chatEngine.buildConversationContext(memory, userMessages, { topicIndex: agentConfig.getTopicIndex(), remoteToolName: REMOTE_TOOL_NAME, classifyTopicWithLLM: null }),
+  buildConversationContext: (memory, userMessages) => chatEngine.buildConversationContext(memory, userMessages, { topicIndex: agentConfig.getTopicIndex(), remoteToolName: REMOTE_TOOL_NAME, classifyTopicWithLLM }),
   buildDeterministicCollectionReply: (memory, activeUserMessages, hasClosedTicketHistory) => chatEngine.buildDeterministicCollectionReply(memory, activeUserMessages, hasClosedTicketHistory, { chatFlowConfig: getChatFlowConfig(), memoryTemplate: agentConfig.getMemoryTemplate(), companyName: COMPANY_NAME }),
   getProviderConfig,
   buildMissingFieldsReply: (memory, latestUserMessage) => chatEngine.buildMissingFieldsReply(memory, latestUserMessage, { chatFlowConfig: getChatFlowConfig() }),
