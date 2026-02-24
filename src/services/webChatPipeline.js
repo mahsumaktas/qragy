@@ -455,7 +455,7 @@ function createWebChatPipeline(deps) {
   async function generateAIResponse({
     contents, latestUserMessage, memory, conversationContext,
     hasClosedTicketHistory, chatHistorySnapshot,
-    sessionId, chatStartTime
+    sessionId, chatStartTime, llmOptions
   }) {
     const supportAvailability = getSupportAvailability();
 
@@ -515,11 +515,11 @@ function createWebChatPipeline(deps) {
       historyMsgs: contents.length,
     });
 
-    let geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS);
+    let geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS, llmOptions);
 
     if (geminiResult.finishReason === "MAX_TOKENS") {
       logger.warn("webChatPipeline", "MAX_TOKENS, retry 2x", { sessionId });
-      geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2);
+      geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2, llmOptions);
     }
     if (geminiResult.fallbackUsed) {
       logger.warn("webChatPipeline", "Fallback model kullanildi", { sessionId });

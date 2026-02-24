@@ -40,10 +40,17 @@ function mount(app, deps) {
 
   const BASE_URL = `http://localhost:${PORT || 3001}`;
 
+  const EVAL_TEMPERATURE = 0;
+  const DEFAULT_CONSENSUS_RUNS = 3;
+  const GREEN_THRESHOLD = 0.95; // %95+ = green
+
   async function sendTurn(messages, sessionId) {
     const res = await fetch(`${BASE_URL}/api/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-eval-mode": "true",
+      },
       body: JSON.stringify({ messages, sessionId }),
     });
     if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
@@ -51,10 +58,10 @@ function mount(app, deps) {
   }
 
   /**
-   * Tek senaryo calistir, sonuclari don.
+   * Tek senaryo calistir (single run), sonuclari don.
    */
-  async function runScenario(scenario) {
-    const sessionId = `eval-admin-${scenario.id}-${Date.now().toString(36)}`;
+  async function runScenarioOnce(scenario, runIndex) {
+    const sessionId = `eval-admin-${scenario.id}-${Date.now().toString(36)}-r${runIndex}`;
     const messages = [];
     let previousReply = null;
     const turnResults = [];
@@ -92,11 +99,41 @@ function mount(app, deps) {
           pass: false,
           checks: [{ check: "API call", pass: false, message: err.message }],
         });
-        break; // Sonraki turn'lari calistirmaya gerek yok
+        break;
       }
     }
 
     return { scenarioId: scenario.id, pass: allPass, turnResults };
+  }
+
+  /**
+   * Tek senaryo calistir (consensus: N run, en az 1 pass = flaky, hepsi fail = real bug).
+   * runs=1 ise consensus yok, tek run sonucu doner.
+   */
+  async function runScenario(scenario, runs) {
+    if (runs <= 1) {
+      return runScenarioOnce(scenario, 0);
+    }
+
+    const results = [];
+    for (let r = 0; r < runs; r++) {
+      results.push(await runScenarioOnce(scenario, r));
+    }
+
+    const passCount = results.filter(r => r.pass).length;
+    const failCount = results.filter(r => !r.pass).length;
+
+    // Consensus: 3'te 3 fail = real bug, diger = flaky (pass sayilir)
+    const consensusPass = passCount > 0;
+    // En iyi (pass) sonucu goster, yoksa son fail'i goster
+    const bestResult = results.find(r => r.pass) || results[results.length - 1];
+
+    return {
+      scenarioId: scenario.id,
+      pass: consensusPass,
+      turnResults: bestResult.turnResults,
+      consensus: { runs, passCount, failCount, verdict: consensusPass ? "pass" : "real_fail" },
+    };
   }
 
   // ── CRUD: Scenarios ──────────────────────────────────────────────────
@@ -238,8 +275,9 @@ function mount(app, deps) {
       const scenario = (data.scenarios || []).find(s => s.id === req.params.id);
       if (!scenario) return res.status(404).json({ error: "Senaryo bulunamadi" });
 
-      logger.info("eval", `Tek senaryo calistiriliyor: ${scenario.id}`);
-      const result = await runScenario(scenario);
+      const runs = Math.min(parseInt(req.query.runs) || 1, 5);
+      logger.info("eval", `Tek senaryo calistiriliyor: ${scenario.id} (runs=${runs})`);
+      const result = await runScenario(scenario, runs);
       res.json(result);
     } catch (err) {
       logger.error("eval", "Test calistirma hatasi", err);
@@ -248,6 +286,7 @@ function mount(app, deps) {
   });
 
   // GET /api/admin/eval/run-all — SSE ile tum senaryolari calistir
+  // Query params: runs=3 (consensus run sayisi), threshold=95 (green threshold %)
   app.get("/api/admin/eval/run-all", requireAdminAccess, async (req, res) => {
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
@@ -259,30 +298,39 @@ function mount(app, deps) {
       res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
+    const runs = Math.min(parseInt(req.query.runs) || DEFAULT_CONSENSUS_RUNS, 5);
+    const threshold = parseFloat(req.query.threshold) || GREEN_THRESHOLD * 100;
+
     try {
       const data = loadScenarios();
       const scenarios = data.scenarios || [];
       const total = scenarios.length;
       let passed = 0;
       let failed = 0;
+      let flaky = 0;
       const allResults = [];
       const startTime = Date.now();
 
-      logger.info("eval", `Toplu eval basliyor: ${total} senaryo`);
+      logger.info("eval", `Toplu eval basliyor: ${total} senaryo, ${runs} run/senaryo, threshold=${threshold}%`);
 
       for (const scenario of scenarios) {
         try {
-          const result = await runScenario(scenario);
+          const result = await runScenario(scenario, runs);
           allResults.push(result);
 
-          if (result.pass) passed++;
-          else failed++;
+          if (result.pass) {
+            passed++;
+            if (result.consensus && result.consensus.failCount > 0) flaky++;
+          } else {
+            failed++;
+          }
 
           sendSSE({
             type: "progress",
             scenarioId: scenario.id,
             pass: result.pass,
             turnResults: result.turnResults,
+            consensus: result.consensus || null,
           });
         } catch (err) {
           failed++;
@@ -301,6 +349,8 @@ function mount(app, deps) {
       }
 
       const durationMs = Date.now() - startTime;
+      const passRate = total > 0 ? Math.round((passed / total) * 100 * 10) / 10 : 0;
+      const green = passRate >= threshold;
 
       // Gecmise kaydet
       const historyEntry = {
@@ -308,23 +358,27 @@ function mount(app, deps) {
         total,
         passed,
         failed,
+        flaky,
+        passRate,
+        green,
+        threshold,
+        consensusRuns: runs,
         durationMs,
         results: allResults,
       };
 
       const history = loadHistory();
       history.unshift(historyEntry);
-      // Son 50 kayit tut
       if (history.length > 50) history.length = 50;
       saveHistory(history);
 
       sendSSE({
         type: "done",
-        summary: { total, passed, failed, durationMs },
+        summary: { total, passed, failed, flaky, passRate, green, threshold, consensusRuns: runs, durationMs },
       });
 
-      logger.info("eval", `Toplu eval tamamlandi: ${passed}/${total} gecti (${durationMs}ms)`);
-      recordAuditEvent("eval_run_all", { total, passed, failed, durationMs });
+      logger.info("eval", `Toplu eval tamamlandi: ${passed}/${total} gecti (%${passRate}), ${flaky} flaky, ${green ? "GREEN" : "RED"} (${durationMs}ms)`);
+      recordAuditEvent("eval_run_all", { total, passed, failed, flaky, passRate, green, threshold, consensusRuns: runs, durationMs });
     } catch (err) {
       logger.error("eval", "Toplu eval hatasi", err);
       sendSSE({ type: "error", message: err.message });

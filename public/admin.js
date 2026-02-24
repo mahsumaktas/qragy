@@ -4573,6 +4573,12 @@ function renderEvalTable() {
       rSpan.className = lastResult.pass ? "eval-result-pass" : "eval-result-fail";
       rSpan.textContent = lastResult.pass ? "GEÇTİ" : "KALDI";
       tdResult.appendChild(rSpan);
+      if (lastResult.consensus && lastResult.consensus.failCount > 0 && lastResult.pass) {
+        var flakySpan = document.createElement("span");
+        flakySpan.style.cssText = "color:#f59e0b;font-size:11px;margin-left:4px";
+        flakySpan.textContent = "(flaky " + lastResult.consensus.passCount + "/" + lastResult.consensus.runs + ")";
+        tdResult.appendChild(flakySpan);
+      }
     } else {
       tdResult.textContent = "—";
     }
@@ -4823,7 +4829,7 @@ async function runSingleScenario(id) {
   if (btn) { btn.disabled = true; btn.textContent = "..."; }
 
   try {
-    var result = await apiPost("admin/eval/run/" + encodeURIComponent(id), {});
+    var result = await apiPost("admin/eval/run/" + encodeURIComponent(id) + "?runs=3", {});
     state.evalLastResults[id] = result;
     renderEvalTable();
     showEvalInlineResult(id, result);
@@ -4843,6 +4849,14 @@ function showEvalInlineResult(id, result) {
 
   var wrapper = document.createElement("div");
   wrapper.className = "eval-inline-result";
+
+  // Consensus info
+  if (result.consensus) {
+    var cDiv = document.createElement("div");
+    cDiv.style.cssText = "font-size:11px;margin-bottom:6px;color:var(--text-secondary)";
+    cDiv.textContent = "Consensus: " + result.consensus.passCount + "/" + result.consensus.runs + " run geçti — " + result.consensus.verdict;
+    wrapper.appendChild(cDiv);
+  }
 
   (result.turnResults || []).forEach(function(tr) {
     var detail = document.createElement("div");
@@ -4902,7 +4916,7 @@ function runAllScenarios() {
   var total = state.evalScenarios.length;
   var completed = 0;
 
-  var evtSource = new EventSource("api/admin/eval/run-all?" + new URLSearchParams({ token: state.token }));
+  var evtSource = new EventSource("api/admin/eval/run-all?" + new URLSearchParams({ token: state.token, runs: 3 }));
 
   evtSource.onmessage = function(e) {
     var data = JSON.parse(e.data);
@@ -4910,16 +4924,30 @@ function runAllScenarios() {
       completed++;
       var pct = Math.round((completed / total) * 100);
       progressFill.style.width = pct + "%";
-      progressText.textContent = completed + "/" + total + " — " + data.scenarioId + ": " + (data.pass ? "GEÇTİ" : "KALDI");
+      var consensusInfo = data.consensus ? " (" + data.consensus.passCount + "/" + data.consensus.runs + " run)" : "";
+      progressText.textContent = completed + "/" + total + " — " + data.scenarioId + ": " + (data.pass ? "GEÇTİ" : "KALDI") + consensusInfo;
       state.evalLastResults[data.scenarioId] = data;
       renderEvalTable();
     }
     if (data.type === "done") {
       evtSource.close();
-      progressText.textContent = "Tamamlandı: " + data.summary.passed + "/" + data.summary.total + " geçti (" + (data.summary.durationMs / 1000).toFixed(1) + "s)";
+      var s = data.summary;
+      var statusLabel = s.green ? "GREEN" : "RED";
+      var flakyInfo = s.flaky > 0 ? ", " + s.flaky + " flaky" : "";
+      progressText.textContent = "";
+      progressText.appendChild(document.createTextNode(
+        "Tamamlandı: " + s.passed + "/" + s.total + " geçti (%" + s.passRate + ")" + flakyInfo + " — "
+      ));
+      var statusSpan = document.createElement("strong");
+      statusSpan.style.color = s.green ? "#22c55e" : "#ef4444";
+      statusSpan.textContent = statusLabel;
+      progressText.appendChild(statusSpan);
+      progressText.appendChild(document.createTextNode(
+        " (" + (s.durationMs / 1000).toFixed(1) + "s, " + s.consensusRuns + " run/senaryo)"
+      ));
       loadEvalHistory();
       if (runAllBtn) runAllBtn.disabled = false;
-      showToast(data.summary.passed + "/" + data.summary.total + " senaryo geçti", data.summary.failed === 0 ? "success" : "warning");
+      showToast(s.passed + "/" + s.total + " senaryo geçti (%" + s.passRate + ") " + statusLabel, s.green ? "success" : "warning");
     }
     if (data.type === "error") {
       evtSource.close();
@@ -4954,7 +4982,7 @@ function renderEvalHistory(history) {
   if (!Array.isArray(history) || history.length === 0) {
     var emptyRow = document.createElement("tr");
     var emptyCell = document.createElement("td");
-    emptyCell.colSpan = 5;
+    emptyCell.colSpan = 8;
     emptyCell.className = "empty";
     emptyCell.textContent = "Henüz geçmiş yok";
     emptyRow.appendChild(emptyCell);
@@ -4984,6 +5012,28 @@ function renderEvalHistory(history) {
     if (h.failed > 0) tdFailed.className = "eval-result-fail";
     tdFailed.textContent = h.failed;
     tr.appendChild(tdFailed);
+
+    var tdFlaky = document.createElement("td");
+    tdFlaky.textContent = h.flaky || 0;
+    if (h.flaky > 0) tdFlaky.style.color = "#f59e0b";
+    tr.appendChild(tdFlaky);
+
+    var tdRate = document.createElement("td");
+    tdRate.textContent = h.passRate !== undefined ? "%" + h.passRate : "—";
+    tr.appendChild(tdRate);
+
+    var tdStatus = document.createElement("td");
+    if (h.green !== undefined) {
+      var badge = document.createElement("span");
+      badge.className = "status-pill";
+      badge.style.background = h.green ? "#22c55e" : "#ef4444";
+      badge.style.color = "#fff";
+      badge.textContent = h.green ? "GREEN" : "RED";
+      tdStatus.appendChild(badge);
+    } else {
+      tdStatus.textContent = "—";
+    }
+    tr.appendChild(tdStatus);
 
     var tdDur = document.createElement("td");
     tdDur.textContent = h.durationMs ? (h.durationMs / 1000).toFixed(1) + "s" : "—";

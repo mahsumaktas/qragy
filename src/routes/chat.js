@@ -221,10 +221,13 @@ function mount(app, deps) {
         });
       }
 
+      // Eval mode: temperature=0 for deterministic LLM output
+      const llmOptions = req.headers["x-eval-mode"] === "true" ? { temperature: 0 } : undefined;
+
       const aiResult = await webChatPipeline.generateAIResponse({
         contents, latestUserMessage, memory, conversationContext,
         hasClosedTicketHistory, chatHistorySnapshot,
-        sessionId, chatStartTime
+        sessionId, chatStartTime, llmOptions
       });
       return res.json(aiResult);
 
