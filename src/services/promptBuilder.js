@@ -78,10 +78,6 @@ function createPromptBuilder(deps) {
       }
     }
 
-    if (conversationContext?.earlyEscalation) {
-      parts.push(`## ERKEN ESCALATION — TROUBLESHOOTING ATLANDI\nKullanıcı ilk mesajında zaten sorunun çözülemediğini belirtti. Adım adım troubleshooting VERME.\nDoğrudan şube kodunu sor: "Anlıyorum, size yardımcı olabilmem için şube kodunuzu iletebilir misiniz?"\nBilgilendirme adımlarını ATLAYIP direkt şube kodu topla.`);
-    }
-
     if (conversationContext?.escalationTriggered) {
       parts.push(`## ESCALATION TETİKLENDİ\nSebep: ${conversationContext.escalationReason}\nEscalation mesajı gönder: "Sizi canlı destek temsilcimize aktarıyorum. Kısa sürede yardımcı olacaktır."`);
     }
@@ -100,9 +96,6 @@ function createPromptBuilder(deps) {
     ctxLines.push(`- Tur sayisi: ${turnCount}`);
     if (conversationContext?.currentTopic) {
       ctxLines.push(`- Aktif konu: ${conversationContext.currentTopic}`);
-    }
-    if (conversationContext?.earlyEscalation) {
-      ctxLines.push("- ERKEN ESCALATION: EVET — Troubleshooting YAPMA, direkt sube kodu sor");
     }
     if (conversationContext?.escalationTriggered) {
       ctxLines.push("- ESCALATION TETIKLENDI — Aktarim mesaji gonder");

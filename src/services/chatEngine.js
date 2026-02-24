@@ -634,12 +634,9 @@ async function buildConversationContext(memory, userMessages, opts = {}) {
     }
   }
 
-  // Erken escalation: Ilk mesajda basarisizlik ifadesi varsa ve konu escalation gerektiriyorsa, troubleshooting'i atla
-  // canResolveDirectly=true konularda (yazici, baglanti vb.) erken escalation YAPMA — once troubleshooting dene
-  if (context.currentTopic && userMessages.length === 1 && _hasFailureIndicator(latestMessage)) {
-    context.earlyEscalation = true;
-    context.conversationState = "info_collection";
-  }
+  // Not: Erken escalation kaldirildi. Ilk turda her zaman KB bilgisi paylasarak yardimci ol.
+  // Failure indicator (olmuyor, yapamiyorum vb.) varsa bile once troubleshooting/KB bilgisi ver,
+  // sonraki turlarda escalation gerektiriyorsa yonlendir.
 
   if (memory.branchCode) {
     context.collectedInfo.branchCode = memory.branchCode;
@@ -716,8 +713,10 @@ function _detectEscalationTriggersLocal(text, remoteToolName) {
   const normalized = normalizeForMatching(text);
 
   // Direkt temsilci/canli destek istegi
+  // Not: "canli destek" tek basina cok genis — saat/bilgi sorularini da yakaliyor.
+  // "canli destek" icin bilgi sorusu mu yoksa talep mi ayirimi yap.
   const DIRECT_AGENT_PATTERNS = [
-    "canli destek", "canli destek istiyorum",
+    "canli destek istiyorum", "canli destege bagla",
     "temsilci istiyorum", "temsilci ile gorusmek", "temsilciye bagla",
     "gercek kisi", "gercek birisi",
     "insan ile", "insanla konusmak",
@@ -726,6 +725,11 @@ function _detectEscalationTriggersLocal(text, remoteToolName) {
     "mudur ile gorusmek",
   ];
   if (DIRECT_AGENT_PATTERNS.some(p => normalized.includes(normalizeForMatching(p)))) {
+    return { shouldEscalate: true, reason: "direct_agent_request" };
+  }
+  // "canli destek" genel pattern: sadece bilgi sorusu degilse escalation yap
+  const INFO_QUESTION_WORDS = ["saat", "ne zaman", "kacta", "saatleri", "acilis", "kapanis", "mesai", "calisma"];
+  if (normalized.includes("canli destek") && !INFO_QUESTION_WORDS.some(w => normalized.includes(w))) {
     return { shouldEscalate: true, reason: "direct_agent_request" };
   }
 
