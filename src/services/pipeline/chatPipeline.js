@@ -30,6 +30,8 @@ function createChatPipeline(deps) {
     logger = { info() {}, warn() {}, error() {} },
   } = deps;
 
+  const chatAuditLog = deps.chatAuditLog || null;
+
   /**
    * STANDARD path: search + rerank.
    * @returns {{ ragResults: Array, citations: Array }}
@@ -324,7 +326,38 @@ function createChatPipeline(deps) {
       logger.warn("chatPipeline", "memoryEngine async hatasi", err);
     });
 
-    // 10. Return result
+    // 10. Audit log — tam konusma kaydı
+    if (chatAuditLog) {
+      chatAuditLog.log({
+        sessionId,
+        userMessage,
+        reply,
+        source: "adaptive-pipeline",
+        route,
+        memory,
+        conversationContext,
+        ragResults,
+        promptLen: systemPrompt.length,
+        finishReason,
+        analysis: {
+          intent: analysis.intent,
+          complexity: analysis.complexity,
+          requiresMemory: analysis.requiresMemory,
+          subQueries: analysis.subQueries?.length || 0,
+        },
+        searchQuery: standaloneQuery !== userMessage ? standaloneQuery : null,
+        topicDetected: conversationContext?.currentTopic || null,
+        extra: {
+          coreMemoryLen: memoryContext.coreMemory ? memoryContext.coreMemory.length : 0,
+          recallMemoryLen: memoryContext.recallMemory ? memoryContext.recallMemory.length : 0,
+          reflexionWarnings: !!reflexionWarnings,
+          graphContext: !!graphContext,
+          historyMsgs: llmHistory.length,
+        },
+      });
+    }
+
+    // 11. Return result
     return {
       reply,
       route,

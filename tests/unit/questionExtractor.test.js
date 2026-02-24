@@ -5,7 +5,7 @@ const fs = require("fs");
 
 function makeExtractor(callLLMFn) {
   return createQuestionExtractor({
-    callLLM: callLLMFn || vi.fn().mockResolvedValue("extracted question"),
+    callLLM: callLLMFn || vi.fn().mockResolvedValue({ reply: "extracted question", finishReason: "STOP" }),
     getProviderConfig: () => ({
       model: "test-model",
       apiKey: "test-key",
@@ -30,7 +30,7 @@ describe("questionExtractor", () => {
   });
 
   it("calls LLM with correct prompt format", async () => {
-    const mockCallLLM = vi.fn().mockResolvedValue("Ankara subesi icin basvuru nasil yapilir?");
+    const mockCallLLM = vi.fn().mockResolvedValue({ reply: "Ankara subesi icin basvuru nasil yapilir?", finishReason: "STOP" });
     const extractor = makeExtractor(mockCallLLM);
 
     const history = [
@@ -41,7 +41,9 @@ describe("questionExtractor", () => {
     await extractor.extractQuestion(history, "Oraya nasil basvuru yaparim?");
 
     expect(mockCallLLM).toHaveBeenCalledTimes(1);
-    const promptArg = mockCallLLM.mock.calls[0][0];
+    const messagesArg = mockCallLLM.mock.calls[0][0];
+    expect(Array.isArray(messagesArg)).toBe(true);
+    const promptArg = messagesArg[0].parts[0].text;
     expect(promptArg).toContain("Sohbet Gecmisi:");
     expect(promptArg).toContain("Kullanici: Ankara subesi hakkinda bilgi verir misiniz?");
     expect(promptArg).toContain("Bot: Ankara subemiz Kizilay'da bulunmaktadir.");
@@ -50,7 +52,7 @@ describe("questionExtractor", () => {
   });
 
   it("returns extracted question on success", async () => {
-    const mockCallLLM = vi.fn().mockResolvedValue("Ankara subesi icin basvuru nasil yapilir?");
+    const mockCallLLM = vi.fn().mockResolvedValue({ reply: "Ankara subesi icin basvuru nasil yapilir?", finishReason: "STOP" });
     const extractor = makeExtractor(mockCallLLM);
 
     const history = [
@@ -79,7 +81,7 @@ describe("questionExtractor", () => {
     const original = "Kisa soru";
     // Return something 4x longer than original (over 3x threshold)
     const longResult = "Bu cok uzun bir cikarilmis soru metnidir ve orijinal mesajin uc katindan fazladir asla kullanilmamalidir";
-    const mockCallLLM = vi.fn().mockResolvedValue(longResult);
+    const mockCallLLM = vi.fn().mockResolvedValue({ reply: longResult, finishReason: "STOP" });
     const extractor = makeExtractor(mockCallLLM);
 
     const history = [
@@ -92,7 +94,7 @@ describe("questionExtractor", () => {
   });
 
   it("limits history to last 6 messages", async () => {
-    const mockCallLLM = vi.fn().mockResolvedValue("cikarilmis soru");
+    const mockCallLLM = vi.fn().mockResolvedValue({ reply: "cikarilmis soru", finishReason: "STOP" });
     const extractor = makeExtractor(mockCallLLM);
 
     const history = [];
@@ -102,7 +104,8 @@ describe("questionExtractor", () => {
 
     await extractor.extractQuestion(history, "Son soru");
 
-    const promptArg = mockCallLLM.mock.calls[0][0];
+    const messagesArg = mockCallLLM.mock.calls[0][0];
+    const promptArg = messagesArg[0].parts[0].text;
     // Should NOT contain first 4 messages (indices 0-3)
     expect(promptArg).not.toContain("Mesaj 0");
     expect(promptArg).not.toContain("Mesaj 1");
@@ -120,7 +123,7 @@ describe("questionExtractor", () => {
   });
 
   it("trims extracted result", async () => {
-    const mockCallLLM = vi.fn().mockResolvedValue("  cikarilmis soru  \n");
+    const mockCallLLM = vi.fn().mockResolvedValue({ reply: "  cikarilmis soru  \n", finishReason: "STOP" });
     const extractor = makeExtractor(mockCallLLM);
 
     const history = [

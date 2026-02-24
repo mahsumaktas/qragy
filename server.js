@@ -355,6 +355,7 @@ const ngChatPipeline = createChatPipeline({
   callLLM,
   getProviderConfig,
   logger,
+  chatAuditLog,
 });
 const ngUrlExtractor = createUrlExtractor({ logger });
 
@@ -501,6 +502,10 @@ const conversationLifecycle = require("./src/routes/conversation").mount(app, {
   ngReflexion, ngGraphBuilder,
 });
 
+// ── Chat Audit Logger ────────────────────────────────────────────────────
+const { createChatAuditLogger } = require("./src/utils/chatAuditLog");
+const chatAuditLog = createChatAuditLogger({ logDir: path.join(DATA_DIR, "chat-logs") });
+
 // ── Web Chat Pipeline (src/services/webChatPipeline.js) ──────────────────
 const { createWebChatPipeline } = require("./src/services/webChatPipeline");
 const webChatPipeline = createWebChatPipeline({
@@ -555,6 +560,7 @@ const webChatPipeline = createWebChatPipeline({
   getUserMemory: userMemory,
   conversationSummarizer,
   logger,
+  chatAuditLog,
 });
 
 // ── Chat Routes (src/routes/chat.js) ────────────────────────────────────

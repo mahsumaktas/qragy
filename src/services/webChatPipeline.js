@@ -94,8 +94,9 @@ function createWebChatPipeline(deps) {
     logger = { info() {}, warn() {} },
   } = deps;
 
-  // Optional dependency — question extraction for better RAG search
+  // Optional dependencies
   const questionExtractor = deps.questionExtractor || null;
+  const chatAuditLog = deps.chatAuditLog || null;
 
   // ── Shared response builder ────────────────────────────────────────────
 
@@ -612,6 +613,31 @@ function createWebChatPipeline(deps) {
     }
     if (ticketCreated) {
       fireWebhook("ticket_created", { ticketId, memory, source: chatSource });
+    }
+
+    // Audit log — tam konusma kaydı
+    if (chatAuditLog) {
+      chatAuditLog.log({
+        sessionId,
+        userMessage: latestUserMessage,
+        reply,
+        source: chatSource,
+        memory,
+        conversationContext,
+        ragResults: knowledgeResults,
+        promptLen: systemPrompt.length,
+        finishReason: geminiResult.finishReason,
+        searchQuery: searchQuery !== latestUserMessage ? searchQuery : null,
+        topicDetected: conversationContext.currentTopic || null,
+        extra: {
+          sentiment,
+          fallbackUsed: !!geminiResult.fallbackUsed,
+          qualityValid: qualityCheck.valid,
+          qualityReason: qualityCheck.reason || null,
+          isEscalation: isEscalationReply,
+          historyMsgs: contents.length,
+        },
+      });
     }
 
     return webResponse({

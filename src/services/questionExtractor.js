@@ -35,16 +35,10 @@ function createQuestionExtractor(deps) {
 
     try {
       const providerConfig = getProviderConfig();
-      const result = await callLLM(prompt, {
-        model: providerConfig.model,
-        apiKey: providerConfig.apiKey,
-        provider: providerConfig.provider,
-        baseUrl: providerConfig.baseUrl,
-        maxOutputTokens: 256,
-        requestTimeoutMs: 5000,
-      });
+      const messages = [{ role: "user", parts: [{ text: prompt }] }];
+      const result = await callLLM(messages, "", 256, providerConfig);
 
-      const extracted = (result || "").trim();
+      const extracted = (result.reply || "").trim();
       if (!extracted || extracted.length > latestMessage.length * 3) {
         logger.info("questionExtractor", "Sanity check basarisiz, orijinal kullaniliyor", {
           originalLen: latestMessage.length,
