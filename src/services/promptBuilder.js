@@ -36,9 +36,10 @@ function createPromptBuilder(deps) {
     if (SOUL_TEXT) parts.push(SOUL_TEXT);
     if (PERSONA_TEXT) parts.push(PERSONA_TEXT);
 
-    // Early turns (0-1): only soul + persona + bootstrap for lighter prompt
+    // Early turns (0-1): soul + persona + bootstrap + response-policy (KB priority needs it)
     if (turnCount <= 1) {
       if (BOOTSTRAP_TEXT) parts.push(BOOTSTRAP_TEXT);
+      if (RESPONSE_POLICY_TEXT) parts.push(RESPONSE_POLICY_TEXT);
     } else {
       // Full agent config for ongoing conversations
       if (DOMAIN_TEXT) parts.push(DOMAIN_TEXT);
@@ -169,9 +170,10 @@ function createPromptBuilder(deps) {
 
     // RAG: Bilgi tabani sonuclarini ekle (token budget ile sinirla)
     if (Array.isArray(knowledgeResults) && knowledgeResults.length > 0) {
-      const kbLines = ["## Bilgi Tabanı Sonuçları",
+      const kbLines = ["## Bilgi Tabanı Sonuçları — MUTLAKA KULLAN",
         "Aşağıdaki soru-cevap çiftleri kullanıcının sorusuyla ilişkili olabilir.",
-        "Bu bilgileri kullanarak HEMEN yanıt ver. Firma/şube bilgisi sormadan ÖNCE bu cevapları paylaş.",
+        "KRITIK: Bu bilgileri kullanarak HEMEN yanıt ver. Şube kodu veya canlı destek yönlendirmesi YAPMA.",
+        "Önce bu bilgileri paylaş, kullanıcı 'olmadı/çözmedi' derse ANCAK O ZAMAN escalation başlat.",
         "Kullanıcının sorusuna uygun değilse görmezden gel.", ""];
       for (const item of knowledgeResults) {
         kbLines.push(`Soru: ${item.question}`);
