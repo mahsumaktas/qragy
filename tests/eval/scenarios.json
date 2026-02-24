@@ -472,6 +472,206 @@
           }
         }
       ]
+    },
+    {
+      "id": "S26-kb-rapor-dogru-adimlar",
+      "title": "Rapor olusturma sorusu → KB'den dogru adimlari ver",
+      "tags": ["rag", "answer-quality", "canResolveDirectly"],
+      "turns": [
+        {
+          "user": "Rapor olusturmak istiyorum nasil yapacagim",
+          "expect": {
+            "shouldContainAny": ["raporlar", "menu", "rapor olustur", "tarih"],
+            "shouldNotContain": ["sube kodu", "aktariyorum", "bilmiyorum"],
+            "handoffReady": false
+          }
+        },
+        {
+          "user": "Raporu olustururken tarih araligini secemiyorum",
+          "expect": {
+            "shouldNotRepeatPrevious": true,
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S27-yazim-hatali-mesaj",
+      "title": "Yazim hatali ve eksik mesaji anlama",
+      "tags": ["edge-case", "real-user-language"],
+      "turns": [
+        {
+          "user": "yazcidan cikti alamyorum yrdm edin",
+          "expect": {
+            "topicShouldBe": "yazici-sorunu",
+            "shouldContainAny": ["yazici", "bagli", "acik", "kontrol"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S28-uzun-konusma-tutarliligi",
+      "title": "5 turn konusma → tutarli kalma, kaybolmama",
+      "tags": ["multi-turn", "coherence", "answer-quality"],
+      "turns": [
+        {
+          "user": "Yazicim calismadi",
+          "expect": {
+            "topicShouldBe": "yazici-sorunu",
+            "handoffReady": false
+          }
+        },
+        {
+          "user": "Evet bagli ve acik",
+          "expect": {
+            "shouldNotRepeatPrevious": true,
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        },
+        {
+          "user": "Kuyrugu temizledim ama yine olmuyor",
+          "expect": {
+            "shouldNotRepeatPrevious": true,
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        },
+        {
+          "user": "Yaziciyi kapatip actim olmadi",
+          "expect": {
+            "shouldNotRepeatPrevious": true,
+            "handoffReady": false
+          }
+        },
+        {
+          "user": "Surucu yukledim ama hala ayni, hicbir sey ise yaramadi",
+          "expect": {
+            "shouldContainAny": ["sube kod", "destek", "temsilci", "aktariyorum", "aktarıyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S29-hafiza-testi",
+      "title": "Bot onceki turn'da soylenen bilgiyi hatirliyor mu",
+      "tags": ["memory", "multi-turn"],
+      "turns": [
+        {
+          "user": "Rapor bos geliyor, filtrelerim dogru",
+          "expect": {
+            "shouldContainAny": ["tarih", "filtre", "aralik"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        },
+        {
+          "user": "Tarih araligini kontrol ettim, veri var ama rapor bos",
+          "expect": {
+            "shouldNotRepeatPrevious": true,
+            "shouldNotContain": ["filtre ayarlarinizi kontrol edin"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S30-halusinasyon-testi",
+      "title": "Bilmedigini uydurmama → escalation veya durst yanit",
+      "tags": ["hallucination", "edge-case"],
+      "turns": [
+        {
+          "user": "Sistemde muhasebe modulu var mi, fatura kesebiliyor muyuz",
+          "expect": {
+            "shouldNotContain": ["evet fatura", "muhasebe modulunu", "fatura kesebilirsiniz"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S31-coklu-sorun-tek-mesaj",
+      "title": "Tek mesajda 2 sorun → tek tek ele alma, birden fazla bilgi istememeli",
+      "tags": ["edge-case", "hard-ban", "multi-issue"],
+      "turns": [
+        {
+          "user": "Hem yazicim calismiyor hem de rapor alamiyorum",
+          "expect": {
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S32-500-hatasi-kb-dogruluk",
+      "title": "500 hatasi → KB'den dogru bilgi: bekle ve tekrar dene",
+      "tags": ["rag", "answer-quality"],
+      "turns": [
+        {
+          "user": "500 hatasi aliyorum ne yapayim",
+          "expect": {
+            "shouldContainAny": ["gecici", "bekle", "5 dakika", "sunucu", "tekrar dene"],
+            "shouldNotContain": ["sube kodu", "aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S33-sifre-mail-gelmiyor",
+      "title": "Sifre sifirlama maili gelmiyor → spam kontrolu + escalation yolu",
+      "tags": ["multi-turn", "answer-quality", "escalation"],
+      "turns": [
+        {
+          "user": "Sifremi unuttum, sifirlama maili gonderiyorum ama gelmiyor",
+          "expect": {
+            "shouldContainAny": ["spam", "gereksiz", "klasor", "e-posta"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        },
+        {
+          "user": "Spam klasorunde de yok, e-posta adresim dogru",
+          "expect": {
+            "shouldContainAny": ["destek", "sube kod", "temsilci", "yardimci"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S34-emoji-ve-kisa-mesaj",
+      "title": "Cok kisa veya emoji iceren mesaj → uygun yanit",
+      "tags": ["edge-case", "real-user-language"],
+      "turns": [
+        {
+          "user": "yardim",
+          "expect": {
+            "shouldContainAny": ["yardimci", "nasil", "sorun"],
+            "shouldNotContain": ["aktariyorum", "sube kodu"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S35-hesap-kilitlendi",
+      "title": "Hesap kilitlendi → KB'den bilgi + escalation gerektigi bilgisi",
+      "tags": ["rag", "answer-quality", "escalation"],
+      "turns": [
+        {
+          "user": "Hesabim kilitlendi giris yapamiyorum",
+          "expect": {
+            "shouldContainAny": ["kilitlen", "basarisiz", "destek", "guvenlik"],
+            "shouldNotContain": ["caps lock"],
+            "handoffReady": false
+          }
+        }
+      ]
     }
   ]
 }
