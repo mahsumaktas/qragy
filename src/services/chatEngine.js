@@ -235,6 +235,11 @@ function extractBranchCodeFromText(text) {
     if (isLikelyBranchCode(candidate)) {
       return candidate;
     }
+
+    // Explicit "sube kodu" baglami varsa pure numeric de kabul et (2-10 hane)
+    if (candidate && /^\d{2,10}$/.test(candidate)) {
+      return candidate;
+    }
   }
 
   const standaloneMatch = text.match(/^\s*([A-Za-z0-9-]{2,20})\s*$/);
@@ -644,9 +649,8 @@ function _detectTopicFromMessages(userMessages, topicIndex) {
     return { topicId: null, confidence: 0, method: "none" };
   }
 
-  // Sadece son 2 mesaja bak
-  const recentMessages = userMessages.slice(-2);
-  const allText = recentMessages.join(" ");
+  // Tum mesajlara bak (topic ilk mesajlarda belirtilir, sonraki turlarda kaybolmamali)
+  const allText = userMessages.join(" ");
   const normalized = normalizeForMatching(allText);
 
   let bestMatch = null;
