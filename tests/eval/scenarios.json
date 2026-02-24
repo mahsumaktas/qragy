@@ -35,16 +35,14 @@
     },
     {
       "id": "S02-early-escalation",
-      "title": "Basarisizlik ifadesi → direkt sube kodu sor → aktarim",
-      "tags": ["escalation", "early-escalation", "rapor"],
+      "title": "Basarisizlik ifadesi → sube kodu sor → aktarim",
+      "tags": ["escalation", "rapor"],
       "turns": [
         {
           "user": "Hesap fisi alamiyorum, lutfen sonra tekrar deneyiniz diyor. Yapamiyorum.",
           "expect": {
             "shouldContainAny": ["sube kod"],
             "shouldNotContainAny": ["islemler butonu", "dokumanlar butonu"],
-            "stateShouldBe": "info_collection",
-            "earlyEscalation": true,
             "handoffReady": false
           }
         },
@@ -119,14 +117,13 @@
     },
     {
       "id": "S06-bilinmeyen-konu",
-      "title": "Bilinmeyen konu → aciklama iste veya RAG cevap",
-      "tags": ["unknown-topic", "rag"],
+      "title": "Bilinmeyen konu → temsilciye yonlendir veya aciklama iste",
+      "tags": ["unknown-topic"],
       "turns": [
         {
           "user": "Sefer nasil olusturacagim",
           "expect": {
-            "handoffReady": false,
-            "shouldNotContain": ["sube kodu"]
+            "handoffReady": false
           }
         }
       ]
