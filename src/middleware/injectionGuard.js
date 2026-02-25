@@ -6,7 +6,7 @@ const INJECTION_PATTERNS = [
   /SYSTEM\s*(OVERRIDE|COMMAND|MODE|PROMPT)\s*[:=]/i,
   /```\s*(system|admin|root)\b/i,
   /###\s*SYSTEM\b/i,
-  /\b(jailbreak|DAN|do anything now)\b/i,
+  /(?<=\P{L}|^)(jailbreak|DAN|do anything now)(?=\P{L}|$)/iu,
   /(?:^|\s)new\s+instructions?\s*:/i,
   /(?:^|\s)forget\s+(everything|all|your\s+rules)/i,
 ];
