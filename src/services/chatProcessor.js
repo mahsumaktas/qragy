@@ -87,16 +87,11 @@ function createChatProcessor(deps) {
 
     const conversationContext = await buildConversationContext(memory, activeUserMessages);
 
-    // Deterministic reply
-    if (conversationContext.conversationState === "welcome_or_greet" ||
-        (conversationContext.conversationState !== "topic_detection" &&
-         conversationContext.conversationState !== "topic_guided_support" &&
-         !conversationContext.currentTopic)) {
-      const deterministicReply = buildDeterministicCollectionReply(memory, activeUserMessages, hasClosedTicketHistory);
-      if (deterministicReply) {
-        recordAnalyticsEvent({ source: "rule-engine", responseTimeMs: Date.now() - chatStartTime });
-        return { reply: deterministicReply, source: "rule-engine", memory };
-      }
+    // Deterministic reply (sadece selamlama ve alan sorgulama için)
+    const deterministicReply = buildDeterministicCollectionReply(memory, activeUserMessages, hasClosedTicketHistory);
+    if (deterministicReply) {
+      recordAnalyticsEvent({ source: "rule-engine", responseTimeMs: Date.now() - chatStartTime });
+      return { reply: deterministicReply, source: "rule-engine", memory };
     }
 
     if (!getProviderConfig().apiKey && getProviderConfig().provider !== "ollama") {

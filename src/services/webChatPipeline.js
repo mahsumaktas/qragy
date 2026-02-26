@@ -387,20 +387,7 @@ function createWebChatPipeline(deps) {
     rawMessages, memory, conversationContext, activeUserMessages,
     hasClosedTicketHistory, chatStartTime, sessionId
   }) {
-    const shouldUseDeterministicReply =
-      conversationContext.conversationState === "welcome_or_greet" ||
-      (conversationContext.conversationState !== "topic_detection" &&
-       conversationContext.conversationState !== "topic_guided_support" &&
-       !conversationContext.currentTopic);
-
-    if (!shouldUseDeterministicReply) {
-      logger.info("webChatPipeline:deterministic", "Deterministic reply kullanilmiyor", {
-        state: conversationContext.conversationState,
-        topic: conversationContext.currentTopic || null,
-      });
-      return null;
-    }
-
+    // Deterministic reply artık sadece selamlama + alan sorgulama için çalışır
     const chatFlowConfig = getChatFlowConfig();
     const deterministicReply = buildDeterministicCollectionReply(
       memory,

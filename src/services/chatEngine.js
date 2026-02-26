@@ -488,10 +488,6 @@ function sanitizeAssistantReply(text) {
 function buildMissingFieldsReply(memory, latestUserMessage = "", opts = {}) {
   const { companyName = "" } = opts;
 
-  const welcomeAndCollectMessage =
-    `Merhaba, ben OBUS Teknik Destek Asistanı. Talep oluşturmamız için lütfen kullanıcı adınızı ve yaşadığınız sorunun kısa özetini iletiniz.`;
-  const askBranchMessage = "Talep oluşturabilmem için lütfen kullanıcı adınızı iletiniz.";
-  const askIssueMessage = "Kullanıcı adınız alındı. Lütfen yaşadığınız sorunun kısa özetini iletiniz.";
   const fieldRequirementMessage =
     "Talep açmak için kullanıcı adı ve sorun özeti zorunludur. Ad soyad ve telefon bilgileri isteğe bağlıdır.";
   const branchLocationMessage =
@@ -507,19 +503,8 @@ function buildMissingFieldsReply(memory, latestUserMessage = "", opts = {}) {
     return branchLocationMessage;
   }
 
-  if (!memory.branchCode && !memory.issueSummary) {
-    return welcomeAndCollectMessage;
-  }
-
-  if (!memory.branchCode) {
-    return askBranchMessage;
-  }
-
-  if (!memory.issueSummary) {
-    return askIssueMessage;
-  }
-
-  return welcomeAndCollectMessage;
+  // Bilgi toplama LLM'e bırakılır — konu dosyasında gerektiğinde LLM sorar
+  return null;
 }
 
 /**
@@ -540,8 +525,8 @@ function buildDeterministicCollectionReply(memory, activeUserMessages, hasClosed
 
   const replyOpts = { companyName, botName };
 
-  const welcomeAndCollectMessage =
-    `Merhaba, ben OBUS Teknik Destek Asistanı. Talep oluşturmamız için lütfen kullanıcı adınızı ve yaşadığınız sorunun kısa özetini iletiniz.`;
+  const welcomeMessage =
+    `Merhaba, ben OBUS Teknik Destek Asistanı. Size nasıl yardımcı olabilirim?`;
   const fieldRequirementMessage =
     "Talep açmak için kullanıcı adı ve sorun özeti zorunludur. Ad soyad ve telefon bilgileri isteğe bağlıdır.";
   const branchLocationMessage =
@@ -551,15 +536,12 @@ function buildDeterministicCollectionReply(memory, activeUserMessages, hasClosed
   const normalizedLatest = normalizeForMatching(latestUserMessage);
 
   if (!latestUserMessage) {
-    return welcomeAndCollectMessage;
+    return welcomeMessage;
   }
 
-  if (
-    !memory.branchCode &&
-    !memory.issueSummary &&
-    (isGreetingOnlyMessage(latestUserMessage) || NEW_TICKET_INTENT_REGEX.test(normalizedLatest))
-  ) {
-    return welcomeAndCollectMessage;
+  // Selamlama mesajı geldiğinde sadece karşılama yap, bilgi toplama
+  if (isGreetingOnlyMessage(latestUserMessage) || NEW_TICKET_INTENT_REGEX.test(normalizedLatest)) {
+    return welcomeMessage;
   }
 
   if (isFieldClarificationMessage(latestUserMessage)) {
@@ -581,10 +563,11 @@ function buildDeterministicCollectionReply(memory, activeUserMessages, hasClosed
       !memory.issueSummary &&
       isNonIssueMessage(latestUserMessage)
     ) {
-      return welcomeAndCollectMessage;
+      return welcomeMessage;
     }
 
-    return buildMissingFieldsReply(memory, latestUserMessage, replyOpts);
+    // Konu belirlenmeden bilgi toplama — LLM'e bırak (null dön)
+    return null;
   }
 
   return null;
@@ -753,24 +736,33 @@ function _detectEscalationTriggersLocal(text, remoteToolName) {
     return { shouldEscalate: true, reason: "direct_agent_request" };
   }
 
-  const toolName = remoteToolName || "remote_tool";
-  const toolPattern = remoteToolName
-    ? new RegExp(remoteToolName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")
-    : null;
-
-  if (toolPattern) {
-    const idPattern = new RegExp(`(?:${toolPattern.source}\\s*(?:id|no|numara)?\\s*[:=-]?\\s*\\d+)`, "i");
-    const passPattern = /(?:(?:parola|sifre|şifre)\s*[:=-]?\s*\d+)/i;
+  // Alpemix ID + Parola algılama (hardcode — OBUS'un uzak bağlantı aracı)
+  const alpemixPattern = /alpemix/i;
+  const hasAlpemix = alpemixPattern.test(text);
+  if (hasAlpemix) {
+    const idPattern = /alpemix\s*(?:id|no|numara)?\s*[:=-]?\s*\d+/i;
+    const passPattern = /(?:parola|sifre|şifre|password|pass)\s*[:=-]?\s*\S+/i;
     const hasToolId = idPattern.test(text);
     const hasToolPass = passPattern.test(text);
 
     if (hasToolId && hasToolPass) {
-      return { shouldEscalate: true, reason: `${toolName}_credentials` };
+      return { shouldEscalate: true, reason: "alpemix_credentials" };
     }
 
-    const bothInOneLine = /\d{3,}[\s,;.-]+\d{3,}/.test(text) &&
-      toolPattern.test(normalized);
+    // İki ayrı sayı grubu + alpemix kelimesi = muhtemelen ID ve parola
+    const bothInOneLine = /\d{3,}[\s,;.-]+\d{3,}/.test(text);
     if (bothInOneLine) {
+      return { shouldEscalate: true, reason: "alpemix_credentials" };
+    }
+  }
+
+  // Ek remote tool pattern (varsa)
+  const toolName = remoteToolName || "remote_tool";
+  if (remoteToolName) {
+    const toolPattern = new RegExp(remoteToolName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    const idPattern = new RegExp(`(?:${toolPattern.source}\\s*(?:id|no|numara)?\\s*[:=-]?\\s*\\d+)`, "i");
+    const passPattern = /(?:(?:parola|sifre|şifre)\s*[:=-]?\s*\d+)/i;
+    if (idPattern.test(text) && passPattern.test(text)) {
       return { shouldEscalate: true, reason: `${toolName}_credentials` };
     }
   }
