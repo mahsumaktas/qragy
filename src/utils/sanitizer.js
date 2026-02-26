@@ -21,7 +21,7 @@ function sanitizeReply(text) {
     .replace(/\*{1,2}([^*]+)\*{1,2}/g, "$1")
     .replace(/\n{3,}/g, "\n\n")
     .trim()
-    .slice(0, 800);
+    .slice(0, 2000);
 }
 
 const TURKISH_DIACRITICS = { "ç":"c","ğ":"g","ı":"i","ö":"o","ş":"s","ü":"u","Ç":"c","Ğ":"g","İ":"i","Ö":"o","Ş":"s","Ü":"u" };
