@@ -1,25 +1,67 @@
 # Yazici Sorunu
 
-Kullanici yazicidan cikti alamiyor veya yazici duzgun calismiyor.
+Kullanici OBUS sistemi uzerinden yazicidan cikti alamiyor, bilet yazdiramiyor veya yazici calismiyordur.
 
-## Cozum Adimlari
-1. Yazicinin acik oldugunu ve bilgisayara bagli oldugunu kontrol edin.
-2. Yazici kuyrugunuzu kontrol edin ve bekleyen islemleri temizleyin.
-3. Yaziciyi kapatip tekrar acin.
-4. Yazici surucusunu kaldirip yeniden yukleyin.
-5. Farkli bir USB portu deneyin.
+## Alt Konu 1: Yazicidan Cikti Alinamiyor
 
-## Yaygin Sorunlar
-Kagit sikismasi: Yazicinin kagit tepsisini kontrol edin.
-Murekkep/toner bitti: Kartusu degistirin veya doldurun.
-Cevrimdisi gorunuyor: Yazici baglantisini kontrol edin, surucuyu yeniden yukleyin.
+Kullanici yazicidan hicbir cikti alamiyor.
+
+### Akis
+
+1. Kullaniciya sor: "Yaziciniz acik ve kablolar duzgun takili mi?"
+   - **Hayir** ise: "Yaziciyi acip, kablolarin duzgun takili olduguna emin olduktan sonra tekrar deneyin." (Gorusmeyi sonlandir veya tekrar denedikten sonra devam et.)
+   - **Evet** ise: 2. adima gec.
+2. Kullaniciya sor: "Farkli bir programdan cikti alabiliyor musunuz?"
+   - **Hayir, hicbir programdan cikti alamiyorum** ise: "OBUS disinda diger uygulamalardan da cikti alamamaniz yazici kaynakli bir durumdur. Bilgisayarciniz ile goruserek destek alabilirsiniz."
+   - **Onceden alabiliyordum ama simdi alamiyorum** ise: Eskalasyon yap.
+
+## Alt Konu 2: Bilet Yazdiramiyor
+
+Kullanici OBUS uzerinden bilet yazdirma islemi yapamiyor.
+
+### Akis
+
+1. "OBUS yazici uygulamasinin aktif oldugunundan emin olun."
+2. "Yazicinizin sinama sayfasi cikarip cikarmadigini kontrol edin."
+   - Sinama sayfasi yazdirmiyorsa: "Sinama sayfasi yazdirmayan yazicilar icin bilgisayarciniz ile gorusmenizi oneririz."
+3. Hala cozulmediyse: Kullanicidan Alpemix ID ve Parola bilgisini iste.
+4. Bilgi alindiktan sonra eskalasyon yap.
+
+## Alt Konu 3: Yazici Calismiyor
+
+Kullanici yazicinin hic calismadigini bildiriyor.
+
+### Akis
+
+1. Kullanicidan direkt olarak Alpemix ID ve Parola bilgisini iste.
+2. Bilgi alindiktan sonra eskalasyon yap.
+
+## Toplanmasi Gereken Bilgiler
+
+- Sorunun turu (cikti alinamiyor / bilet yazdiramiyor / yazici calismiyor)
+- Yazicinin fiziksel durumu (acik mi, kablolar takili mi)
+- Farkli programlardan cikti durumu
+- Alpemix ID ve Parola (eskalasyon gereken durumlarda)
+
+## Eskalasyon
+
+Eskalasyon mesaji: "Kontrol ediyorum, sizi cok kisa bir sure daha bekletecegim."
+
+Eskalasyon gereken durumlar:
+- Onceden cikti alabiliyordu ama simdi alamiyor
+- Bilet yazdirma sorunu temel adimlarla cozulmediyse
+- Yazici hic calismiyorsa
 
 ## Bot ne yapmali
-Ilk olarak fiziksel baglanti ve yazici kuyrugunun temizlenmesini oner.
-Her adimdan sonra sonucu sor.
-Bu sorun genellikle kullanici tarafinda cozulebilir.
+
+- Sorunun turunu anlamak icin soru sor
+- Alt konuya gore troubleshooting adimlarini sirayla uygula
+- Her adimdan sonra sonucu sor
+- Cozulemiyorsa Alpemix bilgilerini toplayip eskalasyon yap
 
 ## Bot ne YAPMAMALI
-Tum adimlari tek mesajda gonderme.
-Yazici modeli veya markasi sormadan detayli surucu talimati verme.
-Platform-disi yazici sorunlarina (ink jet bakim, toner dolumu vb.) derinlemesine girme.
+
+- Tum troubleshooting adimlarini tek seferde gonderme
+- Yazici surucusu yukleme gibi teknik islemlere yonlendirme
+- OBUS disindaki yazici sorunlarini cozmaye calisma (bilgisayarciya yonlendir)
+- Alpemix bilgilerini gerek olmadan isteme

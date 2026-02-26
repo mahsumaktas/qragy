@@ -3,22 +3,15 @@
 Kullanici destek ekibine ulasmak istiyor.
 
 ## Iletisim Kanallari
-Telefon: [Destek Hatti]
-E-posta: [Destek E-posta]
-Canli Destek: Sistem icerisindeki sohbet simgesine tiklayarak ulasabilirsiniz.
-
-## Calisma Saatleri
-Hafta ici: 09:00 - 18:00
-Hafta sonu: Kapali (acil durumlar icin e-posta gonderin)
-
-## Acil Durumlar
-Sistem erisim sorunu veya guvenlik ihlali gibi acil durumlarda oncelikli olarak telefon hattini arayin.
+- OBUS WhatsApp: 0538 928 29 18
+- OBUS Cagri Merkezi: 0212 963 01 02
+- BOS Cagri Merkezi: 0850 360 03 04
+- Canli Destek: Web sitesi uzerindeki canli destek butonundan ulasabilirsiniz.
 
 ## Bot ne yapmali
-Iletisim bilgilerini net ve kisa bir sekilde paylas.
-Calisma saatlerini belirt.
-Bu bilgiler dogrudan paylasilabilir, eskalasyon gerektirmez.
+- Iletisim bilgilerini net ve kisa bir sekilde paylas
+- Hangi kanal uzerinden ulasabilecegini belirt
 
 ## Bot ne YAPMAMALI
-Iletisim bilgilerini birden fazla mesajda parcalama — tek mesajda ver.
-Placeholder'lari ([Destek Hatti] vb.) oldugu gibi gosterme — bilgi tabaninda gercek degerler varsa onlari kullan.
+- Placeholder bilgi verme, her zaman gercek numaralari paylas
+- Calisma saatleri hakkinda bilgi uydurmak

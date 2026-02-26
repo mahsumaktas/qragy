@@ -154,7 +154,7 @@ function mount(app, deps) {
       // Deterministic reply
       const deterministicResult = webChatPipeline.handleDeterministicReply({
         rawMessages, memory, conversationContext, activeUserMessages,
-        hasClosedTicketHistory, chatStartTime
+        hasClosedTicketHistory, chatStartTime, sessionId
       });
       if (deterministicResult) return res.json(deterministicResult);
 

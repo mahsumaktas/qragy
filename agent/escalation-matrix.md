@@ -1,29 +1,29 @@
 # Escalation Karar Matrisi
 
-## Otomatik Escalation (Kosul Gerceklesince Hemen)
-REMOTE_TOOL ID ve parola birlikte iletildiginde: Hemen escalation. Kullanici uzak baglanti bekliyor demektir.
-Kullanici acikca "temsilciye aktar", "canli destek istiyorum", "biriyle gorusmek istiyorum" dediginde: Direkt aktarim mesaji.
+## Otomatik Escalation (Koşul Gerçekleşince Hemen)
+Alpemix ID ve parola birlikte iletildiğinde: Hemen escalation. Kullanıcı uzak bağlantı bekliyor demektir.
+Kullanıcı açıkça "temsilciye aktar", "canlı destek istiyorum", "biriyle görüşmek istiyorum" dediğinde: Direkt aktarım mesajı.
 
-## Kosula Bagli Escalation (Onay Gerektirir)
-Kullanici "yapamadim", "olmadi", "hata verdi", "calismadi" dediginde VE konu dosyasindaki adimlar tukendiyse: Onay sorarak escalation.
-Konu dosyasinda tanimli olmayan bir sorun bildirildiginde: Bilinmeyen konu, onay sorarak escalation.
-3 tur boyunca AYNI konuda yeni bilgi gelmeden tekrar ediyorsa: Donguye girilmis, escalation.
-"3 tur" tanimi: Bot 3 kez farkli bir adim oneremeden ayni seyleri tekrarliyorsa.
+## Koşula Bağlı Escalation (Onay Gerektirir)
+Kullanıcı "yapamadım", "olmadı", "hata verdi", "çalışmadı" dediğinde VE konu dosyasındaki adımlar tükendiğinde: Onay sorarak escalation.
+Konu dosyasında tanımlı olmayan bir sorun bildirildiğinde: Bilinmeyen konu, onay sorarak escalation.
+3 tur boyunca AYNI konuda yeni bilgi gelmeden tekrar ediyorsa: Döngüye girilmiş, escalation.
+"3 tur" tanımı: Bot 3 kez farklı bir adım öneremeden aynı şeyleri tekrarlıyorsa.
 
-## Onayli Escalation Akisi
-Asama 1 — Onay sorusu: "Bu konuda canli destek temsilcimiz size yardimci olabilir. Sizi temsilcimize aktarmami ister misiniz?"
-Kullanici "evet", "tamam", "aktar", "olur" gibi onay verdiyse Asama 2'ye gec.
-Kullanici "hayir", "istemiyorum" derse: "Anlasildi. Baska bir konuda yardimci olabilecegim bir durum var mi?" de.
-Asama 2 — Aktarim mesaji: "Sizi canli destek temsilcimize aktariyorum. Kisa surede yardimci olacaktir."
+## Onaylı Escalation Akışı
+Aşama 1 — Onay sorusu: "Bu konuda canlı destek temsilcimiz size yardımcı olabilir. Sizi temsilcimize aktarmamı ister misiniz?"
+Kullanıcı "evet", "tamam", "aktar", "olur" gibi onay verdiyse Aşama 2'ye geç.
+Kullanıcı "hayır", "istemiyorum" derse: "Anlaşıldı. Başka bir konuda yardımcı olabileceğim bir durum var mı?" de.
+Aşama 2 — Aktarım mesajı: "Sizi canlı destek temsilcimize aktarıyorum. Kısa sürede yardımcı olacaktır."
 
-## Escalation Ozeti
-Escalation mesajinda konusma ozetini dahil et. Bot, temsilciye aktarirken su bilgileri toplams olmali:
-- Sube kodu (zorunlu)
-- Sorun ozeti (kisa)
-- Denenen adimlar (varsa)
+## Escalation Özeti
+Escalation mesajında konuşma özetini dahil et. Bot, temsilciye aktarırken şu bilgileri toplamış olmalı:
+- Kullanıcı adı (zorunlu)
+- Sorun özeti (kısa)
+- Denenen adımlar (varsa)
 
-## Escalation Oncesi Kontrol Listesi
-1. Ilgili konu dosyasi ve bilgi tabani kullanilarak bilgilendirme yapildi mi? Bilgilendirme YAPILMADAN escalation baslatma.
-2. Sube kodu / kullanici kodu toplanmis mi? Toplanmadiysa ONCE kodunu sor.
-3. Gerekli ek bilgiler toplanmis mi? Konu dosyasinda belirtilen zorunlu alanlar sorulmus mu?
-ONEMLI: Bilgi toplama (firma, sube, kullanici kodu) SADECE escalation akisinda yapilir. canResolveDirectly=true konularda bilgi toplama.
+## Escalation Öncesi Kontrol Listesi
+1. İlgili konu dosyası ve bilgi tabanı kullanılarak bilgilendirme yapıldı mı? Bilgilendirme YAPILMADAN escalation başlatma.
+2. Kullanıcı adı toplandı mı? Toplanmadıysa ÖNCE kullanıcı adını sor.
+3. Gerekli ek bilgiler toplandı mı? Konu dosyasında belirtilen zorunlu alanlar sorulmuş mu?
+ÖNEMLİ: Bilgi toplama (kullanıcı adı) SADECE escalation akışında yapılır. canResolveDirectly=true konularda bilgi toplama.

@@ -37,12 +37,12 @@ const NON_ISSUE_MESSAGE_SET = new Set([
   "iyi calismalar"
 ]);
 
-const CONFIRMATION_PREFIX_REGEX = /^Talebinizi ald[ıi]m\.\s*[SŞsş]ube kodu:/i;
+const CONFIRMATION_PREFIX_REGEX = /^Talebinizi ald[ıi]m\.\s*Kullan[ıi]c[ıi] ad[ıi]:/i;
 const ESCALATION_MESSAGE_REGEX = /sizi canl[ıi] destek temsilci(?:mize|sine) aktar[ıi]yorum/i;
 const POST_ESCALATION_FOLLOWUP_MESSAGE =
   "Talebiniz canlı destek ekibine iletildi. En kısa sürede bir temsilci size yardımcı olacaktır. Lütfen bekleyiniz.";
 
-const FIELD_CLARIFICATION_REGEX = /(?:sube\s*kod(?:u)?|firma\s*adi|ad\s*soyad|telefon|branch\s*code)/i;
+const FIELD_CLARIFICATION_REGEX = /(?:kullanici\s*ad(?:i|ı)?|sube\s*kod(?:u)?|firma\s*adi|ad\s*soyad|telefon|branch\s*code)/i;
 const QUESTION_INTENT_REGEX =
   /(?:nerede|nerde|nasil|nasil|gerekli|lazim|zorunlu|hangi|ne|yaziyor|yazilir|nereden)/i;
 const STATUS_FOLLOWUP_REGEX =
@@ -51,19 +51,19 @@ const ISSUE_HINT_REGEX =
   /(?:hata|kesemiyor|baglan|odeme|yazici|program|acilm|donuyor|yanlis|iptal|koltuk|pnr|sefer|bilet)/i;
 const NEW_TICKET_INTENT_REGEX = /(?:yeni\s*talep|yeniden\s*talep|baska\s*talep|tekrar\s*talep)/i;
 const BRANCH_LOCATION_QUESTION_REGEX =
-  /(?:sube\s*kodu?.*(?:nerede|nerden|nereden)|nerede.*sube\s*kodu?)/i;
+  /(?:(?:kullanici\s*ad|sube\s*kodu?).*(?:nerede|nerden|nereden|ne)|nerede.*(?:kullanici\s*ad|sube\s*kodu?))/i;
 const FIELD_REQUIREMENT_QUESTION_REGEX =
   /(?:firma\s*adi|ad\s*soyad|telefon).*(?:gerekli|zorunlu|lazim|sart)|(?:gerekli|zorunlu|lazim|sart).*(?:firma\s*adi|ad\s*soyad|telefon)/i;
 
 const DEFAULT_MEMORY_TEMPLATE = {
   requiredFields: ["branchCode", "issueSummary"],
-  optionalFields: ["companyName", "fullName", "phone"],
+  optionalFields: ["fullName", "phone"],
   confirmationTemplate:
-    "Talebinizi aldım. Şube kodu: {{branchCode}}. Kısa açıklama: {{issueSummary}}. Destek ekibi en kısa sürede dönüş yapacaktır."
+    "Talebinizi aldım. Kullanıcı adı: {{branchCode}}. Sorun özeti: {{issueSummary}}. Destek ekibi en kısa sürede dönüş yapacaktır."
 };
 
 const CLOSED_TICKET_STATUS_MESSAGE =
-  "Talebiniz daha önce alındı ve destek ekibine iletildi. Dönüş bekleniyor. Yeni bir talep açmak isterseniz yeni şube kodu ve sorun özeti yazabilirsiniz.";
+  "Talebiniz daha önce alındı ve destek ekibine iletildi. Dönüş bekleniyor. Yeni bir talep açmak isterseniz kullanıcı adınızı ve sorun özetini yazabilirsiniz.";
 const OUTSIDE_SUPPORT_HOURS_MESSAGE =
   "Canlı destek şu an mesai dışındadır. Talebiniz kayda alındı; mesai saatlerinde temsilciye aktarılacaktır.";
 
@@ -222,6 +222,8 @@ function extractBranchCodeFromText(text) {
   }
 
   const patterns = [
+    /(?:kullan[ıi]c[ıi])\s*(?:ad[ıi])?\s*[:=-]\s*([A-Za-z0-9_.@-]{2,40})/i,
+    /(?:kullan[ıi]c[ıi])\s*(?:ad[ıi])?\s+([A-Za-z0-9_.@-]{2,40})/i,
     /(?:sube|[\u015f\u015e]ube)\s*(?:kodu|kod)?\s*[:=-]\s*([A-Za-z0-9-]{2,20})/i,
     /(?:sube|[\u015f\u015e]ube)\s*(?:kodu|kod)?\s+([A-Za-z0-9-]{2,20})/i,
     /(?:branch)\s*(?:code)?\s*[:=-]\s*([A-Za-z0-9-]{2,20})/i,
@@ -242,17 +244,27 @@ function extractBranchCodeFromText(text) {
     }
   }
 
-  const standaloneMatch = text.match(/^\s*([A-Za-z0-9-]{2,20})\s*$/);
-  const standaloneCandidate = standaloneMatch?.[1]?.toUpperCase() || "";
+  // Standalone text — kullanıcı adı olarak kabul et (2-40 karakter, tek kelime veya kısa metin)
+  const standaloneMatch = text.match(/^\s*([A-Za-z0-9_.@-]{2,40})\s*$/);
+  const standaloneCandidate = standaloneMatch?.[1] || "";
 
-  if (isLikelyBranchCode(standaloneCandidate)) {
-    return standaloneCandidate;
-  }
+  // Selamlama veya genel mesajları kullanıcı adı olarak kabul etme
+  if (standaloneCandidate && (isNonIssueMessage(standaloneCandidate) || isGreetingOnlyMessage(standaloneCandidate))) {
+    // "Merhaba", "Selam", "Tamam" vb. kullanıcı adı değil
+  } else {
+    if (isLikelyBranchCode(standaloneCandidate.toUpperCase())) {
+      return standaloneCandidate;
+    }
 
-  // Standalone pure numeric (2-6 hane) — sube kodu olarak kabul et
-  // (Kullanici direkt "1234" gibi bir sayi yazdiysa ve baska bir sey yazmadiysa)
-  if (standaloneCandidate && /^\d{2,6}$/.test(standaloneCandidate)) {
-    return standaloneCandidate;
+    // Standalone pure numeric (2-6 hane) — kullanıcı kodu olarak kabul et
+    if (standaloneCandidate && /^\d{2,6}$/.test(standaloneCandidate)) {
+      return standaloneCandidate;
+    }
+
+    // Standalone kısa alfanumerik — kullanıcı adı olarak kabul et
+    if (standaloneCandidate && standaloneCandidate.length >= 3 && /[A-Za-z]/.test(standaloneCandidate)) {
+      return standaloneCandidate;
+    }
   }
 
   const hasIssueContext = ISSUE_HINT_REGEX.test(normalizeForMatching(text));
@@ -285,6 +297,7 @@ function extractBranchCodeFromText(text) {
 
 function sanitizeIssueSummary(text, branchCode = "") {
   let cleaned = text
+    .replace(/(?:kullan[ıi]c[ıi])\s*(?:ad[ıi])?\s*[:=-]?\s*[A-Za-z0-9_.@-]{2,40}/gi, "")
     .replace(/(?:sube|[\u015f\u015e]ube)\s*(?:kodu|kod)?\s*[:=-]?\s*[A-Za-z0-9-]{2,20}/gi, "")
     .replace(/(?:ad\s*soyad|telefon|firma(?:\s*adi)?)\s*[:=-]?\s*[^,.;\n]+/gi, "")
     .replace(
@@ -330,8 +343,10 @@ function parseClosedTicketFromAssistantMessage(message) {
   }
 
   const text = String(message.content || "");
-  const branchCode = text.match(/Sube kodu:\s*([^.\n]+)\./i)?.[1]?.trim() || "";
+  const branchCode = text.match(/Kullan[ıi]c[ıi] ad[ıi]:\s*([^.\n]+)\./i)?.[1]?.trim() ||
+    text.match(/Sube kodu:\s*([^.\n]+)\./i)?.[1]?.trim() || "";
   const issueSummary =
+    text.match(/Sorun [öo]zeti:\s*([\s\S]+?)\.\s*Destek ekibi/i)?.[1]?.trim() ||
     text.match(/Kisa aciklama:\s*([\s\S]+?)\.\s*Destek ekibi/i)?.[1]?.trim() || "";
 
   if (!branchCode || !issueSummary) {
@@ -474,13 +489,13 @@ function buildMissingFieldsReply(memory, latestUserMessage = "", opts = {}) {
   const { companyName = "" } = opts;
 
   const welcomeAndCollectMessage =
-    `Merhaba, ${companyName ? companyName + " " : ""}Teknik Destek hattina hos geldiniz. Talep olusturmamiz icin lutfen sube kodunuzu ve yasadiginiz sorunun kisa ozetini iletiniz. Firma adi istege baglidir.`;
-  const askBranchMessage = "Talep oluşturabilmem için lütfen şube kodunuzu iletiniz.";
-  const askIssueMessage = "Şube kodunuz alındı. Lütfen yaşadığınız sorunun kısa özetini iletiniz.";
+    `Merhaba, ben OBUS Teknik Destek Asistanı. Talep oluşturmamız için lütfen kullanıcı adınızı ve yaşadığınız sorunun kısa özetini iletiniz.`;
+  const askBranchMessage = "Talep oluşturabilmem için lütfen kullanıcı adınızı iletiniz.";
+  const askIssueMessage = "Kullanıcı adınız alındı. Lütfen yaşadığınız sorunun kısa özetini iletiniz.";
   const fieldRequirementMessage =
-    "Firma adı, ad soyad ve telefon bilgileri isteğe bağlıdır. Talep açmak için şube kodu ve sorun özeti zorunludur.";
+    "Talep açmak için kullanıcı adı ve sorun özeti zorunludur. Ad soyad ve telefon bilgileri isteğe bağlıdır.";
   const branchLocationMessage =
-    `Sube kodu, firmanizin ${companyName || "sistem"} panelinde tanimli sube veya terminal kodudur. Emin degilseniz firma yoneticinizden teyit edip iletebilirsiniz.`;
+    "Kullanıcı adı, OBUS sistemine giriş yaparken kullandığınız kimlik bilgisidir. Emin değilseniz firma yöneticinizden teyit edip iletebilirsiniz.";
 
   const normalizedLatest = normalizeForMatching(latestUserMessage);
 
@@ -526,11 +541,11 @@ function buildDeterministicCollectionReply(memory, activeUserMessages, hasClosed
   const replyOpts = { companyName, botName };
 
   const welcomeAndCollectMessage =
-    `Merhaba, ${companyName ? companyName + " " : ""}Teknik Destek hattina hos geldiniz. Talep olusturmamiz icin lutfen sube kodunuzu ve yasadiginiz sorunun kisa ozetini iletiniz. Firma adi istege baglidir.`;
+    `Merhaba, ben OBUS Teknik Destek Asistanı. Talep oluşturmamız için lütfen kullanıcı adınızı ve yaşadığınız sorunun kısa özetini iletiniz.`;
   const fieldRequirementMessage =
-    "Firma adı, ad soyad ve telefon bilgileri isteğe bağlıdır. Talep açmak için şube kodu ve sorun özeti zorunludur.";
+    "Talep açmak için kullanıcı adı ve sorun özeti zorunludur. Ad soyad ve telefon bilgileri isteğe bağlıdır.";
   const branchLocationMessage =
-    `Sube kodu, firmanizin ${companyName || "sistem"} panelinde tanimli sube veya terminal kodudur. Emin degilseniz firma yoneticinizden teyit edip iletebilirsiniz.`;
+    "Kullanıcı adı, OBUS sistemine giriş yaparken kullandığınız kimlik bilgisidir. Emin değilseniz firma yöneticinizden teyit edip iletebilirsiniz.";
 
   const latestUserMessage = activeUserMessages[activeUserMessages.length - 1] || "";
   const normalizedLatest = normalizeForMatching(latestUserMessage);
@@ -614,6 +629,7 @@ async function buildConversationContext(memory, userMessages, opts = {}) {
   }
 
   const topicResult = _detectTopicFromMessages(userMessages, topicIndex);
+  context._topicDetection = { method: topicResult.method, keyword: topicResult.matchedKeyword || null };
   if (topicResult.topicId) {
     context.currentTopic = topicResult.topicId;
     context.topicConfidence = topicResult.confidence;
@@ -629,8 +645,10 @@ async function buildConversationContext(memory, userMessages, opts = {}) {
       context.currentTopic = llmTopicId;
       context.topicConfidence = 0.7;
       context.conversationState = "topic_guided_support";
+      context._topicDetection.method = "llm";
     } else {
       context.conversationState = "topic_detection";
+      context._topicDetection.method = "none";
     }
   }
 
@@ -665,6 +683,7 @@ function _detectTopicFromMessages(userMessages, topicIndex) {
 
   let bestMatch = null;
   let bestScore = 0;
+  let matchedKeyword = null;
 
   for (const topic of topicIndex.topics) {
     for (const keyword of topic.keywords) {
@@ -674,16 +693,17 @@ function _detectTopicFromMessages(userMessages, topicIndex) {
         if (score > bestScore) {
           bestScore = score;
           bestMatch = topic.id;
+          matchedKeyword = keyword;
         }
       }
     }
   }
 
   if (bestMatch) {
-    return { topicId: bestMatch, confidence: 0.9, method: "keyword" };
+    return { topicId: bestMatch, confidence: 0.9, method: "keyword", matchedKeyword };
   }
 
-  return { topicId: null, confidence: 0, method: "none" };
+  return { topicId: null, confidence: 0, method: "none", matchedKeyword: null };
 }
 
 /**

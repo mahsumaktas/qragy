@@ -56,17 +56,17 @@ function createConfigStore(deps) {
   const DEFAULT_SITE_CONFIG = {
     pageTitle: "Teknik Destek",
     heroTitle: "Teknik Destek",
-    heroDescription: "Teknik destek taleplerinizi AI katmaninda toplayalim.",
-    heroButtonText: "Canli Destek",
-    heroHint: "AI gerekli bilgileri topladiginda temsilciye otomatik aktarim yapilir.",
+    heroDescription: "Teknik destek taleplerinizi AI katmanında toplayalım.",
+    heroButtonText: "Canlı Destek",
+    heroHint: "AI gerekli bilgileri topladığında temsilciye otomatik aktarım yapılır.",
     headerTitle: "Teknik Destek",
     logoUrl: "",
     themeColor: "#2563EB",
     primaryColor: "",
     headerBg: "",
     chatBubbleColor: "",
-    inputPlaceholder: "Mesajinizi yazin...",
-    sendButtonText: "Gonder"
+    inputPlaceholder: "Mesajınızı yazın...",
+    sendButtonText: "Gönder"
   };
 
   let siteConfig = { ...DEFAULT_SITE_CONFIG };
@@ -96,7 +96,7 @@ function createConfigStore(deps) {
     keyId: "",
     keySecret: "",
     webhookSecret: "",
-    farewellMessage: "Sizi canli destek temsilcisine aktariyorum. Iyi gunler!"
+    farewellMessage: "Sizi canlı destek temsilcisine aktarıyorum. İyi günler!"
   };
 
   let sunshineConfig = { ...DEFAULT_SUNSHINE_CONFIG };

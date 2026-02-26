@@ -1,109 +1,181 @@
 {
   "topics": [
     {
-      "id": "giris-yapamiyorum",
-      "title": "Sisteme Giris Yapamiyorum",
-      "keywords": ["giris yapamiyorum", "login olamiyorum", "sisteme giremiyorum", "giris hatasi", "login hatasi", "sifre kabul etmiyor", "giris ekrani", "oturum acamiyorum", "hesaba giremiyorum", "login sorunu", "giris sayfasi acilmiyor", "kullanici adi kabul etmiyor", "authentication error", "erisim engellendi", "hesap kilitlendi"],
-      "file": "giris-yapamiyorum.md",
+      "id": "giris-sorunu",
+      "title": "Giris Yapamiyorum",
+      "keywords": ["giris yapamiyorum", "login olamiyorum", "sisteme giremiyorum", "giris hatasi", "login hatasi", "sifre kabul etmiyor", "giris ekrani", "oturum acamiyorum", "hesaba giremiyorum", "sistem acilmiyor", "ekran acilmiyor", "beyaz ekran", "siyah ekran", "mavi ekran", "ekran hic acilmiyor", "kullanici sistemde mevcut degil", "sifrenizi kontrol ediniz", "hesap kilitlendi", "giris sayfasi", "login sorunu"],
+      "file": "giris-sorunu.md",
       "requiresEscalation": true,
-      "requiredInfo": ["kullanici_adi", "ip_adresi"],
+      "requiredInfo": ["firma_adi", "sube_adi"],
       "canResolveDirectly": false
     },
     {
       "id": "sifremi-unuttum",
       "title": "Sifremi Unuttum",
-      "keywords": ["sifremi unuttum", "sifre sifirlama", "sifre degistirme", "sifre hatasi", "sifre resetleme", "yeni sifre", "sifre yenileme", "sifre guncellemek", "parola unuttum", "parola degistirme", "sifre maili gelmiyor", "sifre baglantisi", "password reset"],
+      "keywords": ["sifremi unuttum", "sifre sifirlama", "sifre degistirme", "sifre unutmak", "sifre unuttum", "parola unuttum", "parola degistirme", "yeni sifre", "sifre hatasi"],
       "file": "sifremi-unuttum.md",
       "requiresEscalation": true,
-      "requiredInfo": ["kullanici_adi"],
+      "requiredInfo": ["firma_adi", "kullanici_adi", "ip_adresi"],
       "canResolveDirectly": false
     },
     {
       "id": "yazici-sorunu",
-      "title": "Yazici Sorunu",
-      "keywords": ["yazici", "printer", "yazici calismiyor", "cikti alamiyorum", "yazici sorunu", "yazdiramiyorum", "bilet kesemiyorum", "fiş cikmiyor", "yazici baglanti", "print hatasi", "yazici gozukmuyor", "yazici bulunamiyor", "cikti hatasi", "kagit sikismasi", "murekkep bitti"],
+      "title": "Yazici ve Bilet Yazdirma Sorunu",
+      "keywords": ["yazici", "printer", "yazici calismiyor", "cikti alamiyorum", "yazici sorunu", "yazdiramiyorum", "bilet yazdirmak", "bilet yazdiramiyorum", "bilet cikmiyor", "bilet cikartamiyorum", "bilet kesemiyorum", "fis cikmiyor", "yazici baglanti", "print hatasi", "yazici acik mi", "kablo takili mi", "sinama sayfasi"],
       "file": "yazici-sorunu.md",
+      "requiresEscalation": true,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "cache-islemleri",
+      "title": "Sefer Internette Gozukmuyor (Cache Islemleri)",
+      "keywords": ["cache", "sefer gozukmuyor", "sefer obilette gozukmuyor", "sefer internette gozukmuyor", "seferim gozukmuyor", "internette gorunmuyor", "sefer gorunmuyor", "internete aciklik durumu", "sefer internette gorunmuyor"],
+      "file": "cache-islemleri.md",
+      "requiresEscalation": true,
+      "requiredInfo": ["firma_adi", "sefer_guzergahi", "sefer_tarih_saat"],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "uetds-personel",
+      "title": "UETDS Ciktisinda Personeller Gozukmuyor",
+      "keywords": ["uetds personel", "uetds personeller", "uetds personeller gozukmuyor", "personel gozukmuyor", "personeller gozukmuyor", "uetds personel gorunmuyor", "personel gorunmuyor"],
+      "file": "uetds-personel.md",
+      "requiresEscalation": true,
+      "requiredInfo": ["firma_adi", "sefer_guzergahi", "sefer_tarih_saat"],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "uetds-yolcu",
+      "title": "UETDS Ciktisinda Yolcular Gozukmuyor",
+      "keywords": ["uetds yolcu", "uetds yolcular", "uetds yolcular gozukmuyor", "yolcu gozukmuyor", "yolcular gozukmuyor", "uetds yolcu gorunmuyor", "yolcu gorunmuyor"],
+      "file": "uetds-yolcu.md",
+      "requiresEscalation": true,
+      "requiredInfo": ["firma_adi", "sefer_guzergahi", "sefer_tarih_saat"],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "uetds-ciktisi",
+      "title": "UETDS Ciktisi (D1) Alinamiyor",
+      "keywords": ["uetds ciktisi", "uetds ciktisi alamiyorum", "uetds sefer dokumu", "uetds sefer dokumu", "d1 ciktisi", "d1 alamiyorum", "uetds alinamiyor", "sefer dokumu"],
+      "file": "uetds-ciktisi.md",
+      "requiresEscalation": true,
+      "requiredInfo": ["firma_adi", "sefer_guzergahi", "sefer_tarih_saat", "hata_mesaji"],
+      "canResolveDirectly": false
+    },
+    {
+      "id": "hesap-kesimi",
+      "title": "Hesap Kesimi / Arac Kaldirma",
+      "keywords": ["hesap kesimi", "arac kaldirma", "hesap kesim", "arac kaldir", "arac iptal", "hesap kesimi iptal", "hesap kes", "arac kaldirma iptal", "hesap geri al", "hesap kesildi"],
+      "file": "hesap-kesimi.md",
+      "requiresEscalation": true,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "dokumler-hesap-fisi",
+      "title": "Dokumler ve Hesap Fisi",
+      "keywords": ["dokum", "dokum", "dokumler", "hesap fisi", "hesap fisi nasil alinir", "e-yolcu listesi", "koltuk planli yolcu listesi", "rapor olusturulamadi", "mukerrer bilet", "detayli hesap fisi", "yazdir", "yazdirma"],
+      "file": "dokumler-hesap-fisi.md",
+      "requiresEscalation": true,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "obiletrs-kurulumu",
+      "title": "Obiletrs Kurulumu",
+      "keywords": ["obiletrs", "kurulum", "tekrar kurulum", "yeniden kurulum", "format", "otomasyon kurulumu", "sistem kurma", "obiletrs kurulum", "program kurulumu"],
+      "file": "obiletrs-kurulumu.md",
+      "requiresEscalation": true,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "sefer-yonetimi",
+      "title": "Sefer Yonetimi",
+      "keywords": ["sefer acma", "sefer olusturma", "yeni sefer", "sefer uzatma", "sefer iptali", "sefer iptal etme", "seferi iptal etme", "sefer kapatma", "sefer kapama", "sefer saat degisikligi", "saat degistirme", "sefer saat degistirme", "seferin saati", "sefer goremiyorum", "sefer listesinde gozukmuyor", "seferi goremiyorum"],
+      "file": "sefer-yonetimi.md",
+      "requiresEscalation": true,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "hat-durak-fiyat",
+      "title": "Hat, Durak ve Fiyat Yonetimi",
+      "keywords": ["hat acma", "hat olusturma", "yeni hat", "durak olusturma", "durak ve yer yonetimi", "sefere durak ekleme", "durak ekleme", "fiyat ekleme", "fiyat degistirme", "fiyat guncelleme", "fiyat tanimlama", "yeni hat acma"],
+      "file": "hat-durak-fiyat.md",
+      "requiresEscalation": true,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "sube-kullanici-otobus",
+      "title": "Sube, Kullanici ve Otobus Yonetimi",
+      "keywords": ["sube olusturma", "sube acma", "kullanici olusturma", "kullanici acma", "otobus ekleme", "arac kaydetme", "otobus olusturma", "yeni arac", "koltuk plani ekleme", "koltuk modeli olusturma", "yeni koltuk modeli", "otobus sahibi ekleme", "arac sahibi kaydetme", "otobus sahibi olusturma", "yeni arac sahibi", "tali sube"],
+      "file": "sube-kullanici-otobus.md",
+      "requiresEscalation": true,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "kara-liste",
+      "title": "Kara Liste",
+      "keywords": ["kara liste", "karaliste", "kara listeye al", "kara listeye alma", "yolcu engelleme"],
+      "file": "kara-liste.md",
       "requiresEscalation": false,
       "requiredInfo": [],
       "canResolveDirectly": true
     },
     {
-      "id": "rapor-alma",
-      "title": "Rapor Alma",
-      "keywords": ["rapor", "rapor alma", "rapor olusturma", "rapor indirme", "rapor hatasi", "rapor acilmiyor", "excel rapor", "pdf rapor", "rapor bos geliyor", "rapor uzun suruyor", "raporlama", "istatistik", "veri cekme", "donemsel rapor", "rapor filtreleme"],
-      "file": "rapor-alma.md",
+      "id": "yetki-islemleri",
+      "title": "Yetki Islemleri",
+      "keywords": ["yetki", "yetkim yok", "erisemiyorum", "yetkilendirme", "izin hatasi", "yetki tanimlama", "islem onayi", "yetkili onay", "farkli sube bilet iptal", "subeler arasi yetki", "yetki sorunu", "yetkili adi"],
+      "file": "yetki-islemleri.md",
+      "requiresEscalation": true,
+      "requiredInfo": ["firma_adi", "kullanici_adi"],
+      "canResolveDirectly": false
+    },
+    {
+      "id": "kontor-islemleri",
+      "title": "Kontor Islemleri",
+      "keywords": ["kontor", "kontor yukleme", "kontor durumu", "kontor satin al", "kontor islemleri", "kontor arttirma", "kontor azaltma", "kontor hareketleri", "kredi karti kontor"],
+      "file": "kontor-islemleri.md",
       "requiresEscalation": false,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "tercihler-ayarlar",
+      "title": "Tercihler ve Ayarlar",
+      "keywords": ["tercihler", "tema", "yazi boyutu", "koltuk rengi", "gorunum ayarlari", "tema degistirme", "karanlik tema"],
+      "file": "tercihler-ayarlar.md",
+      "requiresEscalation": false,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "yazilim-kullanim-ucreti",
+      "title": "Yazilim Kullanim Ucreti",
+      "keywords": ["yazilim kullanim ucreti", "kullanim ucreti", "lisans", "sure uzatma", "yazilim ucreti", "kullanim suresi", "lisans suresi", "suresi gecti"],
+      "file": "yazilim-kullanim-ucreti.md",
+      "requiresEscalation": true,
+      "requiredInfo": [],
+      "canResolveDirectly": true
+    },
+    {
+      "id": "alpemix-kurulum",
+      "title": "Alpemix Indirme ve Kurulum",
+      "keywords": ["alpemix indirme", "alpemix kurulum", "alpemix yukleme", "alpemix nasil indirilir", "alpemix yok", "alpemix id", "alpemix programi"],
+      "file": "alpemix-kurulum.md",
+      "requiresEscalation": true,
       "requiredInfo": [],
       "canResolveDirectly": true
     },
     {
       "id": "iletisim-bilgileri",
       "title": "Iletisim Bilgileri",
-      "keywords": ["iletisim", "telefon", "destek hatti", "email", "nasil ulasabilirim", "telefon numarasi", "mail adresi", "calisma saatleri", "mesai saatleri", "destek ekibi", "bize ulasin", "iletisim bilgileri", "musteri hizmetleri", "canli destek saatleri"],
+      "keywords": ["iletisim", "telefon", "destek hatti", "cagri merkezi", "whatsapp", "telefon numarasi", "nasil ulasabilirim", "iletisim bilgileri", "bize ulasin", "calisma saatleri", "mesai saatleri"],
       "file": "iletisim-bilgileri.md",
-      "requiresEscalation": false,
-      "requiredInfo": [],
-      "canResolveDirectly": true
-    },
-    {
-      "id": "baglanti-sorunu",
-      "title": "Baglanti Sorunu",
-      "keywords": ["baglanti sorunu", "baglanamiyorum", "site acilmiyor", "sayfa yuklenmiyor", "erisim yok", "timeout", "zaman asimi", "sunucu hatasi", "500 hatasi", "404 hatasi", "server error", "sayfa bulunamadi", "internet baglantisi", "vpn sorunu", "sistem cevrimdisi"],
-      "file": "baglanti-sorunu.md",
-      "requiresEscalation": false,
-      "requiredInfo": [],
-      "canResolveDirectly": true
-    },
-    {
-      "id": "guncelleme-yapma",
-      "title": "Guncelleme ve Yeni Ozellikler",
-      "keywords": ["guncelleme", "yeni ozellik", "versiyon", "update", "son surum", "guncelleme hatasi", "yeni versiyon", "degisiklikler", "ne degisti", "yenilik", "patch", "sistem guncellemesi", "upgrade"],
-      "file": "guncelleme-yapma.md",
-      "requiresEscalation": false,
-      "requiredInfo": [],
-      "canResolveDirectly": true
-    },
-    {
-      "id": "hesap-yetkilendirme",
-      "title": "Hesap ve Yetki Sorunu",
-      "keywords": ["yetki sorunu", "erisim yok", "izin hatasi", "yetkim yok", "erisemiyorum", "yetkilendirme", "izin verilmedi", "forbidden", "unauthorized", "rol degisikligi", "kullanici ekleme", "hesap acma", "hesap kapatma", "yetki tanimlama"],
-      "file": "hesap-yetkilendirme.md",
-      "requiresEscalation": true,
-      "requiredInfo": ["kullanici_adi"],
-      "canResolveDirectly": false
-    },
-    {
-      "id": "yavas-calisiyor",
-      "title": "Sistem Yavas Calisiyor",
-      "keywords": ["yavas calisiyor", "yavas", "donuyor", "kasiyor", "performans sorunu", "cok yavas", "yuklenmiyor", "sayfa gecikmesi", "sistem dondu", "takildi", "cevap vermiyor", "islem uzun suruyor", "bekliyorum", "loading", "gecikme"],
-      "file": "yavas-calisiyor.md",
-      "requiresEscalation": false,
-      "requiredInfo": [],
-      "canResolveDirectly": true
-    },
-    {
-      "id": "entegrasyon-sorunu",
-      "title": "Entegrasyon / API Sorunu",
-      "keywords": ["entegrasyon", "api hatasi", "api sorunu", "baglanti hatasi", "veri gelmiyor", "senkronizasyon", "entegrasyon calismadi", "api key", "api anahtari", "webhook", "ucuncu parti", "dis sistem", "veri aktarimi", "api baglanamadi"],
-      "file": "entegrasyon-sorunu.md",
-      "requiresEscalation": true,
-      "requiredInfo": ["kullanici_adi"],
-      "canResolveDirectly": false
-    },
-    {
-      "id": "veri-aktarimi",
-      "title": "Veri Aktarimi (Import/Export)",
-      "keywords": ["veri aktarimi", "import", "export", "veri yukle", "veri indir", "csv yukleme", "excel yukleme", "veri tasima", "toplu yukleme", "dosya yukleme", "veri cekme", "veri gonderme", "bulk import", "toplu islem"],
-      "file": "veri-aktarimi.md",
-      "requiresEscalation": false,
-      "requiredInfo": [],
-      "canResolveDirectly": true
-    },
-    {
-      "id": "bildirim-ayarlari",
-      "title": "Bildirim ve E-posta Ayarlari",
-      "keywords": ["bildirim", "bildirim gelmiyor", "email ayarlari", "mail gelmiyor", "bildirim kapatma", "bildirim acma", "e-posta bildirimi", "push bildirim", "hatirlatma", "uyari", "notification", "bildirim sesi", "spam", "bildirim tercihleri"],
-      "file": "bildirim-ayarlari.md",
       "requiresEscalation": false,
       "requiredInfo": [],
       "canResolveDirectly": true

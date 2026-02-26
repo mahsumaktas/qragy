@@ -385,7 +385,7 @@ function createWebChatPipeline(deps) {
 
   function handleDeterministicReply({
     rawMessages, memory, conversationContext, activeUserMessages,
-    hasClosedTicketHistory, chatStartTime
+    hasClosedTicketHistory, chatStartTime, sessionId
   }) {
     const shouldUseDeterministicReply =
       conversationContext.conversationState === "welcome_or_greet" ||
@@ -440,6 +440,25 @@ function createWebChatPipeline(deps) {
     }
 
     recordAnalyticsEvent({ source: "rule-engine", responseTimeMs: Date.now() - chatStartTime });
+
+    // Audit log — deterministic reply de loglanmali
+    if (chatAuditLog) {
+      chatAuditLog.log({
+        sessionId,
+        userMessage: activeUserMessages[activeUserMessages.length - 1] || "",
+        reply: deterministicReply,
+        source: "rule-engine",
+        memory,
+        conversationContext,
+        topicDetected: conversationContext.currentTopic || null,
+        extra: {
+          deterministic: true,
+          topicDetection: conversationContext._topicDetection || null,
+          historyMsgs: rawMessages.length,
+        },
+      });
+    }
+
     return webResponse({
       reply: deterministicReply,
       source: "rule-engine",
@@ -636,6 +655,7 @@ function createWebChatPipeline(deps) {
           qualityReason: qualityCheck.reason || null,
           isEscalation: isEscalationReply,
           historyMsgs: contents.length,
+          topicDetection: conversationContext._topicDetection || null,
         },
       });
     }

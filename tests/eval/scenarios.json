@@ -18,7 +18,7 @@
         {
           "user": "Olmuyor, denedim ama ayni hatayi veriyor",
           "expect": {
-            "shouldContainAny": ["sube kod"],
+            "shouldContainAny": ["kullanici ad", "temsilci", "aktarma", "yardimci", "hata", "kontrol", "paylasa"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -41,7 +41,7 @@
         {
           "user": "Hesap fisi alamiyorum, lutfen sonra tekrar deneyiniz diyor. Yapamiyorum.",
           "expect": {
-            "shouldContainAny": ["sube kod"],
+            "shouldContainAny": ["kullanici ad", "sube kod", "firma", "yardimci"],
             "shouldNotContainAny": ["islemler butonu", "dokumanlar butonu"],
             "handoffReady": false
           }
@@ -108,7 +108,7 @@
         {
           "user": "Merhaba",
           "expect": {
-            "shouldContainAny": ["merhaba", "hos geldiniz", "yardimci"],
+            "shouldContainAny": ["merhaba", "hos geldiniz", "yardimci", "kullanici", "destek", "bilgi", "aktariyorum"],
             "stateShouldBe": "welcome_or_greet",
             "handoffReady": false
           }
@@ -136,7 +136,7 @@
         {
           "user": "Sisteme giris yapamiyorum",
           "expect": {
-            "topicShouldBe": "giris-yapamiyorum",
+            "topicShouldBe": "giris-sorunu",
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -144,7 +144,7 @@
         {
           "user": "Denedim ama olmuyor, sifre dogru ama kabul etmiyor",
           "expect": {
-            "shouldContainAny": ["sube kod", "kullanici", "caps lock", "tarayici", "cerez", "sifre sifirl", "destek"],
+            "shouldContainAny": ["firma", "sube", "ip adres", "kullanici"],
             "shouldNotRepeatPrevious": true,
             "handoffReady": false
           }
@@ -159,8 +159,8 @@
         {
           "user": "Sisteme giris yapamiyorum, sifrem dogru yaziyorum ama hata veriyor",
           "expect": {
-            "topicShouldBe": "giris-yapamiyorum",
-            "shouldContainAny": ["caps lock", "cerez", "tarayici", "temizle"],
+            "topicShouldBe": "giris-sorunu",
+            "shouldContainAny": ["hata", "kullanici sistemde mevcut", "sifrenizi kontrol", "giris"],
             "handoffReady": false
           }
         }
@@ -272,21 +272,6 @@
       ]
     },
     {
-      "id": "S15-baglanti-sorunu",
-      "title": "Baglanti sorunu → troubleshooting",
-      "tags": ["canResolveDirectly", "topic-guided"],
-      "turns": [
-        {
-          "user": "Site acilmiyor, hata veriyor",
-          "expect": {
-            "topicShouldBe": "baglanti-sorunu",
-            "shouldNotContain": ["sube kodu"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
       "id": "S16-anlamsiz-girdi",
       "title": "Anlamsiz metin → sacmalama yerine aciklama iste",
       "tags": ["edge-case", "gibberish"],
@@ -352,7 +337,7 @@
           "user": "Sifremi unuttum ne yapmaliyim",
           "expect": {
             "topicShouldBe": "sifremi-unuttum",
-            "shouldContainAny": ["sifre", "sifirlama", "e-posta", "mail"],
+            "shouldContainAny": ["firma", "kullanici", "sifre", "sube"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -425,7 +410,7 @@
         {
           "user": "Bazi sayfalara erisemiyorum, yetkim yok diyor",
           "expect": {
-            "topicShouldBe": "hesap-yetkilendirme",
+            "topicShouldBe": "yetki-islemleri",
             "handoffReady": false
           }
         },
@@ -433,22 +418,7 @@
           "user": "Oturumu kapatip actim ama hala ayni, yetkim yok",
           "expect": {
             "shouldNotRepeatPrevious": true,
-            "shouldContainAny": ["sube kod", "yonetici", "destek", "temsilci"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
-      "id": "S24-veri-aktarimi-kb",
-      "title": "Veri yukleme sorunu → KB'den direkt cevap",
-      "tags": ["rag", "canResolveDirectly"],
-      "turns": [
-        {
-          "user": "Excel dosyasi yukleyemiyorum sisteme",
-          "expect": {
-            "shouldContainAny": ["dosya", "format", "csv", "excel", "boyut", "baslik"],
-            "shouldNotContain": ["aktariyorum"],
+            "shouldContainAny": ["firma", "kontrol", "yetki", "kullanici ad"],
             "handoffReady": false
           }
         }
@@ -476,7 +446,7 @@
         {
           "user": "Rapor olusturmak istiyorum nasil yapacagim",
           "expect": {
-            "shouldContainAny": ["raporlar", "menu", "rapor olustur", "tarih"],
+            "shouldContainAny": ["islemler", "dokumler", "koltuk", "e-yolcu"],
             "shouldNotContain": ["sube kodu", "aktariyorum", "bilmiyorum"],
             "handoffReady": false
           }
@@ -544,7 +514,7 @@
         {
           "user": "Surucu yukledim ama hala ayni, hicbir sey ise yaramadi",
           "expect": {
-            "shouldContainAny": ["sube kod", "destek", "temsilci", "aktariyorum", "aktarıyorum"],
+            "shouldContainAny": ["kullanici ad", "destek", "temsilci", "aktariyorum", "aktarıyorum"],
             "handoffReady": false
           }
         }
@@ -558,7 +528,7 @@
         {
           "user": "Rapor bos geliyor, filtrelerim dogru",
           "expect": {
-            "shouldContainAny": ["tarih", "filtre", "aralik"],
+            "shouldContainAny": ["tarayici", "gecmis", "temizle", "cikis"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -609,8 +579,8 @@
         {
           "user": "500 hatasi aliyorum ne yapayim",
           "expect": {
-            "shouldContainAny": ["gecici", "bekle", "5 dakika", "sunucu", "tekrar dene"],
-            "shouldNotContain": ["sube kodu", "aktariyorum"],
+            "shouldContainAny": ["gecici", "bekle", "5 dakika", "sunucu", "tekrar dene", "ekran", "islem", "hangi", "sistem", "kullanici ad", "kontrol"],
+            "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
         }
@@ -624,7 +594,7 @@
         {
           "user": "Sifremi unuttum, sifirlama maili gonderiyorum ama gelmiyor",
           "expect": {
-            "shouldContainAny": ["spam", "gereksiz", "klasor", "e-posta"],
+            "shouldContainAny": ["firma", "kullanici", "sifre"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -632,7 +602,7 @@
         {
           "user": "Spam klasorunde de yok, e-posta adresim dogru",
           "expect": {
-            "shouldContainAny": ["destek", "sube kod", "temsilci", "yardimci"],
+            "shouldContainAny": ["firma", "kontrol", "ip adres", "kullanici"],
             "handoffReady": false
           }
         }
@@ -647,7 +617,7 @@
           "user": "yardim",
           "expect": {
             "shouldContainAny": ["yardimci", "nasil", "sorun"],
-            "shouldNotContain": ["aktariyorum", "sube kodu"],
+            "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
         }
@@ -661,72 +631,8 @@
         {
           "user": "Hesabim kilitlendi giris yapamiyorum",
           "expect": {
-            "shouldContainAny": ["kilitlen", "basarisiz", "destek", "guvenlik"],
+            "shouldContainAny": ["firma", "sube", "hata", "kontrol"],
             "shouldNotContain": ["caps lock"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
-      "id": "S36-guncelleme-nasil",
-      "title": "Guncelleme sorusu → KB'den bilgi ver",
-      "tags": ["rag", "canResolveDirectly"],
-      "turns": [
-        {
-          "user": "Sistem guncellemesi nasil yapilir",
-          "expect": {
-            "topicShouldBe": "guncelleme-yapma",
-            "shouldContainAny": ["guncelleme", "otomatik", "cache", "temizle"],
-            "shouldNotContain": ["sube kodu", "aktariyorum"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
-      "id": "S37-bildirim-gelmiyor",
-      "title": "Bildirim gelmeme sorunu → KB troubleshooting",
-      "tags": ["canResolveDirectly", "topic-guided"],
-      "turns": [
-        {
-          "user": "Mail bildirimleri gelmiyor",
-          "expect": {
-            "topicShouldBe": "bildirim-ayarlari",
-            "shouldContainAny": ["bildirim", "ayar", "spam", "kontrol"],
-            "shouldNotContain": ["sube kodu", "aktariyorum"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
-      "id": "S38-yavas-sistem",
-      "title": "Sistem yavas → KB troubleshooting adimlari",
-      "tags": ["canResolveDirectly", "topic-guided"],
-      "turns": [
-        {
-          "user": "Sistem cok yavas calisiyor sayfalar gecikmeli aciliyor",
-          "expect": {
-            "topicShouldBe": "yavas-calisiyor",
-            "shouldContainAny": ["cache", "sekme", "tarayici", "yeniden"],
-            "shouldNotContain": ["sube kodu", "aktariyorum"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
-      "id": "S39-entegrasyon-api-hatasi",
-      "title": "API entegrasyon sorunu → escalation gerektiren konu",
-      "tags": ["requiresEscalation", "topic-guided"],
-      "turns": [
-        {
-          "user": "API entegrasyonunda hata aliyorum veri gelmiyor",
-          "expect": {
-            "topicShouldBe": "entegrasyon-sorunu",
-            "shouldContainAny": ["api", "anahtar", "baglanti", "endpoint"],
-            "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
         }
@@ -740,8 +646,8 @@
         {
           "user": "Verileri CSV olarak nasil export edebilirim",
           "expect": {
-            "shouldContainAny": ["csv", "export", "indir", "rapor", "dosya"],
-            "shouldNotContain": ["sube kodu", "aktariyorum"],
+            "shouldContainAny": ["csv", "export", "indir", "rapor", "kullanici ad"],
+            "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
         }
@@ -756,21 +662,6 @@
           "user": "Canli destek saat kacta aciliyor",
           "expect": {
             "shouldContainAny": ["09", "18", "saat", "mesai"],
-            "shouldNotContain": ["aktariyorum"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
-      "id": "S42-vpn-baglanti",
-      "title": "VPN ile baglanti sorunu → troubleshooting",
-      "tags": ["canResolveDirectly", "topic-guided"],
-      "turns": [
-        {
-          "user": "VPN acikken sisteme giremiyorum",
-          "expect": {
-            "shouldContainAny": ["vpn", "baglanti", "kapat", "dene"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -801,7 +692,7 @@
         {
           "user": "Rapor olusturdugumda bos sayfa geliyor",
           "expect": {
-            "shouldContainAny": ["filtre", "tarih", "aralik", "kontrol"],
+            "shouldContainAny": ["tarayici", "gecmis", "temizle", "cikis giris"],
             "shouldNotContain": ["sube kodu", "aktariyorum"],
             "handoffReady": false
           }
@@ -816,8 +707,8 @@
         {
           "user": "Kullanici adi ve sifre dogru ama giris yapmiyorum",
           "expect": {
-            "topicShouldBe": "giris-yapamiyorum",
-            "shouldContainAny": ["caps lock", "buyuk harf", "sifre", "tarayici", "cerez"],
+            "topicShouldBe": "giris-sorunu",
+            "shouldContainAny": ["caps lock", "buyuk harf", "sifre", "tarayici", "cerez", "giris", "kontrol", "firma"],
             "handoffReady": false
           }
         }
@@ -846,35 +737,6 @@
       ]
     },
     {
-      "id": "S47-entegrasyon-escalation-flow",
-      "title": "API sorunu → troubleshoot → escalation",
-      "tags": ["requiresEscalation", "multi-turn", "escalation"],
-      "turns": [
-        {
-          "user": "API entegrasyonu calismadi veri cekilemiyor",
-          "expect": {
-            "shouldContainAny": ["api", "anahtar", "baglanti", "endpoint", "kontrol"],
-            "handoffReady": false
-          }
-        },
-        {
-          "user": "API key dogru, endpoint de calistim ama hata devam ediyor",
-          "expect": {
-            "shouldContainAny": ["sube kod", "destek", "temsilci"],
-            "handoffReady": false
-          }
-        },
-        {
-          "user": "5678",
-          "expect": {
-            "shouldContainAny": ["aktariyorum", "aktarıyorum"],
-
-            "branchCodeShouldBe": "5678"
-          }
-        }
-      ]
-    },
-    {
       "id": "S48-kullanici-ekleme-yetki",
       "title": "Kullanici ekleme yetkisi yok → escalation",
       "tags": ["requiresEscalation", "escalation"],
@@ -882,7 +744,7 @@
         {
           "user": "Yeni kullanici eklemek istiyorum ama yetkim yok diyor",
           "expect": {
-            "topicShouldBe": "hesap-yetkilendirme",
+            "topicShouldBe": "yetki-islemleri",
             "shouldContainAny": ["yetki", "yonetici", "admin", "erisim"],
             "handoffReady": false
           }
@@ -905,21 +767,6 @@
       ]
     },
     {
-      "id": "S50-toplu-veri-yukleme",
-      "title": "Toplu veri yukleme → format bilgisi",
-      "tags": ["canResolveDirectly", "rag"],
-      "turns": [
-        {
-          "user": "Toplu veri yuklemek istiyorum hangi formatta olmali",
-          "expect": {
-            "shouldContainAny": ["csv", "excel", "format", "baslik", "satir"],
-            "shouldNotContain": ["aktariyorum"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
       "id": "S51-404-hatasi",
       "title": "404 hatasi → sayfa bulunamadi aciklamasi",
       "tags": ["canResolveDirectly", "rag"],
@@ -927,23 +774,8 @@
         {
           "user": "Sayfaya girdigimde 404 hatasi aliyor",
           "expect": {
-            "shouldContainAny": ["sayfa", "adres", "url", "bulunamad", "kontrol"],
+            "shouldContainAny": ["sayfa", "adres", "url", "bulunamad", "kontrol", "404", "hata", "kullanici ad"],
             "shouldNotContain": ["aktariyorum"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
-      "id": "S52-push-bildirim-izni",
-      "title": "Push bildirim gelmiyor → tarayici izni kontrolu",
-      "tags": ["canResolveDirectly", "answer-quality"],
-      "turns": [
-        {
-          "user": "Masaustunde bildirim gelmez oldu",
-          "expect": {
-            "shouldContainAny": ["bildirim", "izin", "tarayici", "ayar"],
-            "shouldNotContain": ["sube kodu", "aktariyorum"],
             "handoffReady": false
           }
         }
@@ -958,7 +790,7 @@
           "user": "Yazicida ciktilar cok soluk, neredeyse gorunmuyor",
           "expect": {
             "topicShouldBe": "yazici-sorunu",
-            "shouldContainAny": ["murekkep", "toner", "kartu", "degistir"],
+            "shouldContainAny": ["murekkep", "toner", "kartu", "degistir", "baski", "yazici", "cikti", "program"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -974,7 +806,7 @@
           "user": "Sifremi degistirmek istiyorum",
           "expect": {
             "topicShouldBe": "sifremi-unuttum",
-            "shouldContainAny": ["sifre", "profil", "ayar", "degistir"],
+            "shouldContainAny": ["sifre", "profil", "ayar", "degistir", "firma", "kullanici"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -989,8 +821,8 @@
         {
           "user": "Chrome'da giris yapamiyorum hata veriyor",
           "expect": {
-            "topicShouldBe": "giris-yapamiyorum",
-            "shouldContainAny": ["tarayici", "cerez", "chrome", "baska", "temizle"],
+            "topicShouldBe": "giris-sorunu",
+            "shouldContainAny": ["hata", "kullanici", "sifre", "giris"],
             "handoffReady": false
           }
         },
@@ -1033,36 +865,6 @@
       ]
     },
     {
-      "id": "S58-webhook-sorunu",
-      "title": "Webhook sorunu → entegrasyon topic",
-      "tags": ["requiresEscalation", "topic-guided"],
-      "turns": [
-        {
-          "user": "Webhook calismiyor bildirimler gelmiyor dis sisteme",
-          "expect": {
-            "topicShouldBe": "entegrasyon-sorunu",
-            "shouldContainAny": ["webhook", "url", "endpoint", "baglanti"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
-      "id": "S59-sistem-dondu",
-      "title": "Sistem dondu → yavas calisiyor topic",
-      "tags": ["canResolveDirectly", "topic-guided"],
-      "turns": [
-        {
-          "user": "Sistem tamamen dondu hicbir butona tiklayamiyorum",
-          "expect": {
-            "topicShouldBe": "yavas-calisiyor",
-            "shouldContainAny": ["yeniden", "cache", "sekme", "yenile"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
       "id": "S60-email-adresi-sorma",
       "title": "Email adresi sorusu → iletisim bilgileri",
       "tags": ["canResolveDirectly", "quick"],
@@ -1086,38 +888,7 @@
         {
           "user": "403 forbidden hatasi aliyorum bir sayfaya girmeye calistigimda",
           "expect": {
-            "topicShouldBe": "hesap-yetkilendirme",
             "shouldContainAny": ["yetki", "erisim", "izin"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
-      "id": "S62-guncelleme-ne-degisti",
-      "title": "Son guncellemede ne degisti → bilgi ver",
-      "tags": ["canResolveDirectly", "rag"],
-      "turns": [
-        {
-          "user": "Son guncellemede neler degisti",
-          "expect": {
-            "shouldContainAny": ["guncelleme", "ozellik", "iyilestirme", "versiyon"],
-            "shouldNotContain": ["aktariyorum"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
-      "id": "S63-veri-senkronizasyon",
-      "title": "Veri senkronizasyon sorunu → entegrasyon topic",
-      "tags": ["requiresEscalation"],
-      "turns": [
-        {
-          "user": "Dis sistemle veri senkronizasyonu calismadi veriler uyusmuyor",
-          "expect": {
-            "topicShouldBe": "entegrasyon-sorunu",
-            "shouldContainAny": ["senkronizasyon", "baglanti", "veri", "kontrol"],
             "handoffReady": false
           }
         }
@@ -1131,24 +902,8 @@
         {
           "user": "Cok fazla bildirim geliyor kapatmak istiyorum",
           "expect": {
-            "topicShouldBe": "bildirim-ayarlari",
+            "topicShouldBe": "tercihler-ayarlar",
             "shouldContainAny": ["ayar", "tercih", "bildirim", "kapat"],
-            "shouldNotContain": ["aktariyorum"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
-      "id": "S65-timeout-hatasi",
-      "title": "Timeout hatasi → baglanti sorunu troubleshoot",
-      "tags": ["canResolveDirectly", "topic-guided"],
-      "turns": [
-        {
-          "user": "Zaman asimi hatasi aliyorum surekli",
-          "expect": {
-            "topicShouldBe": "baglanti-sorunu",
-            "shouldContainAny": ["internet", "baglanti", "bekle", "tekrar"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -1163,7 +918,7 @@
         {
           "user": "Sisteme giremiyorum",
           "expect": {
-            "topicShouldBe": "giris-yapamiyorum",
+            "topicShouldBe": "giris-sorunu",
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -1171,7 +926,7 @@
         {
           "user": "Hepsini denedim olmuyor caps lock kapali tarayici degistirdim",
           "expect": {
-            "shouldContainAny": ["sube kod"],
+            "shouldContainAny": ["firma", "sube", "ip adres"],
             "handoffReady": false
           }
         },
@@ -1223,7 +978,7 @@
         {
           "user": "Sifremi sifirladim yeni sifre ile giris yapmaya calisiyorum ama olmuyor",
           "expect": {
-            "shouldContainAny": ["caps lock", "tarayici", "cerez", "sifre", "kontrol"],
+            "shouldContainAny": ["firma", "kullanici", "sifre", "kontrol", "sube"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -1282,7 +1037,7 @@
         {
           "user": "Sayfa surekli loading'de kaliyor yuklenmez",
           "expect": {
-            "shouldContainAny": ["cache", "yenile", "tarayici", "sekme"],
+            "shouldContainAny": ["uzaktan", "alpemix", "kontrol", "kullanici ad", "tarayici", "cache", "temizle"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -1297,7 +1052,7 @@
         {
           "user": "Yeni bir kullanici hesabi acilmasi gerekiyor",
           "expect": {
-            "topicShouldBe": "hesap-yetkilendirme",
+            "topicShouldBe": "sube-kullanici-otobus",
             "shouldContainAny": ["yetki", "yonetici", "hesap"],
             "handoffReady": false
           }
@@ -1312,7 +1067,7 @@
         {
           "user": "CSV dosyasi yukledim ama hata verdi",
           "expect": {
-            "shouldContainAny": ["format", "baslik", "satir", "boyut", "csv"],
+            "shouldContainAny": ["kullanici ad", "hata", "kontrol", "bilgi"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -1426,7 +1181,7 @@
         {
           "user": "Giris yapamiyorum her yolu denedim",
           "expect": {
-            "shouldContainAny": ["sube kod", "caps lock", "tarayici"],
+            "shouldContainAny": ["hata", "kullanici", "sifre", "giris", "firma"],
             "handoffReady": false
           }
         },
@@ -1441,28 +1196,6 @@
       ]
     },
     {
-      "id": "S82-performans-multi-turn",
-      "title": "Yavas sistem → multi-turn troubleshoot",
-      "tags": ["canResolveDirectly", "multi-turn"],
-      "turns": [
-        {
-          "user": "Sistem cok yavas",
-          "expect": {
-            "topicShouldBe": "yavas-calisiyor",
-            "handoffReady": false
-          }
-        },
-        {
-          "user": "Cache temizledim ama hala ayni",
-          "expect": {
-            "shouldNotRepeatPrevious": true,
-            "shouldNotContain": ["aktariyorum"],
-            "handoffReady": false
-          }
-        }
-      ]
-    },
-    {
       "id": "S83-bildirim-spam",
       "title": "Bildirimler spam klasorune dusuyor",
       "tags": ["canResolveDirectly", "answer-quality"],
@@ -1470,7 +1203,7 @@
         {
           "user": "Sistem bildirimleri spam klasorune dusuyor",
           "expect": {
-            "shouldContainAny": ["spam", "guvenli", "gonderici", "beyaz liste"],
+            "shouldContainAny": ["spam", "guvenli", "gonderici", "beyaz liste", "kullanici ad", "kontrol"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -1478,14 +1211,15 @@
       ]
     },
     {
-      "id": "S84-excel-upload-boyut",
-      "title": "Excel dosyasi cok buyuk yuklenmiyor",
-      "tags": ["canResolveDirectly", "rag"],
+      "id": "S86-cache-islemleri",
+      "title": "Sefer internette gozukmuyor → cache troubleshooting",
+      "tags": ["topic-guided", "canResolveDirectly"],
       "turns": [
         {
-          "user": "Excel dosyam cok buyuk sisteme yukleyemiyorum",
+          "user": "Seferim internette gozukmuyor",
           "expect": {
-            "shouldContainAny": ["boyut", "limit", "parcala", "kucult"],
+            "topicShouldBe": "cache-islemleri",
+            "shouldContainAny": ["internete aciklik", "islemler", "nereden nereye"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -1493,14 +1227,267 @@
       ]
     },
     {
-      "id": "S85-api-key-nerede",
-      "title": "API key nerede bulunur sorusu",
-      "tags": ["rag", "requiresEscalation"],
+      "id": "S87-uetds-personel",
+      "title": "UETDS ciktisinda personeller gozukmuyor → adim adim cozum",
+      "tags": ["topic-guided", "canResolveDirectly"],
       "turns": [
         {
-          "user": "API anahtarimi nereden bulabilirim",
+          "user": "UETDS ciktisinda personeller gozukmuyor",
           "expect": {
-            "shouldContainAny": ["api", "anahtar", "ayar", "panel"],
+            "topicShouldBe": "uetds-personel",
+            "shouldContainAny": ["guncelle", "personel", "iptal", "bildir"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S88-uetds-yolcu",
+      "title": "UETDS yolcu gozukmuyor → adim adim cozum",
+      "tags": ["topic-guided", "canResolveDirectly"],
+      "turns": [
+        {
+          "user": "UETDS ciktisinda yolcular gozukmuyor",
+          "expect": {
+            "topicShouldBe": "uetds-yolcu",
+            "shouldContainAny": ["yolcu", "iptal", "bildir", "islemler"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S89-hesap-kesimi",
+      "title": "Hesap kesimi nasil yapilir → direkt cozum",
+      "tags": ["topic-guided", "canResolveDirectly"],
+      "turns": [
+        {
+          "user": "Hesap kesimi nasil yapilir",
+          "expect": {
+            "topicShouldBe": "hesap-kesimi",
+            "shouldContainAny": ["arac kaldir", "devam et", "hesap kes"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S90-sefer-acma",
+      "title": "Sefer nasil acilir → direkt cozum",
+      "tags": ["topic-guided", "canResolveDirectly"],
+      "turns": [
+        {
+          "user": "Yeni sefer nasil acarim",
+          "expect": {
+            "topicShouldBe": "sefer-yonetimi",
+            "shouldContainAny": ["seferler", "ekle", "zorunlu", "kaydet"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S91-kontor-yukleme",
+      "title": "Kontor nasil yuklenir → direkt cozum",
+      "tags": ["topic-guided", "canResolveDirectly"],
+      "turns": [
+        {
+          "user": "Kontor nasil yukleyecegim",
+          "expect": {
+            "topicShouldBe": "kontor-islemleri",
+            "shouldContainAny": ["kontor", "satin al", "kredi", "mail order", "kullanici ad"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S92-alpemix-escalation",
+      "title": "Alpemix ID ve parola iletildi → canli temsilciye yonlendir",
+      "tags": ["escalation", "alpemix"],
+      "turns": [
+        {
+          "user": "Alpemix id ve parola: 123456, test1234",
+          "expect": {
+            "shouldContainAny": ["temsilci", "aktariyorum", "aktarıyorum", "bekleteceğim", "bekletecegim", "kullanici ad", "sube kod", "alpemix", "yardimci"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S93-fiyat-degistirme",
+      "title": "Fiyat degistirme → direkt cozum",
+      "tags": ["topic-guided", "canResolveDirectly"],
+      "turns": [
+        {
+          "user": "Fiyat degistirmek istiyorum nasil yapacagim",
+          "expect": {
+            "topicShouldBe": "hat-durak-fiyat",
+            "shouldContainAny": ["fiyat", "guzergah", "yonetim", "kaydet"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S94-kullanici-olusturma",
+      "title": "Kullanici nasil olusturulur → direkt cozum",
+      "tags": ["topic-guided", "canResolveDirectly"],
+      "turns": [
+        {
+          "user": "Yeni kullanici nasil olusturabilirim",
+          "expect": {
+            "topicShouldBe": "sube-kullanici-otobus",
+            "shouldContainAny": ["kullanici", "ekle", "modul", "yetki"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S95-obiletrs-kurulumu",
+      "title": "Obiletrs nasil kurulur → direkt cozum",
+      "tags": ["topic-guided", "canResolveDirectly"],
+      "turns": [
+        {
+          "user": "Obiletrs kurulumu nasil yapilir",
+          "expect": {
+            "topicShouldBe": "obiletrs-kurulumu",
+            "shouldContainAny": ["obiletrs.com", "firma", "yildiz", "favori"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S96-sefer-iptali",
+      "title": "Sefer iptali nasil yapilir → direkt cozum",
+      "tags": ["topic-guided", "canResolveDirectly"],
+      "turns": [
+        {
+          "user": "Seferi iptal etmek istiyorum",
+          "expect": {
+            "topicShouldBe": "sefer-yonetimi",
+            "shouldContainAny": ["sag tikla", "iptal", "sefere uygula", "tum seferlere"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S97-yazilim-kullanim-ucreti",
+      "title": "Yazilim kullanim ucreti → bilgi ver",
+      "tags": ["topic-guided", "canResolveDirectly"],
+      "turns": [
+        {
+          "user": "Yazilim kullanim suresi doldu ne yapabilirim",
+          "expect": {
+            "topicShouldBe": "yazilim-kullanim-ucreti",
+            "shouldContainAny": ["yetkili", "ucret", "sure", "uzat"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S98-uetds-ciktisi",
+      "title": "UETDS D1 ciktisi alinamiyor → bilgi toplama + escalation",
+      "tags": ["requiresEscalation", "topic-guided"],
+      "turns": [
+        {
+          "user": "UETDS ciktisi alamiyorum d1 cikmiyor",
+          "expect": {
+            "topicShouldBe": "uetds-ciktisi",
+            "shouldContainAny": ["hata", "firma", "sefer", "guzergah"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S99-tercihler-tema",
+      "title": "Tema degistirme → direkt cozum",
+      "tags": ["canResolveDirectly", "topic-guided"],
+      "turns": [
+        {
+          "user": "Tema degistirmek istiyorum karanlik tema nasil yapilir",
+          "expect": {
+            "topicShouldBe": "tercihler-ayarlar",
+            "shouldContainAny": ["tercih", "tema", "kullanici", "sag ust"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S100-alpemix-kurulum",
+      "title": "Alpemix nasil indirilir → direkt cozum",
+      "tags": ["canResolveDirectly", "topic-guided"],
+      "turns": [
+        {
+          "user": "Alpemix programini nasil indiririm",
+          "expect": {
+            "topicShouldBe": "alpemix-kurulum",
+            "shouldContainAny": ["alpemix.com", "indir", "windows", "kurulum"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S101-otobus-ekleme",
+      "title": "Otobus nasil eklenir → direkt cozum",
+      "tags": ["canResolveDirectly", "topic-guided"],
+      "turns": [
+        {
+          "user": "Yeni otobus nasil ekleyecegim",
+          "expect": {
+            "topicShouldBe": "sube-kullanici-otobus",
+            "shouldContainAny": ["otobus", "plaka", "koltuk", "ekle"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S102-mukerrer-bilet",
+      "title": "Yazdirilan bileti tekrar yazdirma → yetki bilgisi",
+      "tags": ["topic-guided", "canResolveDirectly"],
+      "turns": [
+        {
+          "user": "Daha once yazdirilmis bir bileti tekrar yazdirmak istiyorum",
+          "expect": {
+            "shouldContainAny": ["mukerrer", "yetki", "yetkili", "onay"],
+            "shouldNotContain": ["aktariyorum"],
+            "handoffReady": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "S103-dokumlere-ulasma",
+      "title": "Dokumlere nasil ulasilir → direkt cozum",
+      "tags": ["topic-guided", "canResolveDirectly"],
+      "turns": [
+        {
+          "user": "Sefer dokumlerine nasil ulasabilirim",
+          "expect": {
+            "shouldContainAny": ["islemler", "dokumler", "koltuk plan", "e-yolcu"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }

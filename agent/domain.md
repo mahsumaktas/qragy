@@ -1,40 +1,36 @@
 # Alan Bilgisi
-<!-- Bu dosya her kurulumda farklidir. Asagidaki alanlari kendi platformunuza gore doldurun. -->
 
 ## Platform
-<!-- Platform adi ve kisa aciklama. Ornek: "ABC Platform, B2B SaaS operasyon yonetim sistemidir." -->
-{{COMPANY_NAME}} platformu.
+OBUS, Türkiye genelinde 500'den fazla otobüs firmasının kullandığı otobüs işletme ve biletleme platformudur. Sefer planlama, bilet satışı, koltuk yönetimi, hesap fişi, e-yolcu listesi, UETDS bildirimleri ve finansal raporlama gibi işlemleri kapsar.
 
-## Kullanici Profilleri
-<!-- En az 3 kullanici profili tanimlayin -->
-Firma yetkilisi: Genel mudur veya operasyon sorumlusu. Sistem genelinde karar alir.
-Operasyon personeli: Gunluk islemleri ve operasyonel surecleri yurutur.
-Son kullanici: Temel islemleri gerceklestirir, paneli aktif kullanir.
+## Kullanıcı Profilleri
+Firma yetkilisi: Genel müdür veya operasyon sorumlusu. Sistem genelinde karar alır, kullanıcı yönetimi yapar.
+Şube personeli: Günlük bilet satışı, sefer operasyonları ve müşteri işlemlerini yürütür.
+Muhasebe personeli: Hesap fişi, kontör yönetimi ve finansal raporlarla ilgilenir.
 
-## Temel Is Surecleri
-<!-- En az 5 is sureci tanimlayin. Bos birakmak bot'un bilgisini azaltir. -->
-Hesap olusturma: Firma kaydi, kullanici tanimlama, yetki atama sirasiyla yapilir.
-Islem yonetimi: Panel uzerinden islemler olusturulur, takip edilir ve raporlanir.
-Raporlama: Donemsel raporlar olusturulur ve indirilir.
-Entegrasyonlar: Ucuncu parti sistemlerle veri alisverisi yapilir.
-Kullanici yonetimi: Yeni kullanici ekleme, yetki degistirme, hesap deaktifasyon.
-<!-- Ek surecleri buraya ekleyin -->
+## Temel İş Süreçleri
+Bilet satışı: Sefer seçimi, koltuk ataması, yolcu bilgileri girişi ve ödeme işlemi.
+Sefer yönetimi: Sefer oluşturma, güzergah tanımlama, araç atama ve ek sefer açma.
+Hesap fişi ve belgeler: İşlemler menüsünden Dökümanlar bölümüne erişim.
+UETDS bildirimleri: e-Yolcu listesi gönderimi ve UETDS uyumluluk kontrolü.
+Raporlama: Satış, doluluk, gelir ve operasyonel raporlar.
+Kontör yönetimi: Firma kontör bakiyesi takibi ve yükleme işlemleri.
 
-## Terminoloji Sozlugu
-<!-- En az 10 terim tanimlayin. Bot bu terimleri kullaniciya aciklamak icin kullanir. -->
-Panel: Platform yonetim arayuzu. Kullanicilar bu arayuz uzerinden sisteme erisir.
-REMOTE_TOOL: Uzak masaustu erisim araci. Canli destek ekibi bu arac uzerinden kullanicinin ekranina baglanir. Bot REMOTE_TOOL ile baglanti kuramaz.
-Sube kodu / Kullanici kodu: Her kullanicinin platformda tanimli benzersiz kodu. Destek taleplerinde zorunlu bilgidir.
-Lisans: Platform kullanimini yetkilendiren dijital anahtar.
-API anahtari: Harici entegrasyonlar icin kullanilan erisim bilgisi.
-Rapor: Sistem verilerinden olusturulan donemsel cikti dosyasi (PDF veya Excel).
-Filtre: Raporlama ve listeleme ekranlarinda sonuclari daraltmak icin kullanilan kriter.
-Dashboard: Platform girisinde gorulen ozet bilgi ekrani.
-Yetki: Kullanicinin sistemde yapabilecegi islemleri belirleyen erisim seviyesi.
-Entegrasyon: Platform ile ucuncu parti sistemler arasindaki veri baglantisi.
-<!-- Ek terimleri buraya ekleyin -->
+## Terminoloji Sözlüğü
+Panel: OBUS yönetim arayüzü. Kullanıcılar bu arayüz üzerinden sisteme erişir.
+Alpemix: Uzak masaüstü erişim aracı. Canlı destek ekibi bu araç üzerinden kullanıcının ekranına bağlanır.
+Kullanıcı adı: OBUS sistemine giriş için kullanılan benzersiz kimlik. Destek taleplerinde zorunlu bilgidir.
+Kontör: Bilet basımı ve işlem yapabilmek için gereken dijital kredi birimi.
+UETDS: Ulaştırma Elektronik Takip ve Denetim Sistemi. Yasal zorunluluk.
+e-Yolcu listesi: UETDS'ye gönderilen yolcu bildirim listesi.
+Hesap fişi: Bilet satışı sonrası oluşturulan mali belge.
+PNR: Yolcu isim kaydı. Her bilete atanan benzersiz takip numarası.
+Sefer: Belirli güzergah ve tarihte planlanan otobüs seferi.
+Koltuk planı: Araçtaki koltuk düzeni ve müsaitlik durumu.
+Şube kodu: Her şubenin platformda tanımlı benzersiz kodu.
 
-## Mevsimsel ve Zamansal Baglam
-Donem sonlari: Raporlama talepleri artar.
-Yeni versiyon yayinlari: Guncelleme sonrasi destek talepleri yogunlasir.
-Mesai saatleri disinda: Gelen talepler genellikle acil niteliktedir.
+## Mevsimsel ve Zamansal Bağlam
+Bayram ve tatil dönemleri: Bilet satışı ve sefer yoğunluğu artar.
+Dönem sonları: Raporlama talepleri artar.
+UETDS denetim dönemleri: e-Yolcu listesi sorunları yoğunlaşır.
+Mesai saatleri dışında: Gelen talepler genellikle acil niteliktedir.
