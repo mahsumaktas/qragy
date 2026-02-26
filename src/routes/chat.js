@@ -243,7 +243,7 @@ function mount(app, deps) {
         const supportAvailability = getSupportAvailability();
 
         return res.json({
-          reply: buildMissingFieldsReply(memory, latestUserMessage),
+          reply: buildMissingFieldsReply(memory, latestUserMessage) || GENERIC_REPLY,
           model: getGoogleModel(),
           source: "fallback-error",
           memory,

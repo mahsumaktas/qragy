@@ -176,9 +176,9 @@ function createChatProcessor(deps) {
     // Response quality validation
     const qualityCheck = validateBotResponse(reply, []);
     if (!qualityCheck.valid) {
-      reply = buildMissingFieldsReply(memory, latestUserMessage);
+      reply = buildMissingFieldsReply(memory, latestUserMessage) || GENERIC_REPLY;
     }
-    if (!reply) reply = buildMissingFieldsReply(memory, latestUserMessage);
+    if (!reply) reply = GENERIC_REPLY;
 
     recordAnalyticsEvent({ source: conversationContext.currentTopic ? "topic-guided" : "gemini", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null, fallbackUsed: Boolean(geminiResult.fallbackUsed), sentiment });
     return { reply, source: conversationContext.currentTopic ? "topic-guided" : "gemini", memory, citations: citations.length ? citations : undefined };

@@ -34,7 +34,7 @@ function validateBotResponse(reply, expectedLang = "tr") {
   for (const w of words) {
     if (w.length < 3) continue;
     wordCounts[w] = (wordCounts[w] || 0) + 1;
-    if (wordCounts[w] >= 5) return { valid: false, reason: "word_repetition" };
+    if (wordCounts[w] >= 10) return { valid: false, reason: "word_repetition" };
   }
 
   // Hallucination markers
