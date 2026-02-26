@@ -158,8 +158,8 @@ function mount(app, deps) {
       });
       if (deterministicResult) return res.json(deterministicResult);
 
-      // Relevance guardrail — off-topic mesajlari LLM ile yakala (sadece konu tespit edilemediginde)
-      if (!conversationContext.currentTopic && typeof checkRelevanceLLM === "function" && callLLM) {
+      // Relevance guardrail — off-topic mesajlari LLM ile yakala (sadece ilk turda ve konu tespit edilemediginde)
+      if (!conversationContext.currentTopic && activeUserMessages.length <= 1 && typeof checkRelevanceLLM === "function" && callLLM) {
         const relevanceCheck = await checkRelevanceLLM(latestUserMessage, callLLM);
         if (!relevanceCheck.relevant) {
           recordAnalyticsEvent({ source: "relevance-blocked", reason: relevanceCheck.reason, responseTimeMs: Date.now() - chatStartTime });
