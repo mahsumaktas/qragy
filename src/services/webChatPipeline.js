@@ -558,17 +558,17 @@ function createWebChatPipeline(deps) {
     const qualityCheck = validateBotResponse(reply, sources);
     if (!qualityCheck.valid) {
       logger.warn("webChatPipeline", "Kalite dogrulama basarisiz", { sessionId, reason: qualityCheck.reason, replyPreview: reply.slice(0, 100) });
-      reply = buildMissingFieldsReply(memory, latestUserMessage);
+      reply = buildMissingFieldsReply(memory, latestUserMessage) || GENERIC_REPLY;
     }
 
     if (!conversationContext.currentTopic && !hasRequiredFields(memory) && CONFIRMATION_PREFIX_REGEX.test(reply)) {
       logger.warn("webChatPipeline", "LLM onay mesaji uretti ama required fields eksik, fallback", { sessionId, replyPreview: reply.slice(0, 80) });
-      reply = buildMissingFieldsReply(memory, latestUserMessage);
+      reply = buildMissingFieldsReply(memory, latestUserMessage) || GENERIC_REPLY;
     }
 
     if (!reply) {
       logger.warn("webChatPipeline", "Reply bos, fallback", { sessionId });
-      reply = buildMissingFieldsReply(memory, latestUserMessage);
+      reply = GENERIC_REPLY;
     }
 
     // Parse dynamic quick replies from LLM response

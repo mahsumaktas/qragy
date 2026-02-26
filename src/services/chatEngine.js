@@ -539,8 +539,8 @@ function buildDeterministicCollectionReply(memory, activeUserMessages, hasClosed
     return welcomeMessage;
   }
 
-  // Selamlama mesajı geldiğinde sadece karşılama yap, bilgi toplama
-  if (isGreetingOnlyMessage(latestUserMessage) || NEW_TICKET_INTENT_REGEX.test(normalizedLatest)) {
+  // Selamlama mesajı geldiğinde sadece karşılama yap — ama sadece ilk turda
+  if (activeUserMessages.length <= 1 && (isGreetingOnlyMessage(latestUserMessage) || NEW_TICKET_INTENT_REGEX.test(normalizedLatest))) {
     return welcomeMessage;
   }
 
@@ -617,7 +617,8 @@ async function buildConversationContext(memory, userMessages, opts = {}) {
     context.currentTopic = topicResult.topicId;
     context.topicConfidence = topicResult.confidence;
     context.conversationState = "topic_guided_support";
-  } else if (isGreetingOnlyMessage(latestMessage)) {
+  } else if (userMessages.length <= 1 && isGreetingOnlyMessage(latestMessage)) {
+    // Sadece ilk turda greeting algıla — devam eden konuşmada "tamam", "ok" gibi mesajlar greeting değil
     context.conversationState = "welcome_or_greet";
   } else {
     // Keyword eslesmedi — LLM-based classification dene (tum mesajlari gonder, baglam icin)
