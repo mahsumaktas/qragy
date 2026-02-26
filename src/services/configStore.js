@@ -27,7 +27,7 @@ function createConfigStore(deps) {
     farewellMessage: "İyi günler dilerim! İhtiyacınız olursa tekrar yazabilirsiniz.",
     csatEnabled: true,
     csatMessage: "Deneyiminizi değerlendirir misiniz?",
-    welcomeMessage: "Merhaba, Teknik Destek hattına hoş geldiniz. Size nasıl yardımcı olabilirim?",
+    welcomeMessage: "Merhaba, OBUS Teknik Destek hattına hoş geldiniz. Size nasıl yardımcı olabilirim?",
     questionExtractionEnabled: true,
     conversationSummaryEnabled: true,
     summaryThreshold: 15
