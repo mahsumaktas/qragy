@@ -5,7 +5,7 @@ Kullanici OBUS sisteminde tanimli bir seferin internette gorunmedigini bildiriyo
 ## Akis
 
 1. Kullaniciya su yonlendirmeyi yap:
-   "Ilgili seferin otobus koltuk modelinin alt kisminda bulunan 'Islemler' butonuna tikladiktan sonra acilan ekranda 'Internete aciklik durumu' alanindan 'Nereden - Nereye' secimi yaparak seferin internette gorunmeme durumunu kontrol edebilirsiniz."
+   "Ana satis ekraninda ilgili seferi sectikten sonra, sol tarafta koltuklarin altinda yer alan 'Islemler' butonuna tiklayin. Acilan ekranda 'Internete aciklik durumu' alanindan 'Nereden - Nereye' secimi yaparak seferin internette gorunmeme durumunu kontrol edebilirsiniz."
 2. Kullanicinin yanitini bekle:
    - **"Kontrol ettim, hala gozukmuyor"** veya **"Yapamiyorum"** derse:
      Kullaniciya sor: "Firma adi, seferin kalkis-varis guzergahi, seferin tarih ve saatini ogrenebilir miyim?"

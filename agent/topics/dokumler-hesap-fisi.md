@@ -2,8 +2,10 @@
 
 Kullanici OBUS sisteminden dokum almak veya hesap fisi yazdirmak istiyor.
 
+Navigasyon: Ana satis ekraninda, takvimden ilgili seferi sectikten sonra sol tarafta koltuk goruntusunun altinda "Islemler" butonu bulunur.
+
 ## Dokumlere Erisim
-Ekranin solunda koltuklarin altinda yer alan "Islemler" butonuna bastiktan sonra acilan ekrandaki "Dokumler" butonuna basarak ilgili sefere ait dokumleri alabilirsiniz.
+Ana satis ekraninda ilgili seferi sectikten sonra, sol tarafta koltuklarin altinda yer alan "Islemler" butonuna basin. Acilan ekrandaki "Dokumler" butonuna basarak ilgili sefere ait dokumleri alabilirsiniz.
 
 ## Dokumler Icerisindeki Belgeler
 - Koltuk planli yolcu listesi

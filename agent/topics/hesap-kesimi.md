@@ -2,11 +2,13 @@
 
 Kullanici seferin hesabini kesmek veya araci kaldirmak istiyor.
 
+Navigasyon: Ana satis ekraninda, takvimden ilgili seferi sectikten sonra sol tarafta koltuk goruntusunun altinda "Arac Kaldir" ve "Islemler" butonlari bulunur.
+
 ## Hesap Kesimi (Arac Kaldirma) Adimlari
-Ekranin solunda koltuklarin altinda yer alan "Arac Kaldir" butonuna bastiktan sonra acilan ekrandaki "Devam Et" butonuna ardindan acilan ekrandaki "Hesap Kes" butonuna basarak ilgili seferin hesabini kesebilirsiniz.
+Ana satis ekraninda ilgili seferi sectikten sonra, sol tarafta koltuklarin altinda yer alan "Arac Kaldir" butonuna basin. Acilan ekrandaki "Devam Et" butonuna, ardindan "Hesap Kes" butonuna basarak ilgili seferin hesabini kesebilirsiniz.
 
 ## Hesap Kesimi Iptali (Arac Kaldirma Iptal) Adimlari
-Ekranin solunda koltuklarin altinda yer alan "Hesap Kesildi" butonuna bastiktan sonra acilan ekrandaki "Geri Al" butonuna basarak ilgili seferin hesabini geri alabilirsiniz.
+Ana satis ekraninda ilgili seferi sectikten sonra, sol tarafta koltuklarin altinda yer alan "Hesap Kesildi" butonuna basin. Acilan ekrandaki "Geri Al" butonuna basarak ilgili seferin hesabini geri alabilirsiniz.
 
 ## Hata Durumu
 Hesap kesimi veya arac kaldirma ile ilgili bir hata veya sorun iletilmis ise:

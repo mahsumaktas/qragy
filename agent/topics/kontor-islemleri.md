@@ -7,7 +7,7 @@ Kullanici programin sag ust kosesinde bulunan kullanici adina tiklayarak acilan 
 
 ## Kontor Islemleri (Yonetim)
 Kullanici subelerine kontor islemi (arttirma, azaltma) veya kontor hareketlerini inceleme islemlerini saglamak isterse:
-Yonetim > Tanimlar > Subeler > Kontor Islemleri ekranindan islem saglayabilir.
+Ust menuden "Yonetim > Tanimlar > Subeler > Kontor Islemleri" sayfasina giderek islem saglayabilir.
 
 ## Bot ne yapmali
 - Kullanicinin ne yapmak istedigini belirle (yukleme mi, inceleme mi)

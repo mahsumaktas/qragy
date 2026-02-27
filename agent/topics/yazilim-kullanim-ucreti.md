@@ -7,7 +7,7 @@ Yazilim kullanim ucretini uzatmak icin firma yetkilisinin onayi gerekmektedir. F
 
 ## Kullanicinin Kendisi Yapabilir
 Eger kullanici islemi kendisinin yapabilecegini soyluyorsa:
-Yonetim > Tanimlar > Subeler > Yazilim Kullanim Ucretleri ekraninda borca cift tikladiktan sonra "Suresi Gectikten Sonra Kac Gun Kullanilabilir" parametresi 1 gun arttirilir. Boylelikle kullanicinin kullanim suresi uzatilmis olur.
+Ust menuden "Yonetim > Tanimlar > Subeler > Yazilim Kullanim Ucretleri" sayfasina gidin. Borca cift tikladiktan sonra "Suresi Gectikten Sonra Kac Gun Kullanilabilir" parametresi 1 gun arttirilir. Boylelikle kullanicinin kullanim suresi uzatilmis olur.
 
 ## Eskalasyon
 Firma yetkilisi onayi gerektiren durumlarda canli temsilciye aktarilir.
