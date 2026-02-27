@@ -33,7 +33,7 @@ jobs:
         run: npm test
 
       - name: Coverage report
-        run: npx vitest run --coverage
+        run: npm run test:coverage
         continue-on-error: true
 
       - name: Syntax check
