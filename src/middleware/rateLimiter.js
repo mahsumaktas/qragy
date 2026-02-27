@@ -3,7 +3,7 @@
 function createRateLimiter({ maxRequests = 20, windowMs = 60000, maxEntries = 10000 } = {}) {
   const store = new Map();
 
-  // Cleanup stale entries periodically
+  // Cleanup stale entries periodically (10s — fast enough to bound memory on Pi)
   const cleanupInterval = setInterval(() => {
     const now = Date.now();
     for (const [ip, data] of store) {
@@ -11,16 +11,23 @@ function createRateLimiter({ maxRequests = 20, windowMs = 60000, maxEntries = 10
         store.delete(ip);
       }
     }
-  }, windowMs);
+  }, 10000);
 
   // Don't prevent Node from exiting
   if (cleanupInterval.unref) cleanupInterval.unref();
 
   function evictOldest() {
     if (store.size <= maxEntries) return;
-    // Delete oldest entry (first inserted in Map iteration order)
-    const firstKey = store.keys().next().value;
-    store.delete(firstKey);
+    // LRU-like: find and delete the entry with the oldest windowStart
+    let oldestKey = null;
+    let oldestTime = Infinity;
+    for (const [ip, data] of store) {
+      if (data.windowStart < oldestTime) {
+        oldestTime = data.windowStart;
+        oldestKey = ip;
+      }
+    }
+    if (oldestKey) store.delete(oldestKey);
   }
 
   function check(ip) {

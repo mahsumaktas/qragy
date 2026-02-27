@@ -46,7 +46,6 @@ function createWebChatPipeline(deps) {
     saveConversations,
 
     // LLM
-    callLLM,
     callLLMWithFallback,
     generateEscalationSummary,
 

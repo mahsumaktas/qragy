@@ -29,6 +29,8 @@ module.exports = [
         AbortController: "readonly",
         AbortSignal: "readonly",
         globalThis: "readonly",
+        setImmediate: "readonly",
+        TextDecoder: "readonly",
         fetch: "readonly",
         Response: "readonly",
         Map: "readonly",

@@ -71,4 +71,27 @@ function validateConfig(config) {
   return warnings;
 }
 
-module.exports = { loadConfig, validateConfig, parseBool, parseCommaSeparated, parseNumberArray };
+const MIN_ADMIN_TOKEN_LENGTH = 16;
+
+function validateConfigStrict(config, env = process.env) {
+  const warnings = validateConfig(config);
+  const errors = [];
+  const nodeEnv = (env.NODE_ENV || "").toLowerCase();
+  const isTestOrDev = nodeEnv === "test" || nodeEnv === "development";
+
+  // ADMIN_TOKEN: missing/empty is an error in production
+  if (!config.adminToken) {
+    if (!isTestOrDev) {
+      errors.push("ADMIN_TOKEN tanimlanmamis — admin paneli korumasiz. Sunucu baslatilmiyor.");
+    }
+  } else if (config.adminToken.length < MIN_ADMIN_TOKEN_LENGTH && nodeEnv !== "test") {
+    errors.push(`ADMIN_TOKEN en az ${MIN_ADMIN_TOKEN_LENGTH} karakter olmali (mevcut: ${config.adminToken.length}). Sunucu baslatilmiyor.`);
+  }
+
+  // GOOGLE_API_KEY: warning only (some setups use LLM_API_KEY instead)
+  // Already handled by validateConfig as a warning — no error needed.
+
+  return { warnings, errors };
+}
+
+module.exports = { loadConfig, validateConfig, validateConfigStrict, parseBool, parseCommaSeparated, parseNumberArray };

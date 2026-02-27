@@ -123,12 +123,12 @@ function createPromptBuilder(deps) {
     // User Memory: kalici kullanici hafizasi
     const userMemory = options?.userMemory;
     if (userMemory && typeof userMemory === "object" && Object.keys(userMemory).length > 0) {
-      const memLines = ["--- KULLANICI HAFIZASI ---", "Bu kullanici hakkinda bildiklerimiz:"];
+      const userMemLines = ["--- KULLANICI HAFIZASI ---", "Bu kullanici hakkinda bildiklerimiz:"];
       for (const [k, v] of Object.entries(userMemory)) {
-        memLines.push(`${k}: ${v}`);
+        userMemLines.push(`${k}: ${v}`);
       }
-      memLines.push("---");
-      parts.push(memLines.join("\n"));
+      userMemLines.push("---");
+      parts.push(userMemLines.join("\n"));
     }
 
     // Core Memory (from new memory engine — replaces old userMemory when provided)

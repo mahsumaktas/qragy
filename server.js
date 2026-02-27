@@ -14,12 +14,18 @@ const CSV_EXAMPLE_FILE = path.join(__dirname, "knowledge_base.example.csv");
 const CSV_FILE = path.join(__dirname, "data", "knowledge_base.csv");
 
 // ── Config ───────────────────────────────────────────────────────────────
-const { loadConfig, validateConfig } = require("./src/config");
+const { loadConfig, validateConfigStrict } = require("./src/config");
 const { logger } = require("./src/utils/logger");
 const config = loadConfig();
-const configWarnings = validateConfig(config);
+const { warnings: configWarnings, errors: configErrors } = validateConfigStrict(config);
 if (configWarnings.length > 0) {
   configWarnings.forEach((w) => logger.warn("config", w));
+}
+if (configErrors.length > 0) {
+  configErrors.forEach((e) => logger.error("config", e));
+  if ((process.env.NODE_ENV || "").toLowerCase() !== "test") {
+    process.exit(1);
+  }
 }
 
 // ── Modular imports ──────────────────────────────────────────────────────

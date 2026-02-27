@@ -40,7 +40,7 @@ function mount(app, deps) {
 
   const BASE_URL = `http://localhost:${PORT || 3001}`;
 
-  const EVAL_TEMPERATURE = 0;
+  const _EVAL_TEMPERATURE = 0;
   const DEFAULT_CONSENSUS_RUNS = 3;
   const GREEN_THRESHOLD = 0.95; // %95+ = green
 
@@ -156,7 +156,7 @@ function mount(app, deps) {
       const scenario = (data.scenarios || []).find(s => s.id === req.params.id);
       if (!scenario) return res.status(404).json({ error: "Senaryo bulunamadi" });
       res.json(scenario);
-    } catch (err) {
+    } catch (_err) {
       res.status(500).json({ error: "Senaryo okunamadi" });
     }
   });
@@ -425,7 +425,7 @@ function mount(app, deps) {
       const limit = Math.min(parseInt(req.query.limit) || 20, 50);
       const history = loadHistory().slice(0, limit);
       res.json(history);
-    } catch (err) {
+    } catch (_err) {
       res.status(500).json({ error: "Gecmis yuklenemedi" });
     }
   });
@@ -436,7 +436,7 @@ function mount(app, deps) {
       saveHistory([]);
       recordAuditEvent("eval_history_clear", {});
       res.json({ ok: true });
-    } catch (err) {
+    } catch (_err) {
       res.status(500).json({ error: "Gecmis temizlenemedi" });
     }
   });

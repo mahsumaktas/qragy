@@ -486,7 +486,7 @@ function sanitizeAssistantReply(text) {
  * @param {string} opts.botName
  */
 function buildMissingFieldsReply(memory, latestUserMessage = "", opts = {}) {
-  const { companyName = "" } = opts;
+  const { companyName: _companyName = "" } = opts;
 
   const fieldRequirementMessage =
     "Talep açmak için kullanıcı adı ve sorun özeti zorunludur. Ad soyad ve telefon bilgileri isteğe bağlıdır.";

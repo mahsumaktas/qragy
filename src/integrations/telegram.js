@@ -21,15 +21,27 @@ function createTelegramIntegration(deps) {
 
   let telegramOffset = 0;
 
+  const FETCH_TIMEOUT_MS = 10000;
+  const POLL_FETCH_TIMEOUT_MS = 15000; // long polling: Telegram's 10s + 5s buffer
+
   // ── Send Message ────────────────────────────────────────────────────────
   async function sendTelegramMessage(chatId, text) {
     const TELEGRAM_BOT_TOKEN = getTelegramBotToken();
     if (!TELEGRAM_BOT_TOKEN || !text) return;
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text })
-    }).catch(() => {});
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text }),
+        signal: controller.signal
+      });
+    } catch (_) {
+      // fire-and-forget: swallow errors (timeout, network, etc.)
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   // ── Handle Update ───────────────────────────────────────────────────────
@@ -60,11 +72,18 @@ function createTelegramIntegration(deps) {
       const memory = result.memory || {};
       upsertConversation("tg-" + chatId, sessions[chatId].messages, memory, { source: "telegram" });
 
-      await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chatId, text: result.reply })
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      try {
+        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: chatId, text: result.reply }),
+          signal: controller.signal
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
     } catch (err) {
       logger.warn("telegram", "Telegram mesaj isleme hatasi", err);
       saveTelegramSessions(sessions);
@@ -76,9 +95,12 @@ function createTelegramIntegration(deps) {
     const TELEGRAM_ENABLED = getTelegramEnabled();
     const TELEGRAM_BOT_TOKEN = getTelegramBotToken();
     if (!TELEGRAM_ENABLED || !TELEGRAM_BOT_TOKEN) return;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), POLL_FETCH_TIMEOUT_MS);
     try {
       const resp = await fetch(
-        `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${telegramOffset}&timeout=10&allowed_updates=["message"]`
+        `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${telegramOffset}&timeout=10&allowed_updates=["message"]`,
+        { signal: controller.signal }
       );
       const data = await resp.json();
       if (data.ok && Array.isArray(data.result)) {
@@ -89,6 +111,8 @@ function createTelegramIntegration(deps) {
       }
     } catch (err) {
       logger.warn("telegram", "Telegram polling hatasi", err);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
