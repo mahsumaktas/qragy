@@ -8,9 +8,9 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "ingest": "node scripts/ingest.js",
-    "test": "vitest run --exclude tests/eval/**",
-    "test:watch": "vitest --exclude tests/eval/**",
-    "test:coverage": "vitest run --coverage --exclude tests/eval/**",
+    "test": "vitest run --exclude 'tests/eval/**'",
+    "test:watch": "vitest --exclude 'tests/eval/**'",
+    "test:coverage": "vitest run --coverage --exclude 'tests/eval/**'",
     "eval": "vitest run tests/eval/chatbot-eval.test.js",
     "lint": "eslint .",
     "format": "prettier --write ."
