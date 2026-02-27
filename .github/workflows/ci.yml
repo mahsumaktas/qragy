@@ -47,4 +47,5 @@ jobs:
           kill %1 2>/dev/null || true
         env:
           GOOGLE_API_KEY: test-key-for-ci
+          ADMIN_TOKEN: ci-test-token-placeholder-32chars
           PORT: 3000
