@@ -21,3 +21,9 @@ Thumbs.db
 *.log
 .worktrees/
 coverage/
+
+# Project-specific
+kb_doc*
+qa-report*
+tests/manual/
+tests/eval/history.json

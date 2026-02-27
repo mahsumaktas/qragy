@@ -400,7 +400,7 @@ function createWebChatPipeline(deps) {
     }
 
     // Max clarification retry check
-    const sessionKey = getClarificationKey(rawMessages);
+    const sessionKey = getClarificationKey(rawMessages, sessionId);
     const retryCount = incrementClarificationCount(sessionKey);
     if (retryCount > chatFlowConfig.maxClarificationRetries) {
       logger.warn("webChatPipeline:deterministic", "Max clarification retries asildi, escalation", { retryCount, max: chatFlowConfig.maxClarificationRetries });

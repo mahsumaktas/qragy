@@ -7,6 +7,7 @@ Kullanıcı açıkça "temsilciye aktar", "canlı destek istiyorum", "biriyle g�
 ## Koşula Bağlı Escalation (Onay Gerektirir)
 Kullanıcı "yapamadım", "olmadı", "hata verdi", "çalışmadı" dediğinde VE konu dosyasındaki adımlar tükendiğinde: Onay sorarak escalation.
 Konu dosyasında tanımlı olmayan bir sorun bildirildiğinde: Bilinmeyen konu, onay sorarak escalation.
+Bilgi tabanında VE konu dosyalarında kullanıcının sorusuyla ilgili bilgi BULUNAMADIĞINDA: Bilgi yok, onay sorarak escalation. KESINLIKLE uydurma bilgi verme.
 3 tur boyunca AYNI konuda yeni bilgi gelmeden tekrar ediyorsa: Döngüye girilmiş, escalation.
 "3 tur" tanımı: Bot 3 kez farklı bir adım öneremeden aynı şeyleri tekrarlıyorsa.
 

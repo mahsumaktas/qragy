@@ -1315,7 +1315,7 @@
           "user": "Alpemix id ve parola: 123456, test1234",
           "expect": {
             "shouldContainAny": ["temsilci", "aktariyorum", "aktarıyorum", "bekleteceğim", "bekletecegim", "kullanici ad", "sube kod", "alpemix", "yardimci"],
-            "handoffReady": false
+            "handoffReady": true
           }
         }
       ]

@@ -11,7 +11,7 @@ const HALLUCINATION_MARKERS = [
 
 const HEDGING_MARKERS = ["sanirim", "galiba", "tahminimce", "belki de", "emin degilim"];
 
-const TURKISH_INDICATORS = /[çğıöşüÇĞİÖŞÜ]|(\b(bir|ve|ile|icin|nasil|ne|bu|su|olan|gibi|var|yok)\b)/i;
+const TURKISH_INDICATORS = /[çğıöşüÇĞİÖŞÜ]|(\b(bir|ve|ile|icin|nasil|ne|bu|su|olan|gibi|var|yok|size|sizi|lütfen|lutfen|tesekkur|yardimci|olabilir|destek|aktariyorum|kontrol|iletebilir|bilgi|merhaba|iyi gunler)\b)/i;
 
 function validateBotResponse(reply, expectedLang = "tr") {
   if (!reply || typeof reply !== "string") return { valid: false, reason: "empty" };

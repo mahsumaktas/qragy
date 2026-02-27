@@ -78,9 +78,10 @@ function createConversationManager(deps) {
 
   // ── Clarification Retry Tracking ───────────────────────────────────────
 
-  function getClarificationKey(messages) {
+  function getClarificationKey(messages, sessionId) {
+    const prefix = sessionId ? sessionId + ":" : "";
     const firstUser = messages.find(m => m.role === "user");
-    return firstUser ? firstUser.content.slice(0, 50) : "default";
+    return prefix + (firstUser ? firstUser.content.slice(0, 50) : "default");
   }
 
   function incrementClarificationCount(sessionKey) {

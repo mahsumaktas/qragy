@@ -160,9 +160,13 @@ function createPromptBuilder(deps) {
       }
     }
 
-    // Graceful fallback when KB is empty
+    // KB empty — do NOT hallucinate, offer escalation
     if (!knowledgeResults || knowledgeResults.length === 0) {
-      parts.push("## Not: Bilgi tabaninda ilgili kayit bulunamadi. Genel bilginle yardimci ol, ancak spesifik firma bilgisi verme. Gerekirse: 'Detayli bilgim yok ama size yardimci olmaya calisacagim' de.");
+      parts.push("## KRITIK: Bilgi tabaninda bu konuyla ilgili kayit BULUNAMADI.\n" +
+        "- Bu konuda bilgi tabaninda veya konu dosyalarinda bilgi YOKSA kesinlikle uydurma/tahmin bilgi VERME.\n" +
+        "- Menu yolu, buton adi, islem adimi gibi spesifik bilgileri SADECE bilgi tabanindaki veya konu dosyasindaki verilere dayanarak ver.\n" +
+        "- Eger konu dosyasinda da bu konuya ait bilgi yoksa: 'Bu konuda detayli bilgim bulunmamaktadir. Size canli destek temsilcimiz yardimci olabilir. Sizi temsilcimize aktarmami ister misiniz?' de.\n" +
+        "- ASLA tahmin veya genel bilgiyle cevap VERME.");
     }
 
     // RAG: Bilgi tabani sonuclarini ekle (token budget ile sinirla)
@@ -171,7 +175,8 @@ function createPromptBuilder(deps) {
         "Aşağıdaki soru-cevap çiftleri kullanıcının sorusuyla ilişkili olabilir.",
         "KRITIK: Bu bilgileri kullanarak HEMEN yanıt ver. Şube kodu veya canlı destek yönlendirmesi YAPMA.",
         "Önce bu bilgileri paylaş, kullanıcı 'olmadı/çözmedi' derse ANCAK O ZAMAN escalation başlat.",
-        "Kullanıcının sorusuna uygun değilse görmezden gel.", ""];
+        "Kullanıcının sorusuna uygun değilse görmezden gel ve 'Bu konuda detaylı bilgim bulunmamaktadır. Canlı destek temsilcimiz size yardımcı olabilir.' de.",
+        "ONEMLI: Bilgi tabaninda veya konu dosyasinda OLMAYAN menu yollari, buton adlari veya islem adimlari UYDURMA. Sadece asagidaki bilgileri kullan.", ""];
       for (const item of knowledgeResults) {
         kbLines.push(`Soru: ${item.question}`);
         kbLines.push(`Cevap: ${item.answer}`);

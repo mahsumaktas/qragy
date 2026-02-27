@@ -59,9 +59,10 @@ function mount(app, deps) {
   app.post("/api/chat", async (req, res) => {
     const chatStartTime = Date.now();
     try {
-      // Rate limiting
+      // Rate limiting (eval mode from localhost bypasses)
       const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
-      if (!checkRateLimit(clientIp)) {
+      const isLocalEval = req.headers["x-eval-mode"] === "true" && /^(127\.|::1|localhost)/.test(clientIp);
+      if (!isLocalEval && !checkRateLimit(clientIp)) {
         return res.status(429).json({ error: "Cok fazla istek gonderdiniz. Lutfen biraz bekleyin.", retryAfterMs: RATE_LIMIT_WINDOW_MS });
       }
 
