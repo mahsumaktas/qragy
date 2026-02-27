@@ -40,7 +40,7 @@
     "@mozilla/readability": "^0.6.0",
     "better-sqlite3": "^12.6.2",
     "dotenv": "^16.4.5",
-    "express": "^4.21.2",
+    "express": "^5.2.1",
     "jsdom": "^28.1.0",
     "mammoth": "^1.11.0",
     "multer": "^2.0.2",
