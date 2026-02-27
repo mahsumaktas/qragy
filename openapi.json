@@ -1,0 +1,1767 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Qragy API",
+    "description": "Self-hosted AI support chatbot with RAG, human-in-the-loop, and full admin panel.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Qragy",
+      "url": "https://github.com/mahsumaktas/qragy"
+    },
+    "license": {
+      "name": "AGPL-3.0",
+      "url": "https://www.gnu.org/licenses/agpl-3.0.html"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    { "name": "Chat", "description": "Main chat endpoint" },
+    { "name": "Conversations", "description": "Handoff, CSAT, upload, feedback, session status" },
+    { "name": "Health", "description": "Health check" },
+    { "name": "Widget", "description": "Widget configuration" },
+    { "name": "Deploy", "description": "GitHub webhook auto-deploy" },
+    { "name": "Setup", "description": "First-run setup wizard" },
+    { "name": "Tickets", "description": "Ticket CRUD, bulk ops, export, assign, priority, notes" },
+    { "name": "Knowledge Base", "description": "KB CRUD, file upload, reingest, URL import" },
+    { "name": "Agent Config", "description": "Agent files, topics, memory, keyword suggestions" },
+    { "name": "Bot Config", "description": "Chat flow, site config, sunshine config, logo upload" },
+    { "name": "Analytics", "description": "Dashboard stats, analytics, export, feedback report" },
+    { "name": "Insights", "description": "SLA, auto-FAQ, content gaps, feedback" },
+    { "name": "System", "description": "System health, env, audit log, onboarding, backup, conversations" },
+    { "name": "Webhooks", "description": "Webhook CRUD, test, deliveries" },
+    { "name": "Eval", "description": "Eval scenarios CRUD, run, run-all (SSE), history" },
+    { "name": "Prompt Versions", "description": "Prompt version history and rollback" },
+    { "name": "Agent Inbox", "description": "Human-in-the-loop: claim, message, release conversations" },
+    { "name": "WhatsApp", "description": "WhatsApp integration config" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "AdminToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-admin-token",
+        "description": "Admin panel authentication token"
+      }
+    },
+    "schemas": {
+      "OkResponse": {
+        "type": "object",
+        "properties": {
+          "ok": { "type": "boolean", "example": true }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" }
+        }
+      },
+      "ChatMessage": {
+        "type": "object",
+        "required": ["role", "content"],
+        "properties": {
+          "role": { "type": "string", "enum": ["user", "assistant"] },
+          "content": { "type": "string" }
+        }
+      },
+      "TicketSummary": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "status": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "branchCode": { "type": "string" },
+          "issueSummary": { "type": "string" },
+          "companyName": { "type": "string" },
+          "fullName": { "type": "string" },
+          "phone": { "type": "string" },
+          "source": { "type": "string" },
+          "priority": { "type": "string", "enum": ["low", "normal", "high"] },
+          "assignedTo": { "type": "string" },
+          "csatRating": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "sentiment": { "type": "string" }
+        }
+      },
+      "KBRecord": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "question": { "type": "string" },
+          "answer": { "type": "string" }
+        }
+      },
+      "Topic": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "keywords": { "type": "array", "items": { "type": "string" } },
+          "file": { "type": "string" },
+          "requiresEscalation": { "type": "boolean" },
+          "canResolveDirectly": { "type": "boolean" },
+          "requiredInfo": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Webhook": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "url": { "type": "string", "format": "uri" },
+          "events": { "type": "array", "items": { "type": "string" } },
+          "active": { "type": "boolean" },
+          "secret": { "type": "string" }
+        }
+      },
+      "EvalScenario": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "turns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "user": { "type": "string" },
+                "expect": { "type": "object" }
+              },
+              "required": ["user"]
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/chat": {
+      "post": {
+        "tags": ["Chat"],
+        "summary": "Send a chat message",
+        "description": "Main chat endpoint. Sends user messages and receives AI-generated responses. Supports eval mode via x-eval-mode header from localhost.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["messages"],
+                "properties": {
+                  "messages": {
+                    "type": "array",
+                    "items": { "$ref": "#/components/schemas/ChatMessage" },
+                    "minItems": 1
+                  },
+                  "sessionId": { "type": "string", "description": "Session identifier. Auto-generated if omitted." },
+                  "source": { "type": "string", "description": "Message source (web, telegram, etc.)" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chat response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reply": { "type": "string" },
+                    "model": { "type": "string" },
+                    "source": { "type": "string" },
+                    "sessionId": { "type": "string" },
+                    "memory": { "type": "object" },
+                    "conversationContext": { "type": "object" },
+                    "handoffReady": { "type": "boolean" },
+                    "hasClosedTicketHistory": { "type": "boolean" },
+                    "support": { "type": "object" },
+                    "citations": { "type": "array", "items": { "type": "object" } }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "429": { "description": "Rate limit exceeded", "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string" }, "retryAfterMs": { "type": "integer" } } } } } }
+        }
+      }
+    },
+    "/api/tickets/{ticketId}/handoff": {
+      "post": {
+        "tags": ["Conversations"],
+        "summary": "Submit ticket handoff result",
+        "parameters": [
+          { "name": "ticketId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string" },
+                  "detail": { "type": "string" },
+                  "meta": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Handoff result updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "ticket": { "$ref": "#/components/schemas/TicketSummary" } } } } } },
+          "400": { "description": "Invalid request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "Ticket not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/conversations/status/{sessionId}": {
+      "get": {
+        "tags": ["Conversations"],
+        "summary": "Check session status",
+        "parameters": [
+          { "name": "sessionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Session status", "content": { "application/json": { "schema": { "type": "object", "properties": { "active": { "type": "boolean" } } } } } }
+        }
+      }
+    },
+    "/api/conversations/close": {
+      "post": {
+        "tags": ["Conversations"],
+        "summary": "Close a conversation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sessionId"],
+                "properties": {
+                  "sessionId": { "type": "string" },
+                  "reason": { "type": "string", "enum": ["inactivity", "user", "farewell"], "default": "inactivity" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Conversation closed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }
+        }
+      }
+    },
+    "/api/tickets/{ticketId}/rating": {
+      "post": {
+        "tags": ["Conversations"],
+        "summary": "Submit CSAT rating",
+        "parameters": [
+          { "name": "ticketId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["rating"],
+                "properties": {
+                  "rating": { "type": "integer", "minimum": 1, "maximum": 5 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Rating saved", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "rating": { "type": "integer" } } } } } },
+          "400": { "description": "Invalid rating", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "Ticket not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/chat/upload": {
+      "post": {
+        "tags": ["Conversations"],
+        "summary": "Upload file in chat",
+        "description": "Upload image or PDF file. Max 5MB. Allowed types: JPEG, PNG, GIF, WebP, PDF.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "File uploaded", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "url": { "type": "string" }, "name": { "type": "string" }, "size": { "type": "integer" } } } } } },
+          "400": { "description": "No file or unsupported type", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/chat/feedback": {
+      "post": {
+        "tags": ["Conversations"],
+        "summary": "Submit message feedback",
+        "description": "Thumbs up/down feedback for a bot message. Triggers reflexion analysis on negative feedback.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["rating"],
+                "properties": {
+                  "sessionId": { "type": "string" },
+                  "messageIndex": { "type": "integer" },
+                  "rating": { "type": "string", "enum": ["up", "down"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Feedback saved", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } },
+          "400": { "description": "Invalid rating", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "description": "Returns system health snapshot including LLM status, KB status, and ticket summary.",
+        "responses": {
+          "200": {
+            "description": "Health status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "model": { "type": "string" },
+                    "hasApiKey": { "type": "boolean" },
+                    "llmStatus": { "type": "object" },
+                    "agentFilesLoaded": { "type": "boolean" },
+                    "topicsLoaded": { "type": "integer" },
+                    "knowledgeBaseLoaded": { "type": "boolean" },
+                    "supportAvailability": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/config": {
+      "get": {
+        "tags": ["Widget"],
+        "summary": "Get widget configuration",
+        "description": "Returns public configuration for the chat widget: Zendesk, support hours, chat flow, site branding.",
+        "responses": {
+          "200": {
+            "description": "Widget config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "zendesk": { "type": "object" },
+                    "support": { "type": "object" },
+                    "admin": { "type": "object", "properties": { "tokenRequired": { "type": "boolean" } } },
+                    "chatFlow": { "type": "object" },
+                    "site": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deploy": {
+      "post": {
+        "tags": ["Deploy"],
+        "summary": "GitHub deploy webhook",
+        "description": "Receives GitHub push events. Validates HMAC-SHA256 signature (X-Hub-Signature-256), triggers deploy.sh on push to main branch.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ref": { "type": "string", "example": "refs/heads/main" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Deploy triggered or ignored", "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "string" } } } } } },
+          "403": { "description": "Invalid signature", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/setup/status": {
+      "get": {
+        "tags": ["Setup"],
+        "summary": "Check setup status",
+        "responses": {
+          "200": { "description": "Setup status", "content": { "application/json": { "schema": { "type": "object", "properties": { "setupComplete": { "type": "boolean" } } } } } }
+        }
+      }
+    },
+    "/api/setup/complete": {
+      "post": {
+        "tags": ["Setup"],
+        "summary": "Complete initial setup",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["companyName"],
+                "properties": {
+                  "companyName": { "type": "string" },
+                  "sector": { "type": "string", "default": "diger" },
+                  "logoUrl": { "type": "string" },
+                  "primaryColor": { "type": "string" },
+                  "themeColor": { "type": "string" },
+                  "faqs": { "type": "array", "items": { "type": "object" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Setup completed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } },
+          "400": { "description": "Missing companyName", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/tickets": {
+      "get": {
+        "tags": ["Tickets"],
+        "summary": "List tickets",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 100, "maximum": 500 } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "default": 0 } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "source", "in": "query", "schema": { "type": "string" } },
+          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Full-text search" },
+          { "name": "includeEvents", "in": "query", "schema": { "type": "boolean", "default": false } }
+        ],
+        "responses": {
+          "200": { "description": "Ticket list", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "total": { "type": "integer" }, "limit": { "type": "integer" }, "offset": { "type": "integer" }, "tickets": { "type": "array", "items": { "$ref": "#/components/schemas/TicketSummary" } } } } } } }
+        }
+      }
+    },
+    "/api/admin/tickets/{ticketId}": {
+      "get": {
+        "tags": ["Tickets"],
+        "summary": "Get ticket detail",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "ticketId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Ticket detail with chat history, events, and notes" },
+          "404": { "description": "Ticket not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/tickets/bulk": {
+      "post": {
+        "tags": ["Tickets"],
+        "summary": "Bulk ticket operations",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["ticketIds", "action"],
+                "properties": {
+                  "ticketIds": { "type": "array", "items": { "type": "string" }, "maxItems": 100 },
+                  "action": { "type": "string", "enum": ["close", "assign", "priority"] },
+                  "value": { "type": "string", "description": "assignedTo name or priority level" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Bulk operation result", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "updated": { "type": "integer" } } } } } }
+        }
+      }
+    },
+    "/api/admin/tickets/export": {
+      "get": {
+        "tags": ["Tickets"],
+        "summary": "Export tickets",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "format", "in": "query", "schema": { "type": "string", "enum": ["json", "csv"], "default": "json" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Exported tickets (JSON or CSV based on format parameter)", "content": { "application/json": {}, "text/csv": {} } }
+        }
+      }
+    },
+    "/api/admin/tickets/{ticketId}/assign": {
+      "put": {
+        "tags": ["Tickets"],
+        "summary": "Assign ticket",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "ticketId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "assignedTo": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Ticket assigned", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "ticket": { "$ref": "#/components/schemas/TicketSummary" } } } } } },
+          "404": { "description": "Ticket not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/tickets/{ticketId}/notes": {
+      "post": {
+        "tags": ["Tickets"],
+        "summary": "Add internal note",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "ticketId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["note"],
+                "properties": {
+                  "note": { "type": "string", "maxLength": 2000 },
+                  "author": { "type": "string", "default": "admin" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Note added" },
+          "404": { "description": "Ticket not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/tickets/{ticketId}/priority": {
+      "put": {
+        "tags": ["Tickets"],
+        "summary": "Set ticket priority",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "ticketId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["priority"],
+                "properties": {
+                  "priority": { "type": "string", "enum": ["low", "normal", "high"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Priority updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "ticket": { "$ref": "#/components/schemas/TicketSummary" } } } } } },
+          "404": { "description": "Ticket not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/prompt-versions": {
+      "get": {
+        "tags": ["Prompt Versions"],
+        "summary": "List prompt versions",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Version list", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "versions": { "type": "array", "items": { "type": "object" } } } } } } }
+        }
+      }
+    },
+    "/api/admin/prompt-versions/{id}/rollback": {
+      "post": {
+        "tags": ["Prompt Versions"],
+        "summary": "Rollback to a prompt version",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Rollback successful", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "message": { "type": "string" } } } } } },
+          "404": { "description": "Version not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/knowledge": {
+      "get": {
+        "tags": ["Knowledge Base"],
+        "summary": "List KB entries",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "KB entries", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "records": { "type": "array", "items": { "$ref": "#/components/schemas/KBRecord" } } } } } } }
+        }
+      },
+      "post": {
+        "tags": ["Knowledge Base"],
+        "summary": "Add KB entry",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["question", "answer"],
+                "properties": {
+                  "question": { "type": "string" },
+                  "answer": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Entry added", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "id": { "type": "integer" } } } } } }
+        }
+      }
+    },
+    "/api/admin/knowledge/reingest": {
+      "post": {
+        "tags": ["Knowledge Base"],
+        "summary": "Rebuild vector index",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Reingest complete", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "recordCount": { "type": "integer" } } } } } }
+        }
+      }
+    },
+    "/api/admin/knowledge/{id}": {
+      "put": {
+        "tags": ["Knowledge Base"],
+        "summary": "Update KB entry",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["question", "answer"],
+                "properties": {
+                  "question": { "type": "string" },
+                  "answer": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Entry updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } },
+          "404": { "description": "Entry not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "delete": {
+        "tags": ["Knowledge Base"],
+        "summary": "Delete KB entry",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Entry deleted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } },
+          "404": { "description": "Entry not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/knowledge/upload": {
+      "post": {
+        "tags": ["Knowledge Base"],
+        "summary": "Upload file to KB",
+        "description": "Upload PDF, DOCX, TXT, XLSX/XLS file. Extracts text, chunks, generates questions via LLM, adds to KB. Max 10MB.",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "contextualEnrich": { "type": "string", "enum": ["true", "false"], "description": "Enable LLM contextual enrichment" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "File processed", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "chunksAdded": { "type": "integer" }, "totalRecords": { "type": "integer" } } } } } }
+        }
+      }
+    },
+    "/api/admin/knowledge/import-url": {
+      "post": {
+        "tags": ["Knowledge Base"],
+        "summary": "Import from URL",
+        "description": "Scrape a web page, chunk text, generate Q&A pairs, add to KB.",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": { "type": "string", "format": "uri" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "URL imported", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "title": { "type": "string" }, "chunksAdded": { "type": "integer" }, "totalRecords": { "type": "integer" } } } } } }
+        }
+      }
+    },
+    "/api/admin/knowledge/upload-batch": {
+      "post": {
+        "tags": ["Knowledge Base"],
+        "summary": "Batch upload files to KB",
+        "description": "Upload up to 10 files at once. Supports PDF, DOCX, TXT, XLSX/XLS.",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["files"],
+                "properties": {
+                  "files": { "type": "array", "items": { "type": "string", "format": "binary" }, "maxItems": 10 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Batch upload result", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "results": { "type": "array", "items": { "type": "object" } }, "totalAdded": { "type": "integer" }, "totalRecords": { "type": "integer" } } } } } }
+        }
+      }
+    },
+    "/api/admin/agent/files": {
+      "get": {
+        "tags": ["Agent Config"],
+        "summary": "List agent files",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "File list", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "files": { "type": "array", "items": { "type": "string" } } } } } } }
+        }
+      }
+    },
+    "/api/admin/agent/files/{filename}": {
+      "get": {
+        "tags": ["Agent Config"],
+        "summary": "Read agent file",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "filename", "in": "path", "required": true, "schema": { "type": "string" }, "example": "persona.md" }
+        ],
+        "responses": {
+          "200": { "description": "File content", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "filename": { "type": "string" }, "content": { "type": "string" } } } } } },
+          "404": { "description": "File not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "put": {
+        "tags": ["Agent Config"],
+        "summary": "Save agent file",
+        "description": "Updates an agent file. Automatically creates a prompt version backup of the previous content.",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "filename", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["content"],
+                "properties": {
+                  "content": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "File saved", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/agent/topics": {
+      "get": {
+        "tags": ["Agent Config"],
+        "summary": "List topics",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Topic list", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "topics": { "type": "array", "items": { "$ref": "#/components/schemas/Topic" } } } } } } }
+        }
+      },
+      "post": {
+        "tags": ["Agent Config"],
+        "summary": "Create topic",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["id", "title"],
+                "properties": {
+                  "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+                  "title": { "type": "string" },
+                  "keywords": { "type": "array", "items": { "type": "string" } },
+                  "requiresEscalation": { "type": "boolean" },
+                  "canResolveDirectly": { "type": "boolean" },
+                  "requiredInfo": { "type": "array", "items": { "type": "string" } },
+                  "content": { "type": "string", "description": "Markdown content for the topic file" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Topic created", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "topic": { "$ref": "#/components/schemas/Topic" } } } } } }
+        }
+      }
+    },
+    "/api/admin/agent/topics/{topicId}": {
+      "get": {
+        "tags": ["Agent Config"],
+        "summary": "Get topic detail",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "topicId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Topic detail with markdown content" },
+          "404": { "description": "Topic not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "put": {
+        "tags": ["Agent Config"],
+        "summary": "Update topic",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "topicId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "keywords": { "type": "array", "items": { "type": "string" } },
+                  "requiresEscalation": { "type": "boolean" },
+                  "canResolveDirectly": { "type": "boolean" },
+                  "requiredInfo": { "type": "array", "items": { "type": "string" } },
+                  "content": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Topic updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } },
+          "404": { "description": "Topic not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "delete": {
+        "tags": ["Agent Config"],
+        "summary": "Delete topic",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "topicId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Topic deleted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } },
+          "404": { "description": "Topic not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/topics/suggest-keywords": {
+      "post": {
+        "tags": ["Agent Config"],
+        "summary": "Suggest keywords for a topic",
+        "description": "Uses LLM to generate keyword suggestions for a topic title.",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title"],
+                "properties": {
+                  "title": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Keyword suggestions", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "keywords": { "type": "string", "description": "Comma-separated keywords" } } } } } }
+        }
+      }
+    },
+    "/api/admin/agent/memory": {
+      "get": {
+        "tags": ["Agent Config"],
+        "summary": "Read memory templates",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Memory template files" }
+        }
+      }
+    },
+    "/api/admin/agent/memory/{filename}": {
+      "put": {
+        "tags": ["Agent Config"],
+        "summary": "Save memory template",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "filename", "in": "path", "required": true, "schema": { "type": "string", "enum": ["ticket-template.json", "conversation-schema.json"] } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["content"],
+                "properties": {
+                  "content": { "type": "string", "description": "Valid JSON string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Template saved", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/chat-flow": {
+      "get": {
+        "tags": ["Bot Config"],
+        "summary": "Get chat flow config",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Chat flow config with defaults" }
+        }
+      },
+      "put": {
+        "tags": ["Bot Config"],
+        "summary": "Update chat flow config",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["config"],
+                "properties": {
+                  "config": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Config updated" }
+        }
+      }
+    },
+    "/api/admin/site-config": {
+      "get": {
+        "tags": ["Bot Config"],
+        "summary": "Get site config",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Site config with defaults" }
+        }
+      },
+      "put": {
+        "tags": ["Bot Config"],
+        "summary": "Update site config",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["config"],
+                "properties": {
+                  "config": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Config updated" }
+        }
+      }
+    },
+    "/api/admin/site-logo": {
+      "post": {
+        "tags": ["Bot Config"],
+        "summary": "Upload site logo",
+        "description": "Upload logo as raw binary. Accepted types: JPEG, PNG, SVG, WebP, GIF. Max 2MB.",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "image/jpeg": { "schema": { "type": "string", "format": "binary" } },
+            "image/png": { "schema": { "type": "string", "format": "binary" } },
+            "image/svg+xml": { "schema": { "type": "string", "format": "binary" } },
+            "image/webp": { "schema": { "type": "string", "format": "binary" } },
+            "image/gif": { "schema": { "type": "string", "format": "binary" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "Logo uploaded", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "logoUrl": { "type": "string" } } } } } }
+        }
+      }
+    },
+    "/api/admin/sunshine-config": {
+      "get": {
+        "tags": ["Bot Config"],
+        "summary": "Get Sunshine config",
+        "description": "Returns Zendesk Sunshine Conversations config. Sensitive values (keySecret, webhookSecret) are masked.",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Sunshine config (masked)" }
+        }
+      },
+      "put": {
+        "tags": ["Bot Config"],
+        "summary": "Update Sunshine config",
+        "description": "Values containing **** are ignored to prevent overwriting secrets with masked values.",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["config"],
+                "properties": {
+                  "config": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Config updated" }
+        }
+      }
+    },
+    "/api/admin/sunshine-config/test": {
+      "post": {
+        "tags": ["Bot Config"],
+        "summary": "Test Sunshine connection",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Connection test result", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "message": { "type": "string" }, "error": { "type": "string" } } } } } }
+        }
+      }
+    },
+    "/api/admin/dashboard-stats": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Dashboard KPI stats",
+        "description": "Returns today, this week, this month stats with trend percentages.",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Dashboard statistics" }
+        }
+      }
+    },
+    "/api/admin/analytics": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Analytics data",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "range", "in": "query", "schema": { "type": "string", "enum": ["7d", "30d", "90d"], "default": "7d" } }
+        ],
+        "responses": {
+          "200": { "description": "Analytics summary with daily breakdown and top topics" }
+        }
+      }
+    },
+    "/api/admin/analytics/export": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Export analytics",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "format", "in": "query", "schema": { "type": "string", "enum": ["json", "csv"], "default": "json" } },
+          { "name": "range", "in": "query", "schema": { "type": "string", "enum": ["7d", "30d", "90d"], "default": "30d" } }
+        ],
+        "responses": {
+          "200": { "description": "Exported analytics (JSON or CSV based on format parameter)", "content": { "application/json": {}, "text/csv": {} } }
+        }
+      }
+    },
+    "/api/admin/feedback-report": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Feedback report",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "days", "in": "query", "schema": { "type": "integer", "default": 7 } }
+        ],
+        "responses": {
+          "200": { "description": "Feedback analysis report" }
+        }
+      }
+    },
+    "/api/admin/sla": {
+      "get": {
+        "tags": ["Insights"],
+        "summary": "SLA tracking",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "SLA summary with breached tickets" }
+        }
+      }
+    },
+    "/api/admin/auto-faq/generate": {
+      "post": {
+        "tags": ["Insights"],
+        "summary": "Generate auto-FAQ entries",
+        "description": "Uses LLM to generate FAQ entries from resolved ticket conversations.",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Generation result", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "generated": { "type": "integer" } } } } } }
+        }
+      }
+    },
+    "/api/admin/auto-faq": {
+      "get": {
+        "tags": ["Insights"],
+        "summary": "List pending auto-FAQ entries",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Pending FAQ entries" }
+        }
+      }
+    },
+    "/api/admin/auto-faq/{id}/approve": {
+      "post": {
+        "tags": ["Insights"],
+        "summary": "Approve auto-FAQ entry",
+        "description": "Adds the FAQ entry to the knowledge base and triggers reingest.",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "FAQ approved", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } },
+          "404": { "description": "FAQ not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/auto-faq/{id}/reject": {
+      "post": {
+        "tags": ["Insights"],
+        "summary": "Reject auto-FAQ entry",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "FAQ rejected", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } },
+          "404": { "description": "FAQ not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/content-gaps": {
+      "get": {
+        "tags": ["Insights"],
+        "summary": "List content gaps",
+        "description": "Returns unanswered questions sorted by frequency.",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Content gaps" }
+        }
+      }
+    },
+    "/api/admin/content-gaps/{index}": {
+      "delete": {
+        "tags": ["Insights"],
+        "summary": "Dismiss content gap",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "index", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Gap dismissed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/feedback": {
+      "get": {
+        "tags": ["Insights"],
+        "summary": "List recent feedback entries",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Last 100 feedback entries (newest first)" }
+        }
+      }
+    },
+    "/api/admin/backup": {
+      "post": {
+        "tags": ["System"],
+        "summary": "Create database backup",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Backup created", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "path": { "type": "string" } } } } } }
+        }
+      }
+    },
+    "/api/admin/summary": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Admin ticket summary",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Ticket count summary by status" }
+        }
+      }
+    },
+    "/api/admin/conversations": {
+      "get": {
+        "tags": ["System"],
+        "summary": "List conversations",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" }, "description": "Filter by status (active, closed, ticketed)" }
+        ],
+        "responses": {
+          "200": { "description": "Conversation list with chat history" }
+        }
+      }
+    },
+    "/api/admin/conversations/close-all": {
+      "post": {
+        "tags": ["System"],
+        "summary": "Close all active conversations",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Conversations closed", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "closedCount": { "type": "integer" } } } } } }
+        }
+      }
+    },
+    "/api/admin/system": {
+      "get": {
+        "tags": ["System"],
+        "summary": "System status",
+        "description": "Returns uptime, memory usage, agent file status, KB stats, LLM health.",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "forceCheck", "in": "query", "schema": { "type": "string", "enum": ["1"] }, "description": "Force LLM health check" }
+        ],
+        "responses": {
+          "200": { "description": "System status" }
+        }
+      }
+    },
+    "/api/admin/agent/reload": {
+      "post": {
+        "tags": ["System"],
+        "summary": "Hot-reload agent config",
+        "description": "Reloads all agent files, chat flow, site config, and sunshine config without server restart.",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Config reloaded", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "message": { "type": "string" } } } } } }
+        }
+      }
+    },
+    "/api/admin/env": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Read environment variables",
+        "description": "Returns .env variables. Sensitive values (API keys, tokens) are masked with **** pattern.",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Environment variables (sensitive values masked)" }
+        }
+      },
+      "put": {
+        "tags": ["System"],
+        "summary": "Update environment variables",
+        "description": "Updates .env file and reloads runtime config. Values containing **** are ignored.",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["updates"],
+                "properties": {
+                  "updates": { "type": "object", "additionalProperties": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Env updated and applied" }
+        }
+      }
+    },
+    "/api/admin/onboarding-status": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Onboarding checklist status",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Onboarding items with completion status" }
+        }
+      }
+    },
+    "/api/admin/audit-log": {
+      "get": {
+        "tags": ["System"],
+        "summary": "View audit log",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Last 100 audit entries (newest first)" }
+        }
+      }
+    },
+    "/api/admin/webhooks": {
+      "get": {
+        "tags": ["Webhooks"],
+        "summary": "List webhooks",
+        "description": "Webhook secrets are masked in the response.",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Webhook list", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "webhooks": { "type": "array", "items": { "$ref": "#/components/schemas/Webhook" } } } } } } }
+        }
+      },
+      "post": {
+        "tags": ["Webhooks"],
+        "summary": "Create webhook",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": { "type": "string", "format": "uri" },
+                  "events": { "type": "array", "items": { "type": "string" }, "default": ["*"] },
+                  "secret": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Webhook created", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "webhook": { "$ref": "#/components/schemas/Webhook" } } } } } }
+        }
+      }
+    },
+    "/api/admin/webhooks/deliveries": {
+      "get": {
+        "tags": ["Webhooks"],
+        "summary": "List webhook deliveries",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Last 50 deliveries (newest first)" }
+        }
+      }
+    },
+    "/api/admin/webhooks/{id}": {
+      "put": {
+        "tags": ["Webhooks"],
+        "summary": "Update webhook",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": { "type": "string", "format": "uri" },
+                  "events": { "type": "array", "items": { "type": "string" } },
+                  "active": { "type": "boolean" },
+                  "secret": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Webhook updated" },
+          "404": { "description": "Webhook not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "delete": {
+        "tags": ["Webhooks"],
+        "summary": "Delete webhook",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Webhook deleted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } },
+          "404": { "description": "Webhook not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/webhooks/{id}/test": {
+      "post": {
+        "tags": ["Webhooks"],
+        "summary": "Test webhook",
+        "description": "Sends a test event to the webhook URL with HMAC signature if secret is configured.",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Test result", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "status": { "type": "integer" }, "error": { "type": "string" } } } } } }
+        }
+      }
+    },
+    "/api/admin/eval/scenarios": {
+      "get": {
+        "tags": ["Eval"],
+        "summary": "List eval scenarios",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Scenario list", "content": { "application/json": { "schema": { "type": "object", "properties": { "scenarios": { "type": "array", "items": { "$ref": "#/components/schemas/EvalScenario" } } } } } } }
+        }
+      },
+      "post": {
+        "tags": ["Eval"],
+        "summary": "Create eval scenario",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EvalScenario" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Scenario created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EvalScenario" } } } },
+          "400": { "description": "Validation error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/eval/scenarios/{id}": {
+      "get": {
+        "tags": ["Eval"],
+        "summary": "Get eval scenario",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Scenario detail" },
+          "404": { "description": "Scenario not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "put": {
+        "tags": ["Eval"],
+        "summary": "Update eval scenario",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EvalScenario" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Scenario updated" },
+          "404": { "description": "Scenario not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "delete": {
+        "tags": ["Eval"],
+        "summary": "Delete eval scenario",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Scenario deleted" },
+          "404": { "description": "Scenario not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/eval/run/{id}": {
+      "post": {
+        "tags": ["Eval"],
+        "summary": "Run single eval scenario",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "runs", "in": "query", "schema": { "type": "integer", "default": 1, "maximum": 5 }, "description": "Consensus run count" }
+        ],
+        "responses": {
+          "200": { "description": "Scenario result with turn-level pass/fail details" }
+        }
+      }
+    },
+    "/api/admin/eval/run-all": {
+      "get": {
+        "tags": ["Eval"],
+        "summary": "Run all eval scenarios (SSE)",
+        "description": "Server-Sent Events stream. Sends progress events for each scenario, then a done event with summary. Long-running — timeouts are disabled.",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "runs", "in": "query", "schema": { "type": "integer", "default": 3, "maximum": 5 }, "description": "Consensus runs per scenario" },
+          { "name": "threshold", "in": "query", "schema": { "type": "number", "default": 95 }, "description": "Green threshold percentage" }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE event stream",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "SSE events: progress (per scenario), done (final summary), error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/eval/history": {
+      "get": {
+        "tags": ["Eval"],
+        "summary": "Eval run history",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 50 } }
+        ],
+        "responses": {
+          "200": { "description": "Run history entries" }
+        }
+      },
+      "delete": {
+        "tags": ["Eval"],
+        "summary": "Clear eval history",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "History cleared", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/inbox/stream": {
+      "get": {
+        "tags": ["Agent Inbox"],
+        "summary": "Agent inbox SSE stream",
+        "description": "Server-Sent Events stream for real-time inbox updates (claimed, message, released events).",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": {
+            "description": "SSE event stream",
+            "content": {
+              "text/event-stream": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/inbox": {
+      "get": {
+        "tags": ["Agent Inbox"],
+        "summary": "List inbox items",
+        "description": "Returns pending and active (claimed) conversations.",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "Inbox items", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "pending": { "type": "array", "items": { "type": "object" } }, "active": { "type": "array", "items": { "type": "object" } } } } } } }
+        }
+      }
+    },
+    "/api/admin/inbox/{id}/claim": {
+      "post": {
+        "tags": ["Agent Inbox"],
+        "summary": "Claim conversation",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "agentName": { "type": "string", "default": "admin" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Conversation claimed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } },
+          "400": { "description": "Could not claim", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/inbox/{id}/message": {
+      "post": {
+        "tags": ["Agent Inbox"],
+        "summary": "Send agent message",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["message"],
+                "properties": {
+                  "message": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Message sent", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } },
+          "404": { "description": "Conversation not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/inbox/{id}/release": {
+      "post": {
+        "tags": ["Agent Inbox"],
+        "summary": "Release conversation",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Conversation released", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } },
+          "400": { "description": "Could not release", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/whatsapp": {
+      "get": {
+        "tags": ["WhatsApp"],
+        "summary": "Get WhatsApp config",
+        "description": "Access token is masked in the response.",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": { "description": "WhatsApp config (masked)" }
+        }
+      },
+      "put": {
+        "tags": ["WhatsApp"],
+        "summary": "Update WhatsApp config",
+        "security": [{ "AdminToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": { "type": "boolean" },
+                  "phoneNumberId": { "type": "string" },
+                  "accessToken": { "type": "string" },
+                  "verifyToken": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Config updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }
+        }
+      }
+    }
+  }
+}

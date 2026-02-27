@@ -481,6 +481,14 @@ app.use(express.json({ limit: "1mb", type: (req) => {
   const ct = req.headers["content-type"] || "";
   return ct.includes("application/json") || ct.includes("text/plain");
 }}));
+// ── OpenAPI / Swagger UI ──────────────────────────────────────────────────
+app.get("/api-docs.json", (_req, res) => {
+  res.sendFile(path.join(__dirname, "openapi.json"));
+});
+app.get("/api-docs", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "api-docs.html"));
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 // ── Setup Wizard Redirect ────────────────────────────────────────────────

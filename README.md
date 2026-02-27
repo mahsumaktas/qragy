@@ -678,6 +678,8 @@ npx eslint . --fix        # Auto-fix fixable issues
 
 ## API
 
+> Interactive API documentation available at `/api-docs` when the server is running.
+
 All admin endpoints require `x-admin-token` header when `ADMIN_TOKEN` is set.
 
 <details>
