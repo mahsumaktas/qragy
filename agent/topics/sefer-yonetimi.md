@@ -2,19 +2,21 @@
 
 Kullanici sefer acma, uzatma, iptal etme veya saat degistirme istiyor.
 
+Navigasyon: OBUS panelinde ust menudeki "Seferler" sekmesine tiklanir, acilan menuden "Seferler" secilir.
+
 ## Sefer Acma
-"Seferler - Seferler" alanindaki "ekle" butonuna tikladiktan sonra acilan ekranda basinda kirmizi renkli yildiz isareti bulunan zorunlu alanlar doldurulduktan sonra kaydet butonu ile islem tamamlanmis olacaktir.
+Ust menuden "Seferler > Seferler" sayfasina gidin. "Ekle" butonuna tikladiktan sonra acilan ekranda basinda kirmizi renkli yildiz isareti bulunan zorunlu alanlar doldurulduktan sonra kaydet butonu ile islem tamamlanmis olacaktir.
 
 ## Sefer Uzatma
-"Seferler - Seferler" alanindaki durumu "aktif" olarak gozuken uzatilmak istenen sefer/seferler basindaki kutucuk isaretlenerek secilir. "Sefer uzat" butonuna bastiktan sonra baslangic ve bitis tarihi secilir, ardindan kaydet butonu ile islem tamamlanmis olacaktir.
+Ust menuden "Seferler > Seferler" sayfasina gidin. Durumu "aktif" olarak gozuken uzatilmak istenen sefer/seferler basindaki kutucuk isaretlenerek secilir. "Sefer uzat" butonuna bastiktan sonra baslangic ve bitis tarihi secilir, ardindan kaydet butonu ile islem tamamlanmis olacaktir.
 
 ## Sefer Iptali
-Satis ekraninda takvimin altinda yer alan islem yapmak istediginiz sefere sag tikladiktan sonra "iptal et" butonuna tiklanir. Ekrana gelen onay mesajinda tek gunluk icin "sadece bu sefere uygula", secilen gun ve sonraki butun gunler icin "tum seferlere uygula" secildikten sonra islem tamamlanmis olacaktir.
+Ana satis ekraninda takvimin altinda yer alan islem yapmak istediginiz sefere sag tikladiktan sonra "iptal et" butonuna tiklanir. Ekrana gelen onay mesajinda tek gunluk icin "sadece bu sefere uygula", secilen gun ve sonraki butun gunler icin "tum seferlere uygula" secildikten sonra islem tamamlanmis olacaktir.
 
-Toplu iptal icin: "Seferler - Seferler" alaninda "seferleri topluca iptal et" butonuna basarak da islem yapilabilir.
+Toplu iptal icin: Ust menuden "Seferler > Seferler" sayfasinda "seferleri topluca iptal et" butonuna basarak da islem yapilabilir.
 
 ## Sefer Saat Degisikligi
-Satis ekraninda takvimin altinda yer alan islem yapmak istediginiz sefere sag tikladiktan sonra "saat degistir" butonu ile durak, degisim suresi, islem turu secimi ardindan islem tamamlanmis olacaktir.
+Ana satis ekraninda takvimin altinda yer alan islem yapmak istediginiz sefere sag tikladiktan sonra "saat degistir" butonu ile durak, degisim suresi, islem turu secimi ardindan islem tamamlanmis olacaktir.
 
 ## Sefer Listesinde Sefer Goruntulenemiyor
 Kullanici bir seferi goremiyorsa muhtemelen seferin yetkili subeleri arasinda yer almamaktadir. Firma yetkilisinden onay alinarak tarafimiza bilgi verilmesi gerekmektedir.

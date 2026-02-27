@@ -2,29 +2,31 @@
 
 Kullanici sube, kullanici veya otobus ile ilgili tanimlama islemi yapmak istiyor.
 
+Navigasyon: OBUS panelinde ust menudeki "Yonetim" sekmesine tiklanir, acilan menuden ilgili alt bolum secilir.
+
 ## Sube Olusturma
-"Yonetim - Tanimlar - Subeler - Sube Yonetimi" alanindaki "sube ekle" butonuna tikladiktan sonra acilan ekranda basinda kirmizi renkli yildiz bulunan zorunlu alanlar doldurulduktan sonra yeni sube olusturulabilir.
+Ust menuden "Yonetim > Tanimlar > Subeler > Sube Yonetimi" sayfasina gidin. "Sube ekle" butonuna tikladiktan sonra acilan ekranda basinda kirmizi renkli yildiz bulunan zorunlu alanlar doldurulduktan sonra yeni sube olusturulabilir.
 
 Tali sube (hesap kesmeyen) olusturmak icin: zorunlu alanlara ek olarak "Varsa Bagli Oldugu Ana Sube" kisminda bagli oldugu ana sube secilmelidir. Ana (hesap kesip araca para odeyecek) subeler icin bu kismi bos birakmak gerekmektedir.
 
 ## Kullanici Olusturma
-"Yonetim - Tanimlar - Kullanici Yonetimi - Kullanicilar" alanindaki "ekle" butonuna tikladiktan sonra:
+Ust menuden "Yonetim > Tanimlar > Kullanici Yonetimi > Kullanicilar" sayfasina gidin. "Ekle" butonuna tikladiktan sonra:
 - Modul kismi "obus" secilmelidir.
 - Yetkili subeler kismi kullanicinin bagli olacagi sube secilmelidir.
 - Sube secimi ardindan yetkili subeler basliginin yaninda gozuken sube adina tiklanmalidir.
 - Acilan ekranda "tanimlar" kismindaki "bilet" secenegi ile normal yetkiler, "tam" ile tum yetkiler toplu sekilde tanimlanabilmektedir. Dilerseniz yetkileri manuel olarak da tanimlayabilirsiniz.
 
 ## Otobus Olusturma
-"Yonetim - Kartlar - Otobus Yonetimi - Otobusler" alanindaki "ekle" butonuna tikladiktan sonra:
+Ust menuden "Yonetim > Kartlar > Otobus Yonetimi > Otobusler" sayfasina gidin. "Ekle" butonuna tikladiktan sonra:
 - Otobus Adi ve Plaka bolumune ornek "34 ABC 123" seklinde rakam ve harfler arasinda bosluk birakilarak plaka yazilmalidir.
 - Otobus koltuk modeli secilmelidir.
 - Arac sahibi secilmelidir.
 
 ## Koltuk Modeli Olusturma
-"Yonetim - Kartlar - Otobus Yonetimi - Otobus Koltuk Modelleri" alanindaki "ekle" butonuna tikladiktan sonra zorunlu alanlar doldurulup soldaki koltuk numaralari eklendikten sonra kaydet butonu ile islem tamamlanir.
+Ust menuden "Yonetim > Kartlar > Otobus Yonetimi > Otobus Koltuk Modelleri" sayfasina gidin. "Ekle" butonuna tikladiktan sonra zorunlu alanlar doldurulup soldaki koltuk numaralari eklendikten sonra kaydet butonu ile islem tamamlanir.
 
 ## Otobus Sahibi Olusturma
-"Yonetim - Kartlar - Otobus Yonetimi - Otobus Sahipleri" alanindaki "ekle" butonuna tikladiktan sonra zorunlu alanlar doldurularak kaydet butonu ile islem tamamlanir.
+Ust menuden "Yonetim > Kartlar > Otobus Yonetimi > Otobus Sahipleri" sayfasina gidin. "Ekle" butonuna tikladiktan sonra zorunlu alanlar doldurularak kaydet butonu ile islem tamamlanir.
 
 ## Hata Durumu
 Herhangi bir islemde hata veya "yapamadim, olmadi, hata verdi" mesaji gelirse escalation yapilir.
