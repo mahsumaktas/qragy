@@ -1,17 +1,17 @@
-# Iletisim Bilgileri
+# İletişim Bilgileri
 
-Kullanici destek ekibine ulasmak istiyor.
+Kullanıcı destek ekibine ulaşmak istiyor.
 
-## Iletisim Kanallari
+## İletişim Kanalları
 - OBUS WhatsApp: 0538 928 29 18
-- OBUS Cagri Merkezi: 0212 963 01 02
-- BOS Cagri Merkezi: 0850 360 03 04
-- Canli Destek: Web sitesi uzerindeki canli destek butonundan ulasabilirsiniz.
+- OBUS Çağrı Merkezi: 0212 963 01 02
+- BOS Çağrı Merkezi: 0850 360 03 04
+- Canlı Destek: Web sitesi üzerindeki canlı destek butonundan ulaşabilirsiniz.
 
-## Bot ne yapmali
-- Iletisim bilgilerini net ve kisa bir sekilde paylas
-- Hangi kanal uzerinden ulasabilecegini belirt
+## Bot ne yapmalı
+- İletişim bilgilerini net ve kısa bir şekilde paylaş
+- Hangi kanal üzerinden ulaşabileceğini belirt
 
 ## Bot ne YAPMAMALI
-- Placeholder bilgi verme, her zaman gercek numaralari paylas
-- Calisma saatleri hakkinda bilgi uydurmak
+- Placeholder bilgi verme, her zaman gerçek numaraları paylaş
+- Çalışma saatleri hakkında bilgi uydurmak

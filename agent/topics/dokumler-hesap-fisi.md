@@ -1,45 +1,45 @@
-# Dokumler ve Hesap Fisi
+# Dökümler ve Hesap Fişi
 
-Kullanici OBUS sisteminden dokum almak veya hesap fisi yazdirmak istiyor.
+Kullanıcı OBUS sisteminden döküm almak veya hesap fişi yazdırmak istiyor.
 
-Navigasyon: Ana satis ekraninda, takvimden ilgili seferi sectikten sonra sol tarafta koltuk goruntusunun altinda "Islemler" butonu bulunur.
+Navigasyon: Ana satış ekranında, takvimden ilgili seferi seçtikten sonra sol tarafta koltuk görüntüsünün altında "İşlemler" butonu bulunur.
 
-## Dokumlere Erisim
-Ana satis ekraninda ilgili seferi sectikten sonra, sol tarafta koltuklarin altinda yer alan "Islemler" butonuna basin. Acilan ekrandaki "Dokumler" butonuna basarak ilgili sefere ait dokumleri alabilirsiniz.
+## Dökümlere Erişim
+Ana satış ekranında ilgili seferi seçtikten sonra, sol tarafta koltuklarin altında yer alan "İşlemler" butonuna basın. Açılan ekrandaki "Dökümler" butonuna basarak ilgili sefere ait dökümleri alabilirsiniz.
 
-## Dokumler Icerisindeki Belgeler
-- Koltuk planli yolcu listesi
+## Dökümler İçerisindeki Belgeler
+- Koltuk planlı yolcu listesi
 - E-yolcu listesi
-- UETDS sefer dokumu
-- Hesap fisi
-- Hesap fisi (detayli)
+- UETDS sefer dökümü
+- Hesap fişi
+- Hesap fişi (detaylı)
 
-## Hesap Fisi Nasil Alinir
-1. Sefer listesinden ilgili seferi secin.
-2. Sag ustteki "Yazdir" butonuna basin.
-3. Acilan menuden "Hesap Fisi" veya "Hesap Fisi (Detayli)" secenegini tiklayin.
+## Hesap Fişi Nasıl Alınır
+1. Sefer listesinden ilgili seferi seçin.
+2. Sağ üstteki "Yazdır" butonuna basın.
+3. Açılan menüden "Hesap Fişi" veya "Hesap Fişi (Detaylı)" seçeneğini tıklayın.
 4. PDF olarak inecektir.
 
-## Rapor Olusturulamadi Hatasi
-Tarayici gecmisini temizleyip programdan cikis giris yaparak raporu tekrar almayi deneyin.
+## Rapor Oluşturulamadı Hatası
+Tarayıcı geçmişini temizleyip programdan çıkış giriş yaparak raporu tekrar almayı deneyin.
 
-## Mukerrer Bilet Yazdirma
-Yazdirilmis bir biletin tekrar yazdirilmak istenmesi "mukerrer bilet yazdirma" yetkisine baglidir. Bu yetkinin olmasi icin firma yetkilisinin onayi gerekmektedir.
+## Mükerrer Bilet Yazdırma
+Yazdırılmış bir biletin tekrar yazdırılmak istenmesi "mükerrer bilet yazdırma" yetkisine bağlıdır. Bu yetkinin olması için firma yetkilisinin onayı gerekmektedir.
 
 ## Hata Durumu
-Dokum alma ile ilgili bir hata iletilmis ise:
-"Kontrol edebilmek adina aldiginiz hatayi ogrenebilir miyim?"
-Gelen yanit ardindan escalation yapilir.
+Döküm alma ile ilgili bir hata iletilmiş ise:
+"Kontrol edebilmek adına aldığınız hatayı öğrenebilir miyim?"
+Gelen yanıt ardından escalation yapılır.
 
 ## Eskalasyon
-Hata durumunda canli temsilciye aktarilir.
-Eskalasyon mesaji: "Kontrol etmeye devam ediyorum, sizi cok kisa bir sure daha bekletecegim."
+Hata durumunda canlı temsilciye aktarılır.
+Eskalasyon mesajı: "Kontrol etmeye devam ediyorum, sizi çok kısa bir süre daha bekletecğim."
 
-## Bot ne yapmali
-- Kullanicinin hangi dokumu istedigini anla
-- Hesap fisi icin adim adim yonlendir
-- Hata varsa hata mesajini sor ve escalate et
+## Bot ne yapmalı
+- Kullanıcının hangi dökümü istediğini anla
+- Hesap fişi için adım adım yönlendir
+- Hata varsa hata mesajını sor ve escalate et
 
 ## Bot ne YAPMAMALI
-- Tum dokum turlerini tek mesajda listeleme
-- Kullanicinin yetkisini kontrol edebilecegini ima etme
+- Tüm döküm türlerini tek mesajda listeleme
+- Kullanıcının yetkisini kontrol edebileceğini ima etme

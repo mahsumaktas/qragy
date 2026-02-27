@@ -1,30 +1,30 @@
-# Hesap Kesimi / Arac Kaldirma
+# Hesap Kesimi / Araç Kaldırma
 
-Kullanici seferin hesabini kesmek veya araci kaldirmak istiyor.
+Kullanıcı seferin hesabını kesmek veya aracı kaldırmak istiyor.
 
-Navigasyon: Ana satis ekraninda, takvimden ilgili seferi sectikten sonra sol tarafta koltuk goruntusunun altinda "Arac Kaldir" ve "Islemler" butonlari bulunur.
+Navigasyon: Ana satış ekranında, takvimden ilgili seferi seçtikten sonra sol tarafta koltuk görüntüsünün altında "Araç Kaldır" ve "İşlemler" butonları bulunur.
 
-## Hesap Kesimi (Arac Kaldirma) Adimlari
-Ana satis ekraninda ilgili seferi sectikten sonra, sol tarafta koltuklarin altinda yer alan "Arac Kaldir" butonuna basin. Acilan ekrandaki "Devam Et" butonuna, ardindan "Hesap Kes" butonuna basarak ilgili seferin hesabini kesebilirsiniz.
+## Hesap Kesimi (Araç Kaldırma) Adımları
+Ana satış ekranında ilgili seferi seçtikten sonra, sol tarafta koltuklarin altında yer alan "Araç Kaldır" butonuna basın. Açılan ekrandaki "Devam Et" butonuna, ardından "Hesap Kes" butonuna basarak ilgili seferin hesabını kesebilirsiniz.
 
-## Hesap Kesimi Iptali (Arac Kaldirma Iptal) Adimlari
-Ana satis ekraninda ilgili seferi sectikten sonra, sol tarafta koltuklarin altinda yer alan "Hesap Kesildi" butonuna basin. Acilan ekrandaki "Geri Al" butonuna basarak ilgili seferin hesabini geri alabilirsiniz.
+## Hesap Kesimi İptali (Araç Kaldırma İptal) Adımları
+Ana satış ekranında ilgili seferi seçtikten sonra, sol tarafta koltuklarin altında yer alan "Hesap Kesildi" butonuna basın. Açılan ekrandaki "Geri Al" butonuna basarak ilgili seferin hesabını geri alabilirsiniz.
 
 ## Hata Durumu
-Hesap kesimi veya arac kaldirma ile ilgili bir hata veya sorun iletilmis ise:
-"Kontrol edebilmek adina aldiginiz hatayi ogrenebilir miyim?"
-Gelen yanit ardindan escalation yapilir.
+Hesap kesimi veya araç kaldırma ile ilgili bir hata veya sorun iletilmiş ise:
+"Kontrol edebilmek adına aldığınız hatayı öğrenebilir miyim?"
+Gelen yanıt ardından escalation yapılır.
 
 ## Eskalasyon
-Hata durumunda canli temsilciye aktarilir.
-Eskalasyon mesaji: "Kontrol etmeye devam ediyorum, sizi cok kisa bir sure daha bekletecegim."
+Hata durumunda canlı temsilciye aktarılır.
+Eskalasyon mesajı: "Kontrol etmeye devam ediyorum, sizi çok kısa bir süre daha bekletecğim."
 
-## Bot ne yapmali
-- Islem turunu belirle (hesap kesimi mi, iptal mi)
-- Ilgili adimlari paylas
-- Onaylayici mesaj gelirse ugulama prosedurune gec
-- Hata iletilirse hatayi sor ve escalate et
+## Bot ne yapmalı
+- İşlem türünü belirle (hesap kesimi mi, iptal mi)
+- İlgili adımları paylaş
+- Onaylayıcı mesaj gelirse uygulama prosedürüne geç
+- Hata iletilirse hatayı sor ve escalate et
 
 ## Bot ne YAPMAMALI
-- Tum adimlari bir anda verme, adim adim ilerle
-- "Yapamadiniz mi?" gibi olumsuz soru sorma
+- Tüm adımları bir anda verme, adım adım ilerle
+- "Yapamadınız mı?" gibi olumsuz soru sorma

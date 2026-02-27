@@ -1,37 +1,37 @@
-# Cache Islemleri (Sefer Internette Gozukmuyor)
+# Cache İşlemleri (Sefer İnternette Gözükmüyor)
 
-Kullanici OBUS sisteminde tanimli bir seferin internette gorunmedigini bildiriyor.
+Kullanıcı OBUS sisteminde tanımlı bir seferin internette görünmediğini bildiriyor.
 
-## Akis
+## Akış
 
-1. Kullaniciya su yonlendirmeyi yap:
-   "Ana satis ekraninda ilgili seferi sectikten sonra, sol tarafta koltuklarin altinda yer alan 'Islemler' butonuna tiklayin. Acilan ekranda 'Internete aciklik durumu' alanindan 'Nereden - Nereye' secimi yaparak seferin internette gorunmeme durumunu kontrol edebilirsiniz."
-2. Kullanicinin yanitini bekle:
-   - **"Kontrol ettim, hala gozukmuyor"** veya **"Yapamiyorum"** derse:
-     Kullaniciya sor: "Firma adi, seferin kalkis-varis guzergahi, seferin tarih ve saatini ogrenebilir miyim?"
-   - Bilgi alindiktan sonra eskalasyon yap.
+1. Kullanıcıya şu yönlendirmeyi yap:
+   "Ana satış ekranında ilgili seferi seçtikten sonra, sol tarafta koltukların altında yer alan 'İşlemler' butonuna tıklayın. Açılan ekranda 'İnternete açıklık durumu' alanından 'Nereden - Nereye' seçimi yaparak seferin internette görünmeme durumunu kontrol edebilirsiniz."
+2. Kullanıcının yanıtını bekle:
+   - **"Kontrol ettim, hala gözükmüyor"** veya **"Yapamıyorum"** derse:
+     Kullanıcıya sor: "Firma adı, seferin kalkış-varış güzergahı, seferin tarih ve saatini öğrenebilir miyim?"
+   - Bilgi alındıktan sonra eskalasyon yap.
 
-## Toplanmasi Gereken Bilgiler
+## Toplanması Gereken Bilgiler
 
-- Firma adi
-- Seferin kalkis-varis guzergahi
+- Firma adı
+- Seferin kalkış-varış güzergahı
 - Seferin tarih ve saati
 
 ## Eskalasyon
 
-Kullanici yonlendirme ile sorunu cozemediyse canli temsilciye aktarilir.
-Eskalasyon mesaji: "Kontrol ediyorum, sizi cok kisa bir sure daha bekletecegim."
+Kullanıcı yönlendirme ile sorunu çözemediyse canlı temsilciye aktarılır.
+Eskalasyon mesajı: "Kontrol ediyorum, sizi çok kısa bir süre daha bekleteceğim."
 
-## Bot ne yapmali
+## Bot ne yapmalı
 
-- Once kullaniciyi "Islemler > Internete aciklik durumu" kontrolune yonlendir
-- Kullanici kontrol ettikten sonra hala sorun varsa bilgi topla
-- Bilgiler alindiktan sonra eskalasyon yap
-- Adim adim ilerle
+- Önce kullanıcıyı "İşlemler > İnternete açıklık durumu" kontrolüne yönlendir
+- Kullanıcı kontrol ettikten sonra hala sorun varsa bilgi topla
+- Bilgiler alındıktan sonra eskalasyon yap
+- Adım adım ilerle
 
 ## Bot ne YAPMAMALI
 
-- Direkt bilgi isteyerek baslamak (once yonlendirme yapmali)
-- Cache temizleme veya teknik islem yapabilecegini ima etme
-- Tum bilgileri tek seferde isteme
-- Internete aciklik durumu kontrolunu atlamak
+- Direkt bilgi isteyerek başlamak (önce yönlendirme yapmalı)
+- Cache temizleme veya teknik işlem yapabileceğini ima etme
+- Tüm bilgileri tek seferde isteme
+- İnternete açıklık durumu kontrolünü atlamak

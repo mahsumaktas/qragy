@@ -1,43 +1,43 @@
-# Sube, Kullanici ve Otobus Yonetimi
+# Şube, Kullanıcı ve Otobüs Yönetimi
 
-Kullanici sube, kullanici veya otobus ile ilgili tanimlama islemi yapmak istiyor.
+Kullanıcı şube, kullanıcı veya otobüs ile ilgili tanımlama işlemi yapmak istiyor.
 
-Navigasyon: OBUS panelinde ust menudeki "Yonetim" sekmesine tiklanir, acilan menuden ilgili alt bolum secilir.
+Navigasyon: OBUS panelinde üst menüdeki "Yönetim" sekmesine tıklanır, açılan menüden ilgili alt bölüm seçilir.
 
-## Sube Olusturma
-Ust menuden "Yonetim > Tanimlar > Subeler > Sube Yonetimi" sayfasina gidin. "Sube ekle" butonuna tikladiktan sonra acilan ekranda basinda kirmizi renkli yildiz bulunan zorunlu alanlar doldurulduktan sonra yeni sube olusturulabilir.
+## Şube Oluşturma
+Üst menüden "Yönetim > Tanımlar > Şubeler > Şube Yönetimi" sayfasına gidin. "Şube ekle" butonuna tıkladıktan sonra açılan ekranda başında kırmızı renkli yıldız bulunan zorunlu alanlar doldurulduktan sonra yeni şube oluşturulabilir.
 
-Tali sube (hesap kesmeyen) olusturmak icin: zorunlu alanlara ek olarak "Varsa Bagli Oldugu Ana Sube" kisminda bagli oldugu ana sube secilmelidir. Ana (hesap kesip araca para odeyecek) subeler icin bu kismi bos birakmak gerekmektedir.
+Tali şube (hesap kesmeyen) oluşturmak için: zorunlu alanlara ek olarak "Varsa Bağlı Olduğu Ana Şube" kısmında bağlı olduğu ana şube seçilmelidir. Ana (hesap kesip araca para ödeyecek) şubeler için bu kısmı boş bırakmak gerekmektedir.
 
-## Kullanici Olusturma
-Ust menuden "Yonetim > Tanimlar > Kullanici Yonetimi > Kullanicilar" sayfasina gidin. "Ekle" butonuna tikladiktan sonra:
-- Modul kismi "obus" secilmelidir.
-- Yetkili subeler kismi kullanicinin bagli olacagi sube secilmelidir.
-- Sube secimi ardindan yetkili subeler basliginin yaninda gozuken sube adina tiklanmalidir.
-- Acilan ekranda "tanimlar" kismindaki "bilet" secenegi ile normal yetkiler, "tam" ile tum yetkiler toplu sekilde tanimlanabilmektedir. Dilerseniz yetkileri manuel olarak da tanimlayabilirsiniz.
+## Kullanıcı Oluşturma
+Üst menüden "Yönetim > Tanımlar > Kullanıcı Yönetimi > Kullanıcılar" sayfasına gidin. "Ekle" butonuna tıkladıktan sonra:
+- Modül kısmı "obus" seçilmelidir.
+- Yetkili şubeler kısmı kullanıcının bağlı olacağı şube seçilmelidir.
+- Şube seçimi ardından yetkili şubeler başlığının yanında gözüken şube adına tıklanmalıdır.
+- Açılan ekranda "tanımlar" kısmındaki "bilet" seçeneği ile normal yetkiler, "tam" ile tüm yetkiler toplu şekilde tanımlanabilmektedir. Dilerseniz yetkileri manuel olarak da tanımlayabilirsiniz.
 
-## Otobus Olusturma
-Ust menuden "Yonetim > Kartlar > Otobus Yonetimi > Otobusler" sayfasina gidin. "Ekle" butonuna tikladiktan sonra:
-- Otobus Adi ve Plaka bolumune ornek "34 ABC 123" seklinde rakam ve harfler arasinda bosluk birakilarak plaka yazilmalidir.
-- Otobus koltuk modeli secilmelidir.
-- Arac sahibi secilmelidir.
+## Otobüs Oluşturma
+Üst menüden "Yönetim > Kartlar > Otobüs Yönetimi > Otobüsler" sayfasına gidin. "Ekle" butonuna tıkladıktan sonra:
+- Otobüs Adı ve Plaka bölümüne örnek "34 ABC 123" şeklinde rakam ve harfler arasında boşluk bırakılarak plaka yazılmalıdır.
+- Otobüs koltuk modeli seçilmelidir.
+- Araç sahibi seçilmelidir.
 
-## Koltuk Modeli Olusturma
-Ust menuden "Yonetim > Kartlar > Otobus Yonetimi > Otobus Koltuk Modelleri" sayfasina gidin. "Ekle" butonuna tikladiktan sonra zorunlu alanlar doldurulup soldaki koltuk numaralari eklendikten sonra kaydet butonu ile islem tamamlanir.
+## Koltuk Modeli Oluşturma
+Üst menüden "Yönetim > Kartlar > Otobüs Yönetimi > Otobüs Koltuk Modelleri" sayfasına gidin. "Ekle" butonuna tıkladıktan sonra zorunlu alanlar doldurulup soldaki koltuk numaraları eklendikten sonra kaydet butonu ile işlem tamamlanır.
 
-## Otobus Sahibi Olusturma
-Ust menuden "Yonetim > Kartlar > Otobus Yonetimi > Otobus Sahipleri" sayfasina gidin. "Ekle" butonuna tikladiktan sonra zorunlu alanlar doldurularak kaydet butonu ile islem tamamlanir.
+## Otobüs Sahibi Oluşturma
+Üst menüden "Yönetim > Kartlar > Otobüs Yönetimi > Otobüs Sahipleri" sayfasına gidin. "Ekle" butonuna tıkladıktan sonra zorunlu alanlar doldurularak kaydet butonu ile işlem tamamlanır.
 
 ## Hata Durumu
-Herhangi bir islemde hata veya "yapamadim, olmadi, hata verdi" mesaji gelirse escalation yapilir.
-Eskalasyon mesaji: "Kontrol ediyorum, sizi cok kisa bir sure daha bekletecegim."
+Herhangi bir işlemde hata veya "yapamadım, olmadı, hata verdi" mesajı gelirse escalation yapılır.
+Eskalasyon mesajı: "Kontrol ediyorum, sizi çok kısa bir süre daha bekletecegim."
 
-## Bot ne yapmali
-- Hangi tanimlama islemini yapmak istedigini belirle
-- Ilgili adimlari adim adim paylas
-- Onaylayici mesaj gelirse ugulama prosedurune gec
+## Bot ne yapmalı
+- Hangi tanımlama işlemini yapmak istediğini belirle
+- İlgili adımları adım adım paylaş
+- Onaylayıcı mesaj gelirse uygulama prosedürüne geç
 - Hata gelirse escalate et
 
 ## Bot ne YAPMAMALI
-- Tum tanimlama islemlerini tek mesajda anlatma
-- Kullanicinin yetkisi hakkinda bilgi verme
+- Tüm tanımlama işlemlerini tek mesajda anlatma
+- Kullanıcının yetkisi hakkında bilgi verme

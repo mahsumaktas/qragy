@@ -1,16 +1,16 @@
 # Tercihler ve Ayarlar
 
-Kullanici ekran gorunumu veya kisisel ayarlarini degistirmek istiyor.
+Kullanıcı ekran görünümü veya kişisel ayarlarını değiştirmek istiyor.
 
-## Tercihlere Erisim
-Kullanici ekraninin sag ust kosesinde yer alan kullanici adina tiklandiginda acilan listede yer alan "Tercihler" bolumunden asagidaki ayarlar yapilabilir:
+## Tercihlere Erişim
+Kullanıcı ekranının sağ üst köşesinde yer alan kullanıcı adına tıklandığında açılan listede yer alan "Tercihler" bölümünden aşağıdaki ayarlar yapılabilir:
 - Tema tercihi
-- Yazi boyutu secimi
-- Kendi subesinin sattigi koltuklarin isaret rengini guncelleme
+- Yazı boyutu seçimi
+- Kendi şubesinin sattığı koltukların işaret rengini güncelleme
 
-## Bot ne yapmali
-- Tercihlere nasil erisildegini kisa ve net anlat
-- Hangi ayari degistirmek istedigini sor
+## Bot ne yapmalı
+- Tercihlere nasıl erişildiğini kısa ve net anlat
+- Hangi ayarı değiştirmek istediğini sor
 
 ## Bot ne YAPMAMALI
-- Ayarlari bot'un degistirebilecegini ima etme
+- Ayarları bot'un değiştirebileceğini ima etme

@@ -1,38 +1,38 @@
-# Yetki Islemleri
+# Yetki İşlemleri
 
-Kullanici yetki sorunu yasiyor veya islem onayi vermek istiyor.
+Kullanıcı yetki sorunu yaşıyor veya işlem onayı vermek istiyor.
 
 ## Yetki Sorunu
-Kullanici belirli islemlere veya sayfalara erisemiyorsa yetki tanimi eksik olabilir. Bu durumda firma yetkilisinin OBUS'ta yetki tanimlamasi veya dogrudan bizimle iletisime gecmesi gerekmektedir.
+Kullanıcı belirli işlemlere veya sayfalara erişemiyorsa yetki tanımı eksik olabilir. Bu durumda firma yetkilisinin OBUS'ta yetki tanımlaması veya doğrudan bizimle iletişime geçmesi gerekmektedir.
 
-## Subeler Arasi Yetki
-Kullanici kendi subesinde baska bir subenin biletini iptal etmek gibi islemler talep ediyorsa:
-"Bu islem icin yetki kontrolu yapmam gerekiyor. Lutfen firma adi ve kullanici adinizi paylasir misiniz?"
+## Şubeler Arası Yetki
+Kullanıcı kendi şubesinde başka bir şubenin biletini iptal etmek gibi işlemler talep ediyorsa:
+"Bu işlem için yetki kontrolü yapmam gerekiyor. Lütfen firma adı ve kullanıcı adınızı paylaşır mısınız?"
 
-Kullanici firma yetkilisi ile gorustugundu veya yetkilinin kendisini canli destege yonlendirdigini belirtirse:
-"Anliyorum. Ancak islem yapabilmem icin firma yetkilisinin dogrudan bizimle iletisime gecmesi veya sistemde size yetki tanimlamasi gerekmektedir."
+Kullanıcı firma yetkilisi ile görüştüğünü veya yetkilinin kendisini canlı desteğe yönlendirdiğini belirtirse:
+"Anlıyorum. Ancak işlem yapabilmem için firma yetkilisinin doğrudan bizimle iletişime geçmesi veya sistemde size yetki tanımlaması gerekmektedir."
 
-Bu bilgilerden sonra canli destek temsilcisine aktarilir.
+Bu bilgilerden sonra canlı destek temsilcisine aktarılır.
 
-## Islem Onayi
-Canli destege baglanan kisi herhangi bir islem icin onay verdigine dair bilgi iletirse asagidaki bilgiler alinir ve temsilciye aktarilir:
-- Yetkili Adi Soyadi
+## İşlem Onayı
+Canlı desteğe bağlanan kişi herhangi bir işlem için onay verdiğine dair bilgi iletirse aşağıdaki bilgiler alınır ve temsilciye aktarılır:
+- Yetkili Adı Soyadı
 - Firma
-- Yapilacak Islem
+- Yapılacak İşlem
 
-## Toplanmasi Gereken Bilgiler
-- Firma adi
-- Kullanici adi
+## Toplanması Gereken Bilgiler
+- Firma adı
+- Kullanıcı adı
 
 ## Eskalasyon
-Yetki islemleri her zaman canli temsilciye aktarilir.
-Eskalasyon mesaji: "Kontrol ediyorum, sizi cok kisa bir sure daha bekletecegim."
+Yetki işlemleri her zaman canlı temsilciye aktarılır.
+Eskalasyon mesajı: "Kontrol ediyorum, sizi çok kısa bir süre daha bekletecğim."
 
-## Bot ne yapmali
-- Yetki turunu belirle (erisim sorunu mu, islem onayi mi, subeler arasi mi)
+## Bot ne yapmalı
+- Yetki türünü belirle (erişim sorunu mu, işlem onayı mı, şubeler arası mı)
 - Gerekli bilgileri topla
 - Escalation yap
 
 ## Bot ne YAPMAMALI
-- Yetki degisikligi yapabilecegini ima etme
-- Firma yetkilisi olmadan islem yapma
+- Yetki değişikliği yapabileceğini ima etme
+- Firma yetkilisi olmadan işlem yapma

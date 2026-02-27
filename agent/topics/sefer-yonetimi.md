@@ -1,41 +1,41 @@
-# Sefer Yonetimi
+# Sefer Yönetimi
 
-Kullanici sefer acma, uzatma, iptal etme veya saat degistirme istiyor.
+Kullanıcı sefer açma, uzatma, iptal etme veya saat değiştirme istiyor.
 
-Navigasyon: OBUS panelinde ust menudeki "Seferler" sekmesine tiklanir, acilan menuden "Seferler" secilir.
+Navigasyon: OBUS panelinde üst menüdeki "Seferler" sekmesine tıklanır, açılan menüden "Seferler" seçilir.
 
-## Sefer Acma
-Ust menuden "Seferler > Seferler" sayfasina gidin. "Ekle" butonuna tikladiktan sonra acilan ekranda basinda kirmizi renkli yildiz isareti bulunan zorunlu alanlar doldurulduktan sonra kaydet butonu ile islem tamamlanmis olacaktir.
+## Sefer Açma
+Üst menüden "Seferler > Seferler" sayfasına gidin. "Ekle" butonuna tıkladıktan sonra açılan ekranda başında kırmızı renkli yıldız işareti bulunan zorunlu alanlar doldurulduktan sonra kaydet butonu ile işlem tamamlanmış olacaktır.
 
 ## Sefer Uzatma
-Ust menuden "Seferler > Seferler" sayfasina gidin. Durumu "aktif" olarak gozuken uzatilmak istenen sefer/seferler basindaki kutucuk isaretlenerek secilir. "Sefer uzat" butonuna bastiktan sonra baslangic ve bitis tarihi secilir, ardindan kaydet butonu ile islem tamamlanmis olacaktir.
+Üst menüden "Seferler > Seferler" sayfasına gidin. Durumu "aktif" olarak gözüken uzatılmak istenen sefer/seferler başındaki kutucuk işaretlenerek seçilir. "Sefer uzat" butonuna bastıktan sonra başlangıç ve bitiş tarihi seçilir, ardından kaydet butonu ile işlem tamamlanmış olacaktır.
 
-## Sefer Iptali
-Ana satis ekraninda takvimin altinda yer alan islem yapmak istediginiz sefere sag tikladiktan sonra "iptal et" butonuna tiklanir. Ekrana gelen onay mesajinda tek gunluk icin "sadece bu sefere uygula", secilen gun ve sonraki butun gunler icin "tum seferlere uygula" secildikten sonra islem tamamlanmis olacaktir.
+## Sefer İptali
+Ana satış ekranında takvimin altında yer alan işlem yapmak istediğiniz sefere sağ tıkladıktan sonra "iptal et" butonuna tıklanır. Ekrana gelen onay mesajında tek günlük için "sadece bu sefere uygula", seçilen gün ve sonraki bütün günler için "tüm seferlere uygula" seçildikten sonra işlem tamamlanmış olacaktır.
 
-Toplu iptal icin: Ust menuden "Seferler > Seferler" sayfasinda "seferleri topluca iptal et" butonuna basarak da islem yapilabilir.
+Toplu iptal için: Üst menüden "Seferler > Seferler" sayfasında "seferleri topluca iptal et" butonuna basarak da işlem yapılabilir.
 
-## Sefer Saat Degisikligi
-Ana satis ekraninda takvimin altinda yer alan islem yapmak istediginiz sefere sag tikladiktan sonra "saat degistir" butonu ile durak, degisim suresi, islem turu secimi ardindan islem tamamlanmis olacaktir.
+## Sefer Saat Değişikliği
+Ana satış ekranında takvimin altında yer alan işlem yapmak istediğiniz sefere sağ tıkladıktan sonra "saat değiştir" butonu ile durak, değişim süresi, işlem türü seçimi ardından işlem tamamlanmış olacaktır.
 
-## Sefer Listesinde Sefer Goruntulenemiyor
-Kullanici bir seferi goremiyorsa muhtemelen seferin yetkili subeleri arasinda yer almamaktadir. Firma yetkilisinden onay alinarak tarafimiza bilgi verilmesi gerekmektedir.
+## Sefer Listesinde Sefer Görüntülenemiyor
+Kullanıcı bir seferi göremiyorsa muhtemelen seferin yetkili şubeleri arasında yer almamaktadır. Firma yetkilisinden onay alınarak tarafımıza bilgi verilmesi gerekmektedir.
 
 ## Hata Durumu
-Herhangi bir islemde hata alinirsa:
-"Kontrol edebilmek adina aldiginiz hatayi ogrenebilir miyim?"
-Gelen yanit ardindan escalation yapilir.
+Herhangi bir işlemde hata alınırsa:
+"Kontrol edebilmek adına aldığınız hatayı öğrenebilir miyim?"
+Gelen yanıt ardından escalation yapılır.
 
 ## Eskalasyon
-Hata durumunda veya yetkisiz durumlarda canli temsilciye aktarilir.
-Eskalasyon mesaji: "Kontrol ediyorum, sizi cok kisa bir sure daha bekletecegim."
+Hata durumunda veya yetkisiz durumlarda canlı temsilciye aktarılır.
+Eskalasyon mesajı: "Kontrol ediyorum, sizi çok kısa bir süre daha bekletecegim."
 
-## Bot ne yapmali
-- Hangi sefer islemini yapmak istedigini belirle
-- Ilgili adimlari paylas
-- Onaylayici mesaj gelirse ugulama prosedurune gec
-- Hata veya "yapamadim" gelirse escalate et
+## Bot ne yapmalı
+- Hangi sefer işlemini yapmak istediğini belirle
+- İlgili adımları paylaş
+- Onaylayıcı mesaj gelirse uygulama prosedürüne geç
+- Hata veya "yapamadım" gelirse escalate et
 
 ## Bot ne YAPMAMALI
-- Tum sefer islemlerini tek mesajda anlatma
-- Kullanicinin sefer verileri hakkinda tahmin yurutme
+- Tüm sefer işlemlerini tek mesajda anlatma
+- Kullanıcının sefer verileri hakkında tahmin yürütme

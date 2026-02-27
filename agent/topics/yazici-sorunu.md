@@ -1,67 +1,67 @@
-# Yazici Sorunu
+# Yazıcı Sorunu
 
-Kullanici OBUS sistemi uzerinden yazicidan cikti alamiyor, bilet yazdiramiyor veya yazici calismiyordur.
+Kullanıcı OBUS sistemi üzerinden yazıcıdan çıktı alamıyor, bilet yazdıramıyor veya yazıcı çalışmıyordur.
 
-## Alt Konu 1: Yazicidan Cikti Alinamiyor
+## Alt Konu 1: Yazıcıdan Çıktı Alınamıyor
 
-Kullanici yazicidan hicbir cikti alamiyor.
+Kullanıcı yazıcıdan hiçbir çıktı alamıyor.
 
-### Akis
+### Akış
 
-1. Kullaniciya sor: "Yaziciniz acik ve kablolar duzgun takili mi?"
-   - **Hayir** ise: "Yaziciyi acip, kablolarin duzgun takili olduguna emin olduktan sonra tekrar deneyin." (Gorusmeyi sonlandir veya tekrar denedikten sonra devam et.)
-   - **Evet** ise: 2. adima gec.
-2. Kullaniciya sor: "Farkli bir programdan cikti alabiliyor musunuz?"
-   - **Hayir, hicbir programdan cikti alamiyorum** ise: "OBUS disinda diger uygulamalardan da cikti alamamaniz yazici kaynakli bir durumdur. Bilgisayarciniz ile goruserek destek alabilirsiniz."
-   - **Onceden alabiliyordum ama simdi alamiyorum** ise: Eskalasyon yap.
+1. Kullanıcıya sor: "Yazıcınız açık ve kablolar düzgün takılı mı?"
+   - **Hayır** ise: "Yazıcıyı açıp, kabloların düzgün takılı olduğuna emin olduktan sonra tekrar deneyin." (Görüşmeyi sonlandır veya tekrar denedikten sonra devam et.)
+   - **Evet** ise: 2. adıma geç.
+2. Kullanıcıya sor: "Farklı bir programdan çıktı alabiliyor musunuz?"
+   - **Hayır, hiçbir programdan çıktı alamıyorum** ise: "OBUS dışında diğer uygulamalardan da çıktı alamamanız yazıcı kaynaklı bir durumdur. Bilgisayarcınız ile görüşerek destek alabilirsiniz."
+   - **Önceden alabiliyordum ama şimdi alamıyorum** ise: Eskalasyon yap.
 
-## Alt Konu 2: Bilet Yazdiramiyor
+## Alt Konu 2: Bilet Yazdıramıyor
 
-Kullanici OBUS uzerinden bilet yazdirma islemi yapamiyor.
+Kullanıcı OBUS üzerinden bilet yazdırma işlemi yapamıyor.
 
-### Akis
+### Akış
 
-1. "OBUS yazici uygulamasinin aktif oldugunundan emin olun."
-2. "Yazicinizin sinama sayfasi cikarip cikarmadigini kontrol edin."
-   - Sinama sayfasi yazdirmiyorsa: "Sinama sayfasi yazdirmayan yazicilar icin bilgisayarciniz ile gorusmenizi oneririz."
-3. Hala cozulmediyse: Kullanicidan Alpemix ID ve Parola bilgisini iste.
-4. Bilgi alindiktan sonra eskalasyon yap.
+1. "OBUS yazıcı uygulamasının aktif olduğunundan emin olun."
+2. "Yazıcınızın sınama sayfası çıkarıp çıkarmadığını kontrol edin."
+   - Sınama sayfası yazdırmıyorsa: "Sınama sayfası yazdırmayan yazıcılar için bilgisayarcınız ile görüşmenizi öneririz."
+3. Hala çözülmediyse: Kullanıcıdan Alpemix ID ve Parola bilgisini iste.
+4. Bilgi alındıktan sonra eskalasyon yap.
 
-## Alt Konu 3: Yazici Calismiyor
+## Alt Konu 3: Yazıcı Çalışmıyor
 
-Kullanici yazicinin hic calismadigini bildiriyor.
+Kullanıcı yazıcının hiç çalışmadığını bildiriyor.
 
-### Akis
+### Akış
 
-1. Kullanicidan direkt olarak Alpemix ID ve Parola bilgisini iste.
-2. Bilgi alindiktan sonra eskalasyon yap.
+1. Kullanıcıdan direkt olarak Alpemix ID ve Parola bilgisini iste.
+2. Bilgi alındıktan sonra eskalasyon yap.
 
-## Toplanmasi Gereken Bilgiler
+## Toplanması Gereken Bilgiler
 
-- Sorunun turu (cikti alinamiyor / bilet yazdiramiyor / yazici calismiyor)
-- Yazicinin fiziksel durumu (acik mi, kablolar takili mi)
-- Farkli programlardan cikti durumu
+- Sorunun türü (çıktı alınamıyor / bilet yazdıramıyor / yazıcı çalışmıyor)
+- Yazıcının fiziksel durumu (açık mı, kablolar takılı mı)
+- Farklı programlardan çıktı durumu
 - Alpemix ID ve Parola (eskalasyon gereken durumlarda)
 
 ## Eskalasyon
 
-Eskalasyon mesaji: "Kontrol ediyorum, sizi cok kisa bir sure daha bekletecegim."
+Eskalasyon mesajı: "Kontrol ediyorum, sizi çok kısa bir süre daha bekleteceğim."
 
 Eskalasyon gereken durumlar:
-- Onceden cikti alabiliyordu ama simdi alamiyor
-- Bilet yazdirma sorunu temel adimlarla cozulmediyse
-- Yazici hic calismiyorsa
+- Önceden çıktı alabiliyordu ama şimdi alamıyor
+- Bilet yazdırma sorunu temel adımlarla çözülmediyse
+- Yazıcı hiç çalışmıyorsa
 
-## Bot ne yapmali
+## Bot ne yapmalı
 
-- Sorunun turunu anlamak icin soru sor
-- Alt konuya gore troubleshooting adimlarini sirayla uygula
-- Her adimdan sonra sonucu sor
-- Cozulemiyorsa Alpemix bilgilerini toplayip eskalasyon yap
+- Sorunun türünü anlamak için soru sor
+- Alt konuya göre troubleshooting adımlarını sırayla uygula
+- Her adımdan sonra sonucu sor
+- Çözülemiyorsa Alpemix bilgilerini toplayıp eskalasyon yap
 
 ## Bot ne YAPMAMALI
 
-- Tum troubleshooting adimlarini tek seferde gonderme
-- Yazici surucusu yukleme gibi teknik islemlere yonlendirme
-- OBUS disindaki yazici sorunlarini cozmaye calisma (bilgisayarciya yonlendir)
+- Tüm troubleshooting adımlarını tek seferde gönderme
+- Yazıcı sürücüsü yükleme gibi teknik işlemlere yönlendirme
+- OBUS dışındaki yazıcı sorunlarını çözmeye çalışma (bilgisayarcıya yönlendir)
 - Alpemix bilgilerini gerek olmadan isteme

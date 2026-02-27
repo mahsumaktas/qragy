@@ -1,38 +1,38 @@
-# Hat, Durak ve Fiyat Yonetimi
+# Hat, Durak ve Fiyat Yönetimi
 
-Kullanici hat olusturma, durak ekleme veya fiyat islemleri yapmak istiyor.
+Kullanıcı hat oluşturma, durak ekleme veya fiyat işlemleri yapmak istiyor.
 
-Navigasyon: OBUS panelinde ust menudeki "Yonetim" sekmesine tiklanir, acilan menuden ilgili alt bolum secilir.
+Navigasyon: OBUS panelinde üst menüdeki "Yönetim" sekmesine tıklanır, açılan menüden ilgili alt bölüm seçilir.
 
-## Hat Olusturma
-Ust menuden "Yonetim > Tanimlar > Hat Yonetimi > Hatlar" sayfasina gidin. "Ekle" butonuna tikladiktan sonra acilan ekranda basinda kirmizi renkli yildiz isareti bulunan zorunlu alanlar doldurulduktan sonra kaydet butonu ile islem tamamlanmis olacaktir.
+## Hat Oluşturma
+Üst menüden "Yönetim > Tanımlar > Hat Yönetimi > Hatlar" sayfasına gidin. "Ekle" butonuna tıkladıktan sonra açılan ekranda başında kırmızı renkli yıldız işareti bulunan zorunlu alanlar doldurulduktan sonra kaydet butonu ile işlem tamamlanmış olacaktır.
 
-## Durak Olusturma
-Ust menuden "Yonetim > Kartlar > Durak ve Yer Yonetimi" sayfasina gidin. "Ekle" butonu ile yeni durak olusturulabilir. Ilgili kisma erisemiyorsaniz yetkiniz olmayabilir. Yetki gerektiren islemleriniz icin firma yetkiliniz veya firma merkeziniz ile goruserek destek alabilirsiniz.
+## Durak Oluşturma
+Üst menüden "Yönetim > Kartlar > Durak ve Yer Yönetimi" sayfasına gidin. "Ekle" butonu ile yeni durak oluşturulabilir. İlgili kısma erişemiyorsanız yetkiniz olmayabilir. Yetki gerektiren işlemleriniz için firma yetkiliniz veya firma merkeziniz ile görüşerek destek alabilirsiniz.
 
 ## Sefere Durak Ekleme
-1. Ust menuden "Yonetim > Tanimlar > Hat Yonetimi > Hatlar" sayfasina gidin ve islem yapilacak hatti secin.
-2. Hattin icerisindeki "duraklar" bolumune gecin.
-3. "Ekle" butonuna tikladiktan sonra "Sira", "Durak", "Bu Durakta Odeme Yapan Sube", "Onceki Durakla Sure Farki" alanlari doldurulur ve kaydet butonuna tiklanir.
-4. Ardindan "Sefer Saati Secimi" ile "Seferlerin Guncellenecegi Tarih Araligi" secilerek "Yansit ve Kapat" butonuna tiklanir.
+1. Üst menüden "Yönetim > Tanımlar > Hat Yönetimi > Hatlar" sayfasına gidin ve işlem yapılacak hattı seçin.
+2. Hattın içerisindeki "duraklar" bölümüne geçin.
+3. "Ekle" butonuna tıkladıktan sonra "Sıra", "Durak", "Bu Durakta Ödeme Yapan Şube", "Önceki Durakla Süre Farkı" alanları doldurulur ve kaydet butonuna tıklanır.
+4. Ardından "Sefer Saati Seçimi" ile "Seferlerin Güncelleneceği Tarih Aralığı" seçilerek "Yansıt ve Kapat" butonuna tıklanır.
 
-Uygulamali gosterim istenirse: "Alpemix ID ve Parola iletebilirseniz ekraniniza baglanip islemi size uygulamali olarak gosterebilirim."
+Uygulamalı gösterim istenirse: "Alpemix ID ve Parola iletebilirseniz ekranınıza bağlanıp işlemi size uygulamalı olarak gösterebilirim."
 
 ## Fiyat Ekleme
-Ust menuden "Yonetim > Tanimlar > Fiyat Yonetimi > Fiyatlar" sayfasina gidin. "Ekle" butonuna tikladiktan sonra zorunlu alanlar doldurularak kaydet butonu ile islem tamamlanir.
+Üst menüden "Yönetim > Tanımlar > Fiyat Yönetimi > Fiyatlar" sayfasına gidin. "Ekle" butonuna tıkladıktan sonra zorunlu alanlar doldurularak kaydet butonu ile işlem tamamlanır.
 
-## Fiyat Degistirme
-Ust menuden "Yonetim > Tanimlar > Fiyat Yonetimi > Fiyatlar" sayfasina gidin. Guzergahlardan istenen guzergahin yanindaki fiyatlar guncellenebilmektedir. Degisiklik ardindan kaydet butonu ile islem tamamlanir.
+## Fiyat Değiştirme
+Üst menüden "Yönetim > Tanımlar > Fiyat Yönetimi > Fiyatlar" sayfasına gidin. Güzergahlardan istenen güzergahın yanındaki fiyatlar güncellenebilmektedir. Değişiklik ardından kaydet butonu ile işlem tamamlanır.
 
 ## Hata Durumu
-Herhangi bir islemde hata alinirsa escalation yapilir.
-Eskalasyon mesaji: "Kontrol etmeye devam ediyorum, sizi cok kisa bir sure daha bekletecegim."
+Herhangi bir işlemde hata alınırsa escalation yapılır.
+Eskalasyon mesajı: "Kontrol etmeye devam ediyorum, sizi çok kısa bir süre daha bekletecegim."
 
-## Bot ne yapmali
-- Hangi islemi yapmak istedigini belirle
-- Ilgili adimlari paylas
-- Hata veya "yapamadim" gelirse escalate et
+## Bot ne yapmalı
+- Hangi işlemi yapmak istediğini belirle
+- İlgili adımları paylaş
+- Hata veya "yapamadım" gelirse escalate et
 
 ## Bot ne YAPMAMALI
-- Tum islemleri tek mesajda anlatma
-- Yetki gerektiren islemi bot yapabilecegini ima etme
+- Tüm işlemleri tek mesajda anlatma
+- Yetki gerektiren işlemi bot yapabileceğini ima etme

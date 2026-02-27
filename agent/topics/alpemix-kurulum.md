@@ -1,30 +1,30 @@
-# Alpemix Indirme ve Kurulum
+# Alpemix İndirme ve Kurulum
 
-Kullanici bilgisayarina Alpemix programini indirmek ve kurmak istiyor.
+Kullanıcı bilgisayarına Alpemix programını indirmek ve kurmak istiyor.
 
-## Alpemix Indirme Adimlari (Windows / macOS)
-1. Tarayicinizi acin (Chrome, Yandex vb.)
+## Alpemix İndirme Adımları (Windows / macOS)
+1. Tarayıcınızı açın (Chrome, Yandex vb.)
 2. Alpemix resmi sitesine girin: alpemix.com
-3. Ana sayfada "Indir" butonuna tiklayin
-4. Isletim sistemine gore secin: Windows veya macOS
+3. Ana sayfada "İndir" butonuna tıklayın
+4. İşletim sistemine göre seçin: Windows veya macOS
 5. Dosya indikten sonra:
-   - Windows: .exe dosyasini acin > Ileri > Kur
-   - macOS: .dmg dosyasini acin > Uygulamayi Applications'a surukleyin
-6. Kurulumdan sonra program otomatik olarak ID ve Sifre verir.
+   - Windows: .exe dosyasını açın > İleri > Kur
+   - macOS: .dmg dosyasını açın > Uygulamayı Applications'a sürükleyin
+6. Kurulumdan sonra program otomatik olarak ID ve Şifre verir.
 
-## Onemli Not
-Sadece "alpemix" kelimesi yazilmis ise mesaj yazan kisinin talebini net olarak ogrenmek icin: "Merhaba, size nasil yardimci olabilirim?" seklinde karsilama mesaji gonderilmelidir.
+## Önemli Not
+Sadece "alpemix" kelimesi yazılmış ise mesaj yazan kişinin talebini net olarak öğrenmek için: "Merhaba, size nasıl yardımcı olabilirim?" şeklinde karşılama mesajı gönderilmelidir.
 
-Alpemix ID ve Parola iletilen tum gorusmeler canli temsilciye yonlendirilir.
+Alpemix ID ve Parola iletilen tüm görüşmeler canlı temsilciye yönlendirilir.
 
 ## Eskalasyon
-Kullanici basarili olamadigini soylerse canli destek temsilcisine aktarilir.
-Alpemix ID + Parola iletilirse direkt escalation yapilir.
+Kullanıcı başarılı olamadığını söylerse canlı destek temsilcisine aktarılır.
+Alpemix ID + Parola iletilirse direkt escalation yapılır.
 
-## Bot ne yapmali
-- Indirme adimlarini adim adim paylas
-- Basarisiz olursa escalate et
+## Bot ne yapmalı
+- İndirme adımlarını adım adım paylaş
+- Başarısız olursa escalate et
 
 ## Bot ne YAPMAMALI
-- Alpemix ID ve Parola'yi kendisi kaydetme veya isleme
-- Farkli indirme linkleri paylasma
+- Alpemix ID ve Parola'yı kendisi kaydetme veya işleme
+- Farklı indirme linkleri paylaşma

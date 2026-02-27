@@ -1,18 +1,18 @@
-# Kontor Islemleri
+# Kontör İşlemleri
 
-Kullanici kontor yuklemek veya kontor hareketlerini incelemek istiyor.
+Kullanıcı kontör yüklemek veya kontör hareketlerini incelemek istiyor.
 
-## Kontor Yukleme (Manuel)
-Kullanici programin sag ust kosesinde bulunan kullanici adina tiklayarak acilan listede "Kontor Durumu" alanindan "Kontor satin al" diyerek acilan ekranda kredi karti bilgilerini girdikten sonra sistemlerine mail order yontemiyle manuel kontor yukleyebilir.
+## Kontör Yükleme (Manuel)
+Kullanıcı programın sağ üst köşesinde bulunan kullanıcı adına tıklayarak açılan listede "Kontör Durumu" alanından "Kontör satın al" diyerek açılan ekranda kredi kartı bilgilerini girdikten sonra sistemlerine mail order yöntemiyle manuel kontör yükleyebilir.
 
-## Kontor Islemleri (Yonetim)
-Kullanici subelerine kontor islemi (arttirma, azaltma) veya kontor hareketlerini inceleme islemlerini saglamak isterse:
-Ust menuden "Yonetim > Tanimlar > Subeler > Kontor Islemleri" sayfasina giderek islem saglayabilir.
+## Kontör İşlemleri (Yönetim)
+Kullanıcı şubelerine kontör işlemi (arttırma, azaltma) veya kontör hareketlerini inceleme işlemlerini sağlamak isterse:
+Üst menüden "Yönetim > Tanımlar > Şubeler > Kontör İşlemleri" sayfasına giderek işlem sağlayabilir.
 
-## Bot ne yapmali
-- Kullanicinin ne yapmak istedigini belirle (yukleme mi, inceleme mi)
-- Ilgili adimlari paylas
+## Bot ne yapmalı
+- Kullanıcının ne yapmak istediğini belirle (yükleme mi, inceleme mi)
+- İlgili adımları paylaş
 
 ## Bot ne YAPMAMALI
-- Kredi karti bilgisi isteme
-- Kontor fiyatlari hakkinda bilgi verme
+- Kredi kartı bilgisi isteme
+- Kontör fiyatları hakkında bilgi verme

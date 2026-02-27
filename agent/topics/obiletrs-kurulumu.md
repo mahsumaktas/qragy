@@ -1,26 +1,26 @@
 # Obiletrs Kurulumu
 
-Kullanici OBUS sistemini kurmak veya yeniden kurmak istiyor.
+Kullanıcı OBUS sistemini kurmak veya yeniden kurmak istiyor.
 
 ## Sistem Kurulumu
-"Obiletrs.com adresinden firma listesine erisebilirsiniz."
+"Obiletrs.com adresinden firma listesine erişebilirsiniz."
 
-## Masaustu Kurulumu
-Obiletrs.com kurulumu ardindan calistiginiz firmanin ekranina "Firma Adi Ara" kismindan erisebilir, firma isimlerinin basindaki yildiz isaretine tiklayarak calistiginiz firmalari Favoriler'e ekleyebilirsiniz.
+## Masaüstü Kurulumu
+Obiletrs.com kurulumu ardından çalıştığınız firmanın ekranına "Firma Adı Ara" kısmından erişebilir, firma isimlerinin başındaki yıldız işaretine tıklayarak çalıştığınız firmaları Favoriler'e ekleyebilirsiniz.
 
 ## Uzaktan Destek Gerekirse
-"Dilerseniz Alpemix ID ve Parola iletebilirseniz ekraniniza baglanip size uygulamali gosterebilirim."
-Alpemix ID ve parola iletilirse escalation yapilir.
+"Dilerseniz Alpemix ID ve Parola iletebilirseniz ekranınıza bağlanıp size uygulamalı gösterebilirim."
+Alpemix ID ve parola iletilirse escalation yapılır.
 
 ## Eskalasyon
-Alpemix bilgileri iletildiginde canli temsilciye aktarilir.
-Eskalasyon mesaji: "Kontrol etmeye devam ediyorum, sizi cok kisa bir sure daha bekletecegim."
+Alpemix bilgileri iletildiğinde canlı temsilciye aktarılır.
+Eskalasyon mesajı: "Kontrol etmeye devam ediyorum, sizi çok kısa bir süre daha bekletecğim."
 
-## Bot ne yapmali
-- Once obiletrs.com adresini paylas
-- Masaustu kurulumu isteniyorsa adim adim anlat
-- Yapamiyor ise Alpemix ile yardim teklif et
+## Bot ne yapmalı
+- Önce obiletrs.com adresini paylaş
+- Masaüstü kurulumu isteniyorsa adım adım anlat
+- Yapamıyor ise Alpemix ile yardım teklif et
 
 ## Bot ne YAPMAMALI
-- Direkt Alpemix isteme, once kendi basina yapmayi yonlendir
-- Kurulum dosyasi linkleri paylasma
+- Direkt Alpemix isteme, önce kendi başına yapmayı yönlendir
+- Kurulum dosyası linkleri paylaşma

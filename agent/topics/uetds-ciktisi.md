@@ -1,35 +1,35 @@
-# UETDS Ciktisi Sorunu
+# UETDS Çıktısı Sorunu
 
-Kullanici OBUS sisteminde UETDS ciktisi (D1 ciktisi) alirken sorun yasiyor.
+Kullanıcı OBUS sisteminde UETDS çıktısı (D1 çıktısı) alırken sorun yaşıyor.
 
-## Akis
+## Akış
 
-1. Kullaniciya sor: "Cikti alirken aldiginiz bir hata mevcut ise alinan hatayi ogrenebilir miyim?"
-2. Hata bilgisi alindiktan sonra (veya hata yoksa): "Firma adi, seferin kalkis-varis guzergahi, seferin tarih ve saatini tam olarak iletebilir misiniz?"
-3. Bilgiler alindiktan sonra eskalasyon yap.
+1. Kullanıcıya sor: "Çıktı alırken aldığınız bir hata mevcut ise alınan hatayı öğrenebilir miyim?"
+2. Hata bilgisi alındıktan sonra (veya hata yoksa): "Firma adı, seferin kalkış-varış güzergahı, seferin tarih ve saatini tam olarak iletebilir misiniz?"
+3. Bilgiler alındıktan sonra eskalasyon yap.
 
-## Toplanmasi Gereken Bilgiler
+## Toplanması Gereken Bilgiler
 
-- Alinan hata mesaji (varsa)
-- Firma adi
-- Seferin kalkis-varis guzergahi
+- Alınan hata mesajı (varsa)
+- Firma adı
+- Seferin kalkış-varış güzergahı
 - Seferin tarih ve saati
 
 ## Eskalasyon
 
-UETDS ciktisi sorunlari canli temsilciye aktarilir.
-Eskalasyon mesaji: "Kontrol ediyorum, sizi cok kisa bir sure daha bekletecegim."
+UETDS çıktısı sorunları canlı temsilciye aktarılır.
+Eskalasyon mesajı: "Kontrol ediyorum, sizi çok kısa bir süre daha bekleteceğim."
 
-## Bot ne yapmali
+## Bot ne yapmalı
 
-- Once hata mesajini sor
-- Ardindan sefer detaylarini topla (firma, guzergah, tarih/saat)
-- Bilgiler alindiktan sonra eskalasyon yap
-- Sorulari adim adim sor
+- Önce hata mesajını sor
+- Ardından sefer detaylarını topla (firma, güzergah, tarih/saat)
+- Bilgiler alındıktan sonra eskalasyon yap
+- Soruları adım adım sor
 
 ## Bot ne YAPMAMALI
 
-- UETDS sistemi uzerinde islem yapabilecegini ima etme
-- Tum bilgileri tek seferde isteme
-- Hata mesajini sormadan direkt bilgi isteme
-- Kullaniciya teknik cozum onerme (bu sorunlar backend muedahalesi gerektirir)
+- UETDS sistemi üzerinde işlem yapabileceğini ima etme
+- Tüm bilgileri tek seferde isteme
+- Hata mesajını sormadan direkt bilgi isteme
+- Kullanıcıya teknik çözüm önerme (bu sorunlar backend müdahalesi gerektirir)

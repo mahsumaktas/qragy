@@ -1,42 +1,42 @@
 # UETDS Yolcu Sorunu
 
-Kullanici OBUS sisteminde UETDS yolcu bildirimlerinde sorun yasiyor veya yolcular gozukmuyor.
+Kullanıcı OBUS sisteminde UETDS yolcu bildirimlerinde sorun yaşıyor veya yolcular gözükmüyor.
 
-## Akis
+## Akış
 
-1. Kullaniciya su adimlari yonlendir:
-   - "Sefere sag tiklayip 'Guncelle' secenegine tiklayin."
-   - "Yolcu bilgilerinin ve binis yerlerinin dogru olduguna emin olun."
-   - "Islemler butonuna tiklayin."
-   - "UETDS Islemleri sekmesine gelin."
-   - "Sirasiyla su islemleri yapin: Seferi iptal et, Seferi bildir, Yolculari iptal et, Yolculari bildir."
-2. "Bu adimlardan sonra ciktiyi tekrar almayi deneyin."
-3. Kullanicinin yanitini bekle:
-   - **Hata aliyor veya yapamiyor** ise:
-     Kullaniciya sor: "Firma adi, seferin kalkis-varis guzergahi, seferin tarih ve saatini ogrenebilir miyim?"
-   - Bilgi alindiktan sonra eskalasyon yap.
+1. Kullanıcıya şu adımları yönlendir:
+   - "Sefere sağ tıklayıp 'Güncelle' seçeneğine tıklayın."
+   - "Yolcu bilgilerinin ve biniş yerlerinin doğru olduğuna emin olun."
+   - "İşlemler butonuna tıklayın."
+   - "UETDS İşlemleri sekmesine gelin."
+   - "Sırasıyla şu işlemleri yapın: Seferi iptal et, Seferi bildir, Yolcuları iptal et, Yolcuları bildir."
+2. "Bu adımlardan sonra çıktıyı tekrar almayı deneyin."
+3. Kullanıcının yanıtını bekle:
+   - **Hata alıyor veya yapamıyor** ise:
+     Kullanıcıya sor: "Firma adı, seferin kalkış-varış güzergahı, seferin tarih ve saatini öğrenebilir miyim?"
+   - Bilgi alındıktan sonra eskalasyon yap.
 
-## Toplanmasi Gereken Bilgiler
+## Toplanması Gereken Bilgiler
 
-- Firma adi
-- Seferin kalkis-varis guzergahi
+- Firma adı
+- Seferin kalkış-varış güzergahı
 - Seferin tarih ve saati
 
 ## Eskalasyon
 
-Yonlendirme adimlari ile cozulemeyen durumlar canli temsilciye aktarilir.
-Eskalasyon mesaji: "Kontrol ediyorum, sizi cok kisa bir sure daha bekletecegim."
+Yönlendirme adımları ile çözülemeyen durumlar canlı temsilciye aktarılır.
+Eskalasyon mesajı: "Kontrol ediyorum, sizi çok kısa bir süre daha bekleteceğim."
 
-## Bot ne yapmali
+## Bot ne yapmalı
 
-- Once troubleshooting adimlarini sirasiyla yonlendir
-- Her adimi acik ve anlasilir sekilde anlat
-- Kullanici hata alirsa veya yapamazsa bilgi toplayip eskalasyon yap
-- Adim adim ilerle
+- Önce troubleshooting adımlarını sırasıyla yönlendir
+- Her adımı açık ve anlaşılır şekilde anlat
+- Kullanıcı hata alırsa veya yapamazsa bilgi toplayıp eskalasyon yap
+- Adım adım ilerle
 
 ## Bot ne YAPMAMALI
 
-- Tum adimlari tek mesajda yigma
-- UETDS portalinda islem yapabilecegini ima etme
-- Direkt eskalasyon yapmak (once troubleshooting adimlarini dene)
-- Kullanicinin teknik bilgi seviyesini varsayma
+- Tüm adımları tek mesajda yığma
+- UETDS portalında işlem yapabileceğini ima etme
+- Direkt eskalasyon yapmak (önce troubleshooting adımlarını dene)
+- Kullanıcının teknik bilgi seviyesini varsayma

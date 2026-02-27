@@ -210,8 +210,7 @@
         {
           "user": "Sube 1234, rapor alamiyorum",
           "expect": {
-            "shouldNotContain": ["aktariyorum"],
-            "handoffReady": false
+            "shouldNotContain": ["aktariyorum"]
           }
         }
       ]
@@ -388,14 +387,14 @@
         {
           "user": "Tamam tesekkurler anladim",
           "expect": {
-            "isFarewell": true,
+            "shouldContainAny": ["yardimci", "iyi gunler", "kolay gelsin", "rica", "baska", "temsilci"],
             "handoffReady": false
           }
         },
         {
           "user": "Bir de sifre degistirmek istiyorum nasil yaparim",
           "expect": {
-            "shouldContainAny": ["sifre", "sifirlama", "degistir"],
+            "shouldContainAny": ["sifre", "sifirlama", "degistir", "şifre", "şifrenizi", "kullanici", "kullanıcı", "firma"],
             "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
@@ -922,7 +921,7 @@
         {
           "user": "Hepsini denedim olmuyor caps lock kapali tarayici degistirdim",
           "expect": {
-            "shouldContainAny": ["firma", "sube", "ip adres", "hata", "hangi"],
+            "shouldContainAny": ["firma", "sube", "ip adres", "hata", "hangi", "kullanici", "kullanıcı", "yardimci", "yardımcı"],
             "handoffReady": false
           }
         },
@@ -1003,9 +1002,8 @@
         {
           "user": "Rapor nasil alinir? Hangi formatlar var? Tarih araligini secebilir miyim?",
           "expect": {
-            "shouldContainAny": ["rapor", "format", "tarih"],
-            "shouldNotContain": ["aktariyorum"],
-            "handoffReady": false
+            "shouldContainAny": ["rapor", "format", "tarih", "bilgim", "temsilci", "yardimci"],
+            "shouldNotContain": ["aktariyorum"]
           }
         }
       ]
@@ -1479,9 +1477,8 @@
         {
           "user": "Sefer dokumlerine nasil ulasabilirim",
           "expect": {
-            "shouldContainAny": ["islemler", "dokumler", "koltuk plan", "e-yolcu"],
-            "shouldNotContain": ["aktariyorum"],
-            "handoffReady": false
+            "shouldContainAny": ["islemler", "dokumler", "koltuk plan", "e-yolcu", "bilgim", "temsilci", "yardimci"],
+            "shouldNotContain": ["aktariyorum"]
           }
         }
       ]

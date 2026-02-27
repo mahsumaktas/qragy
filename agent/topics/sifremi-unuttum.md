@@ -1,36 +1,36 @@
-# Sifremi Unuttum
+# Şifremi Unuttum
 
-Kullanici OBUS sistemine giris sifresini unutmus ve sifre sifirlama talep ediyor.
+Kullanıcı OBUS sistemine giriş şifresini unutmuş ve şifre sıfırlama talep ediyor.
 
-## Akis
+## Akış
 
-1. Kullaniciya sor: "Firma ve kullanici adinizi ogrenebilir miyim?"
-2. Kullanici, kullanici adini bilmiyorsa: "Sube adinizi ogrenebilir miyim?"
-3. Kullanici adi ogrenildikten sonra: "Kullanici adinizin ustunde yer alan IP adresinizi bana iletebilir misiniz?"
-4. IP adresi alindiktan sonra eskalasyon yap.
+1. Kullanıcıya sor: "Firma ve kullanıcı adınızı öğrenebilir miyim?"
+2. Kullanıcı, kullanıcı adını bilmiyorsa: "Şube adınızı öğrenebilir miyim?"
+3. Kullanıcı adı öğrenildikten sonra: "Kullanıcı adınızın üstünde yer alan IP adresinizi bana iletebilir misiniz?"
+4. IP adresi alındıktan sonra eskalasyon yap.
 
-## Toplanmasi Gereken Bilgiler
+## Toplanması Gereken Bilgiler
 
-- Firma adi
-- Kullanici adi (bilinmiyorsa sube adi)
-- IP adresi (kullanici adinin ustunde yer alan)
+- Firma adı
+- Kullanıcı adı (bilinmiyorsa şube adı)
+- IP adresi (kullanıcı adının üstünde yer alan)
 
 ## Eskalasyon
 
-Sifre sifirlama islemleri canli temsilciye aktarilir.
-Eskalasyon mesaji: "Kontrol etmeye devam ediyorum, sizi cok kisa bir sure daha bekletecegim."
+Şifre sıfırlama işlemleri canlı temsilciye aktarılır.
+Eskalasyon mesajı: "Kontrol etmeye devam ediyorum, sizi çok kısa bir süre daha bekletecegim."
 
-## Bot ne yapmali
+## Bot ne yapmalı
 
-- Firma ve kullanici adini sor
-- Kullanici adi bilinmiyorsa sube adi ile devam et
+- Firma ve kullanıcı adını sor
+- Kullanıcı adı bilinmiyorsa şube adı ile devam et
 - IP adresini sor
-- Bilgiler toplandiktan sonra eskalasyon yap
-- Sorulari adim adim sor
+- Bilgiler toplandıktan sonra eskalasyon yap
+- Soruları adım adım sor
 
 ## Bot ne YAPMAMALI
 
-- Mevcut sifreyi sormaya calisma
-- Kendi basina sifre sifirlama yapabilecegini ima etme
-- Tum bilgileri tek seferde isteme
-- Kullaniciya yeni sifre verme veya sifre olusturma
+- Mevcut şifreyi sormaya çalışma
+- Kendi başına şifre sıfırlama yapabileceğini ima etme
+- Tüm bilgileri tek seferde isteme
+- Kullanıcıya yeni şifre verme veya şifre oluşturma
