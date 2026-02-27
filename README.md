@@ -5,7 +5,7 @@
 <h1 align="center">Qragy</h1>
 
 <p align="center">
-  <strong>Self-hosted RAG chatbot that runs on a Raspberry Pi. $0/month.</strong>
+  <strong>Self-hosted AI support chatbot with RAG, human-in-the-loop, and full admin panel.<br/>Runs on a Raspberry Pi. $0/month.</strong>
 </p>
 
 <p align="center">
@@ -18,12 +18,14 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick Start</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#architecture">Architecture</a> ·
-  <a href="#admin-panel">Admin Panel</a> ·
-  <a href="#deploy">Deploy</a> ·
-  <a href="#api">API</a> ·
+  <a href="#quick-start">Quick Start</a> &middot;
+  <a href="#features">Features</a> &middot;
+  <a href="#architecture">Architecture</a> &middot;
+  <a href="#admin-panel">Admin Panel</a> &middot;
+  <a href="#eval-system">Eval System</a> &middot;
+  <a href="#integrations">Integrations</a> &middot;
+  <a href="#deploy">Deploy</a> &middot;
+  <a href="#api">API</a> &middot;
   <a href="#configuration">Configuration</a>
 </p>
 
@@ -37,66 +39,83 @@
 
 **Dify needs Docker, Redis, and Postgres.** Botpress is cloud-only. Intercom costs $74/seat/month.
 
-**Qragy needs one command: `npm start`.** Multi-model support (Gemini, OpenAI, Anthropic, Groq, Mistral, DeepSeek, Ollama) with zero extra dependencies.
+**Qragy needs one command: `npm start`.** It ships with 7 LLM providers, hybrid RAG, a full admin panel, human-in-the-loop agent inbox, eval testing framework, and multi-channel integrations — all in a single Node.js process with zero external infrastructure.
 
-It uses [LanceDB](https://lancedb.com) (embedded vector DB) and supports multiple AI providers, so you get a production-ready AI support chatbot with zero infrastructure cost — even on a **$35 Raspberry Pi**.
+It uses [LanceDB](https://lancedb.com) (embedded vector DB) and [SQLite](https://www.sqlite.org/) for storage, so you get a production-ready AI support chatbot with zero infrastructure cost — even on a **$35 Raspberry Pi**.
 
 > One process. One CSV file. 7 npm dependencies. Zero cloud bills.
 
-| Feature | Qragy | Dify | LibreChat | Open WebUI |
-|---------|-------|------|-----------|------------|
-| Runs on Pi | Yes | No | No | No |
-| Min RAM | 150MB | 4GB+ | 2GB+ | 1GB+ |
-| Dependencies | 7 npm | Docker+ | 5 services | Docker+ |
-| Setup time | 30sec | 30min+ | 20min+ | 15min+ |
-| Multi-model | Yes | Yes | Yes | Yes |
-| RAG built-in | Yes | Yes | No | Yes |
-| Admin panel | Yes | Yes | No | Yes |
+| Feature | Qragy | Dify | Botpress | Intercom |
+|---------|-------|------|----------|----------|
+| Fully self-hosted | Yes | Partial | No | No |
+| Runs on Raspberry Pi | Yes | No | No | No |
+| Min RAM | **150 MB** | 4 GB+ | 2 GB+ | N/A |
+| Setup time | **30 sec** | 30+ min | 15+ min | N/A |
+| LLM providers | **7** | 10+ | 3 | 1 |
+| Hybrid RAG + CRAG | Yes | Partial | No | No |
+| Human-in-the-loop | Yes | No | Yes | Yes |
+| Eval framework | Built-in | No | No | No |
+| Vector DB | Embedded | External | External | Managed |
+| Admin panel | Built-in (25 panels) | Yes | Yes | Yes |
+| Monthly cost | **$0** | Free tier limited | Free tier limited | $74+/seat |
+| Open source | MIT | Apache 2.0 | AGPL | No |
+| Dependencies | 7 npm | Docker + Redis + Postgres | Cloud | Cloud |
 
 ---
 
 ## Features
 
-### 🧠 RAG-Powered AI
-- **Hybrid search** — vector + full-text search with RRF fusion and LLM reranker
-- **Multi-model** — Gemini, OpenAI, Anthropic, Groq, Mistral, DeepSeek, Ollama out of the box
-- **Topic routing** — keywords + AI classify issues into structured flows
-- **Deterministic collection** — bot gathers required info before escalating
-- **Model fallback** — automatic retry with configurable fallback chain
-- **Smart chunking** — markdown, recursive, sentence, and contextual document splitting
-- **Quality scoring** — automatic response quality evaluation with reflexion
-- **CRAG evaluation** — Corrective RAG checks relevance before answering
+### AI & RAG Engine
 
-### 🎛️ Admin Panel (`/admin`)
-Manage everything from the browser — no code, no CLI:
+- **7 LLM providers** — Gemini, OpenAI, Anthropic (Claude), Groq, Mistral, DeepSeek, Ollama — all via raw `fetch()`, zero extra dependencies
+- **Model fallback chain** — automatic retry on 429/500/503/504 with configurable fallback models and circuit breaker health tracking
+- **Hybrid search** — vector search (LanceDB) + full-text search with Reciprocal Rank Fusion (RRF) scoring
+- **3-tier reranker** — Cohere API > LLM-based > text similarity scoring (automatic fallback)
+- **CRAG (Corrective RAG)** — evaluates search result relevance (RELEVANT/PARTIAL/IRRELEVANT), rewrites queries up to 2 times when results are insufficient
+- **Adaptive pipeline** — three modes: FAST (direct LLM, no retrieval), STANDARD (hybrid search + rerank), DEEP (search + rerank + CRAG + sub-queries)
+- **Quality scoring** — automatic response quality evaluation with confidence scores
+- **Reflexion** — self-reflection on low-quality answers, triggers re-generation with improved context
+- **Smart chunking** — markdown, recursive, sentence, and contextual document splitting strategies
+- **Topic routing** — keyword matching + AI classification routes conversations into structured support flows
+- **Deterministic collection** — bot gathers required fields step-by-step before escalating to a human
+- **Conversation state machine** — `welcome_or_greet` → `topic_detection` → `topic_guided_support` → `escalation_handoff` (+ farewell, fallback states)
 
-| Tab | What You Can Do |
-|-----|----------------|
-| **Tickets** | Full chat histories, handoff status, assignment, priority, internal notes |
-| **Knowledge Base** | CRUD for Q&A entries, file upload (PDF/DOCX/XLSX/TXT), one-click re-embed |
-| **Bot Config** | Edit persona, topics, escalation rules, memory templates, env vars |
-| **Analytics** | Daily metrics, top topics, resolution rates, SVG charts |
-| **Agent Inbox** | Human-in-the-loop: claim conversations, live SSE updates, agent replies |
-| **Bot Test** | Multi-chat test panel — open parallel sessions to test the bot |
-| **Admin Assistant** | AI-powered assistant that can read/update config, manage KB, execute actions |
-| **Feedback** | User satisfaction reports, CSAT tracking |
-| **Insights** | SLA monitoring, auto-FAQ generation, content gap detection |
-| **System** | Health monitoring, uptime, memory usage, audit log, backup |
+### Memory System
 
-### 📦 Zero Infrastructure
-- **LanceDB** — embedded vector DB, no separate server (unlike Pinecone/Weaviate/Qdrant)
-- **File-based storage** — CSV + JSON + LanceDB files. No PostgreSQL, no Redis
-- **Single process** — one `node server.js`, that's it
-- **No build step** — vanilla JS frontend, zero bundling
+- **Core memory (MemGPT-style)** — automatically extracts user profile facts (name, company, preferences) from conversations, injects into system prompt with 500-token budget
+- **Recall memory** — full conversation history with full-text search, enables cross-session context
+- **Memory templates** — configurable memory extraction patterns per use case
 
-### 🔌 Integrations
-- **Zendesk** — automatic widget + Sunshine Conversations two-way handoff
-- **Telegram** — bot channel via long polling
-- **Webhooks** — HMAC-SHA256 signed events to Slack, n8n, Zapier
-- **Embeddable widget** — one `<script>` tag on any website
-- **WhatsApp** — via Zendesk Sunshine Conversations
+### Knowledge Base
 
-### 🆓 Free Embedding Models
+- **CSV-based Q&A** — simple question/answer format, easy to edit and version
+- **File upload** — PDF, DOCX, XLSX, TXT parsing with automatic chunking and embedding
+- **One-click re-embed** — rebuild the entire vector index from the admin panel
+- **Knowledge graph** — extracts entities (product, issue_type, resolution, customer_segment) and relationships from resolved tickets, stored in SQLite
+- **Content gap detection** — identifies questions the bot cannot answer, suggests new KB entries
+- **Auto-FAQ generation** — generates FAQ entries from recurring ticket patterns
+
+### Security
+
+- **Prompt injection guard** — two-layer detection: 12 regex patterns (ignore instructions, jailbreak, DAN, roleplay) + LLM-based relevance guard for off-topic detection
+- **Output validation** — checks for AI confession phrases, prompt leaks, and internal data exposure
+- **PII masking** — automatic detection and masking of personal identifiable information in logs
+- **Credential masking** — prevents API keys and tokens from appearing in error messages or logs
+- **Rate limiting** — per-IP request throttling with configurable window and max requests
+- **Security headers** — Helmet.js, CORS configuration, CSP headers
+- **HMAC-SHA256 webhooks** — all outgoing webhooks are signed for verification
+
+### Infrastructure
+
+- **Single process** — one `node server.js`, no orchestration needed
+- **Embedded databases** — LanceDB (vectors) + SQLite (tickets, analytics, graph) — no external DB servers
+- **File-based config** — CSV knowledge base, JSON config files, markdown agent prompts
+- **No build step** — vanilla JS frontend, zero bundling or compilation
+- **PWA support** — service worker with offline caching (cache-first for static, network-first for API), web push notifications
+- **Auto-deploy** — GitHub webhook receiver with HMAC-SHA256 verification, triggers `deploy.sh` on push to main
+- **Hot-reload** — update bot config, topics, persona without restarting the server
+
+### Free Embedding Models
 
 | Provider | Model | Dimensions | Cost |
 |----------|-------|-----------|------|
@@ -104,17 +123,155 @@ Manage everything from the browser — no code, no CLI:
 | **OpenAI** | `text-embedding-3-small` | 1536 | $0.02/1M tokens |
 | **Ollama** | `nomic-embed-text` | 768 | Free (local) |
 
-### 🚀 v2 Highlights
-- **7 LLM providers** — Gemini, OpenAI, Anthropic, Groq, Mistral, DeepSeek, Ollama (zero new deps)
-- **Hybrid RAG** — vector + full-text search with RRF fusion and reranker
-- **Human-in-the-loop** — agent inbox with live SSE, claim/release, real-time replies
-- **Admin AI assistant** — action-capable assistant that manages config, KB, topics
-- **Bot test panel** — multi-chat grid for parallel testing
-- **SQLite backend** — tickets, conversations, analytics stored in SQLite
-- **Knowledge graph** — entity extraction and relationship mapping
-- **Core memory** — persistent user facts across conversations
-- Rate limiting, file upload, team features, prompt versioning
-- Docker support, auto-deploy webhook, Telegram integration
+---
+
+## Admin Panel
+
+Full browser-based management — no code, no CLI needed. 25 panels organized by function:
+
+### Tickets & Conversations
+
+| Panel | Description |
+|-------|-------------|
+| **Live Chats** | Active conversations with real-time updates, handoff status indicators |
+| **Closed Chats** | Full chat histories with search, assignment, priority, internal notes |
+| **Search** | Full-text search across all conversations and tickets |
+| **Agent Inbox (HITL)** | Human-in-the-loop: claim conversations, live SSE updates, type replies in real-time |
+
+### Knowledge & Content
+
+| Panel | Description |
+|-------|-------------|
+| **Knowledge Base** | CRUD for Q&A entries, file upload (PDF/DOCX/XLSX/TXT), one-click vector re-embed |
+| **Auto-FAQ** | Auto-generated FAQ entries from ticket patterns, one-click add to KB |
+| **Content Gaps** | Unanswered questions the bot couldn't handle, prioritized by frequency |
+
+### Bot Configuration
+
+| Panel | Description |
+|-------|-------------|
+| **Agent Files** | Edit persona, soul, domain rules, hard-bans, response policy, escalation matrix — all from the browser |
+| **Topics** | Create/edit/delete structured support flows with step-by-step guides and escalation rules |
+| **Memory Templates** | Configure what user facts the bot should remember across conversations |
+| **Environment** | View and edit `.env` variables at runtime |
+| **Chat Flow** | Configure conversation behavior: greeting, fallback, collection mode, state transitions |
+| **Site Config** | Widget appearance, company branding, business hours |
+| **Prompt Versions** | Version history of all prompt changes with one-click rollback |
+
+### Integrations
+
+| Panel | Description |
+|-------|-------------|
+| **Webhooks** | Configure webhook endpoints, select event types, test delivery, view delivery logs |
+| **Zendesk Sunshine** | Two-way Zendesk Sunshine Conversations integration config |
+| **WhatsApp** | Direct WhatsApp Cloud API integration setup |
+
+### Analytics & Insights
+
+| Panel | Description |
+|-------|-------------|
+| **Dashboard** | Daily metrics, top topics, resolution rates, SVG charts |
+| **Analytics** | Detailed conversation analytics, response time tracking |
+| **Feedback Report** | User satisfaction (CSAT 1-5), thumbs up/down tracking |
+| **SLA Monitoring** | Response time SLA compliance tracking |
+
+### System & Testing
+
+| Panel | Description |
+|-------|-------------|
+| **Bot Test** | Multi-chat grid — open parallel sessions to test the bot side by side |
+| **Admin Assistant** | AI-powered assistant that can read/update config, manage KB, execute admin actions |
+| **Eval Management** | Run eval scenarios, view results, manage test suites (see [Eval System](#eval-system)) |
+| **System Health** | Uptime, memory usage, LLM health, audit log, database stats, backup/export |
+| **Setup Wizard** | First-run onboarding: API key, bot name, persona, knowledge base setup — no `.env` editing needed |
+
+---
+
+## Eval System
+
+Built-in evaluation framework for testing chatbot quality. Run scenarios from the admin panel or CLI.
+
+### How It Works
+
+1. **Scenarios** — multi-turn conversation scripts with expected outcomes defined in `tests/eval/scenarios.json`
+2. **Judge** — rule-based assertion engine (`judge.js`) that checks bot responses against 10 assertion types
+3. **Runner** — sends messages to the live chat API, collects responses, runs assertions
+4. **Consensus** — runs each scenario N times (default 3), distinguishes real failures from flaky results
+
+### Assertion Types
+
+| Assertion | Description |
+|-----------|-------------|
+| `shouldContainAny` | Response must contain at least one of the specified strings |
+| `shouldNotContain` | Response must not contain any of the specified strings |
+| `shouldNotContainAny` | Response must not contain any of the specified strings |
+| `stateShouldBe` | Conversation state must match expected value |
+| `topicShouldBe` | Detected topic must match expected value |
+| `handoffReady` | Escalation handoff must be triggered (or not) |
+| `earlyEscalation` | Check for premature escalation |
+| `branchCodeShouldBe` | Extracted branch code must match |
+| `isFarewell` | Response should (not) be a farewell message |
+| `shouldNotRepeatPrevious` | Response must differ from previous reply (Jaccard similarity < 0.6) |
+
+### Running Evals
+
+**From admin panel:**
+- Open **Eval Management** panel
+- Click **Run** on a single scenario or **Run All** for the full suite
+- SSE streaming shows real-time progress with pass/fail results
+- Results are saved to history with pass rate and duration
+
+**From CLI:**
+```bash
+npx vitest run tests/eval/chatbot-eval.test.js
+```
+
+### Consensus Mode
+
+When running all scenarios, each is executed 3 times (configurable). If at least 1 run passes, it's marked as **flaky** (acceptable). If all 3 fail, it's a **real failure**. This eliminates false negatives from LLM non-determinism.
+
+---
+
+## Integrations
+
+### Embeddable Widget
+
+Add Qragy to any website with one script tag:
+
+```html
+<script>
+  window.__QRAGY_API = "https://your-qragy-server.com";
+</script>
+<script src="https://your-qragy-server.com/embed.js"></script>
+```
+
+Cross-origin communication via `postMessage`. Customizable appearance from the admin panel.
+
+### Zendesk Sunshine Conversations
+
+Two-way integration: bot handles initial conversation, escalates to Zendesk agent when needed. Zendesk agent replies flow back through the bot.
+
+### WhatsApp (Cloud API)
+
+Direct WhatsApp Business Cloud API integration. Configure from the admin panel — no middleware required.
+
+### Telegram
+
+Long-polling Telegram bot. Enable with `TELEGRAM_ENABLED=true` and your bot token.
+
+### Webhooks
+
+Send signed events to any endpoint (Slack, n8n, Zapier, custom):
+
+- **HMAC-SHA256** signed with `X-Qragy-Signature` header
+- **Event filtering** — subscribe to specific events or `*` wildcard
+- **Retry** — 3 attempts with exponential backoff (1s, 2s, 4s)
+- **Delivery log** — last 200 deliveries with status and response
+- **Max 10 webhooks** per event
+
+### Auto-Deploy
+
+GitHub webhook receiver at `/deploy`. Verifies `X-Hub-Signature-256`, triggers `deploy.sh` on push to `main`.
 
 ---
 
@@ -122,53 +279,79 @@ Manage everything from the browser — no code, no CLI:
 
 ```mermaid
 graph TB
-    subgraph Client
+    subgraph Clients
         CW[Chat Widget]
         TG[Telegram Bot]
         EMB[Embed Script]
-        SC[Sunshine / WhatsApp]
+        WA[WhatsApp Cloud API]
+        SC[Zendesk Sunshine]
     end
 
     subgraph "Qragy Server (single process)"
         EXP[Express.js API]
         TC[Topic Classifier]
-        RAG[Hybrid RAG Engine]
+        RAG[Adaptive RAG Pipeline]
+        CRAG[CRAG Evaluator]
+        QS[Quality Scorer + Reflexion]
+        MEM[Core Memory]
         HITL[Agent Inbox / HITL]
         AST[Admin Assistant]
         TKT[Ticket System]
-        ADM[Admin Panel]
+        ADM[Admin Panel - 25 panels]
         WH[Webhook Dispatcher]
+        EVAL[Eval Runner]
+        IG[Injection Guard]
     end
 
     subgraph Storage["Local Storage (no external DB)"]
         LDB[(LanceDB<br/>Vector Index)]
-        SQL[(SQLite<br/>Tickets + Analytics)]
-        CSV[(CSV + JSON<br/>Knowledge Base)]
+        SQL[(SQLite<br/>Tickets + Analytics + Graph)]
+        CSV[(CSV + JSON<br/>Knowledge Base + Config)]
     end
 
     subgraph External
         LLM[LLM Provider<br/>Gemini / OpenAI / Claude<br/>Groq / Mistral / DeepSeek / Ollama]
-        ZD[Zendesk<br/>Handoff]
+        ZD[Zendesk Handoff]
+        COH[Cohere Reranker]
     end
 
-    CW & TG & EMB & SC -->|HTTP / Long Poll / Webhook| EXP
-    EXP --> TC -->|topic match| RAG
+    CW & TG & EMB & WA & SC -->|HTTP / Long Poll / Webhook| EXP
+    EXP --> IG -->|safe| TC
+    TC -->|topic match| RAG
     RAG -->|vector + full-text| LDB
-    RAG -->|read/write| CSV
+    RAG -->|CRAG check| CRAG
+    RAG -->|read KB| CSV
+    RAG -->|rerank| COH
     RAG -->|generate| LLM
+    LLM --> QS -->|low quality| LLM
+    EXP --> MEM --> SQL
     EXP --> TKT --> SQL
     EXP --> HITL -->|live SSE| ADM
     TKT -->|escalate| ZD
     TKT -->|notify| WH
     EXP --> AST -->|actions| ADM
+    EVAL -->|test scenarios| EXP
 ```
 
-**Message flow:**
+### Message Flow
 
-1. User sends a message → **Topic detection** (keywords + AI classification)
-2. **Hybrid RAG** — vector + full-text search with RRF fusion, reranker, CRAG evaluation
-3. **LLM** generates a contextual reply with quality scoring and reflexion
-4. Bot collects required fields → **Escalation** to Zendesk or **HITL agent inbox**
+1. **Input** — user sends a message via widget, Telegram, WhatsApp, or Zendesk
+2. **Injection guard** — regex patterns + LLM relevance check filter malicious input
+3. **Topic detection** — keyword matching + AI classification routes to structured flow
+4. **Adaptive RAG** — FAST/STANDARD/DEEP pipeline based on query complexity
+5. **CRAG evaluation** — checks search result relevance, rewrites query if needed
+6. **LLM generation** — contextual reply with persona, topic guide, and memory
+7. **Quality scoring** — evaluates response quality, triggers reflexion if low
+8. **Collection** — bot gathers required fields step-by-step (deterministic mode)
+9. **Escalation** — hands off to Zendesk, agent inbox, or webhook when criteria are met
+
+### Design Patterns
+
+- **Factory + DI** — services use `createXxxService(deps)`, all dependencies injected
+- **Route mounting** — routes use `mount(app, deps)` pattern
+- **CommonJS** — all modules use `require()` / `module.exports`
+- **Getter closures** — mutable runtime config accessed via `() => VALUE` getters
+- **Fire-and-forget** — memory updates, analytics, graph building run async without blocking response
 
 ---
 
@@ -205,7 +388,7 @@ npm start
 
 Open [localhost:3000](http://localhost:3000) for the chatbot, [localhost:3000/admin](http://localhost:3000/admin) for the admin panel.
 
-> **First run?** The setup wizard at `/admin` guides you through API key, bot name, persona, and knowledge base setup — no `.env` editing needed.
+> **First run?** The setup wizard at `/admin` guides you through API key, bot name, persona, and knowledge base — no `.env` editing needed.
 
 ---
 
@@ -315,27 +498,28 @@ Works on any machine with Node.js 18+. No Docker required, but runs fine in a co
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GOOGLE_API_KEY` | Gemini API key **(required for Gemini)** | — |
-| `LLM_PROVIDER` | LLM provider (`gemini`, `openai`, `anthropic`, `groq`, `mistral`, `deepseek`, `ollama`) | `gemini` |
-| `LLM_API_KEY` | API key (falls back to GOOGLE_API_KEY) | — |
-| `LLM_MODEL` | Chat model (falls back to GOOGLE_MODEL) | — |
-| `LLM_BASE_URL` | Custom base URL (Ollama, etc.) | — |
+| `LLM_PROVIDER` | `gemini`, `openai`, `anthropic`, `groq`, `mistral`, `deepseek`, `ollama` | `gemini` |
+| `LLM_API_KEY` | API key (falls back to `GOOGLE_API_KEY`) | — |
+| `LLM_MODEL` | Chat model | — |
+| `LLM_BASE_URL` | Custom base URL (Ollama, DeepSeek, etc.) | — |
+| `GOOGLE_FALLBACK_MODEL` | Fallback model on error | — |
 | `EMBEDDING_PROVIDER` | Embedding provider | `gemini` |
 | `EMBEDDING_MODEL` | Embedding model | `gemini-embedding-001` |
-| `GOOGLE_MODEL` | Chat model | `gemini-3-pro-preview` |
-| `GOOGLE_FALLBACK_MODEL` | Fallback model on error | — |
 | `BOT_NAME` | Bot display name | `QRAGY Bot` |
 | `COMPANY_NAME` | Your company name | — |
 | `ADMIN_TOKEN` | Admin panel password | — |
+| `PORT` | Server port | `3000` |
+| `RATE_LIMIT_ENABLED` | Per-IP rate limiting | `true` |
+| `RATE_LIMIT_MAX` | Max requests per window | `20` |
+| `DETERMINISTIC_COLLECTION_MODE` | Structured info gathering | `true` |
+| `SUPPORT_HOURS_ENABLED` | Enforce business hours | `false` |
 | `ZENDESK_ENABLED` | Enable Zendesk handoff | `false` |
 | `TELEGRAM_ENABLED` | Enable Telegram bot | `false` |
 | `TELEGRAM_BOT_TOKEN` | Telegram Bot API token | — |
-| `RATE_LIMIT_ENABLED` | Per-IP rate limiting | `true` |
-| `RATE_LIMIT_MAX` | Max requests per window | `20` |
+| `WHATSAPP_ENABLED` | Enable WhatsApp integration | `false` |
 | `WEBHOOK_ENABLED` | Enable webhook notifications | `false` |
 | `WEBHOOK_URL` | Webhook endpoint URL | — |
 | `WEBHOOK_SECRET` | HMAC-SHA256 signing secret | — |
-| `SUPPORT_HOURS_ENABLED` | Enforce business hours | `false` |
-| `DETERMINISTIC_COLLECTION_MODE` | Structured info gathering | `true` |
 
 Full list in [`.env.example`](.env.example).
 
@@ -358,106 +542,98 @@ Add Qragy to any website:
 
 ```
 qragy/
-├── server.js                       # App setup, middleware, route mounting, startup (~660 lines)
+├── server.js                          # Express app, middleware, route mounting
 ├── src/
-│   ├── config/
-│   │   └── index.js                # Centralized env config loader + validation
+│   ├── config/index.js                # Centralized env config loader + validation
 │   ├── routes/
-│   │   ├── admin/                  # Admin panel API endpoints
-│   │   │   ├── index.js            # Admin route aggregator
-│   │   │   ├── agent.js            # Agent config CRUD
-│   │   │   ├── analytics.js        # Analytics dashboard
-│   │   │   ├── config.js           # Runtime config management
-│   │   │   ├── insights.js         # SLA, auto-FAQ, content gaps
-│   │   │   ├── knowledge.js        # Knowledge base management
-│   │   │   ├── system.js           # System health, audit log
-│   │   │   ├── tickets.js          # Ticket CRUD + bulk ops + prompt versions
-│   │   │   └── webhooks.js         # Webhook config + test
-│   │   ├── chat.js                 # POST /api/chat — main chat endpoint
-│   │   ├── conversation.js         # Handoff, CSAT, file upload, session status
-│   │   ├── deploy.js               # GitHub webhook auto-deploy
-│   │   ├── health.js               # GET /api/health
-│   │   └── widget.js               # GET /api/config (widget configuration)
+│   │   ├── admin/                     # Admin panel API (25 panels)
+│   │   │   ├── index.js               # Route aggregator
+│   │   │   ├── agent.js               # Agent config CRUD
+│   │   │   ├── analytics.js           # Analytics + feedback
+│   │   │   ├── config.js              # Runtime config management
+│   │   │   ├── eval.js                # Eval CRUD + SSE test runner
+│   │   │   ├── insights.js            # SLA, auto-FAQ, content gaps
+│   │   │   ├── knowledge.js           # Knowledge base CRUD + upload
+│   │   │   ├── system.js              # Health, audit log, backup
+│   │   │   ├── tickets.js             # Ticket CRUD + bulk ops + prompt versions
+│   │   │   └── webhooks.js            # Webhook config + test
+│   │   ├── chat.js                    # POST /api/chat — main endpoint
+│   │   ├── conversation.js            # Handoff, CSAT, upload, session
+│   │   ├── deploy.js                  # GitHub webhook auto-deploy
+│   │   ├── health.js                  # GET /api/health
+│   │   └── widget.js                  # Widget configuration
 │   ├── services/
-│   │   ├── agentConfig.js          # Agent prompt/config file loader with caching
-│   │   ├── analytics.js            # Event buffer, daily aggregation, CSAT tracking
-│   │   ├── chatProcessor.js        # Chat message processing pipeline
-│   │   ├── configStore.js          # Runtime config file store (chat flow, site, etc.)
-│   │   ├── conversationManager.js  # Conversation CRUD + clarification tracking
-│   │   ├── conversationUtils.js    # Conversation context building
-│   │   ├── escalation.js           # Escalation rule evaluation
-│   │   ├── knowledge.js            # Knowledge base search + content gaps
-│   │   ├── llmHealth.js            # LLM error tracking + circuit breaker
-│   │   ├── promptBuilder.js        # Prompt builder service wrapper
-│   │   ├── responseValidator.js    # Bot response safety validation
-│   │   ├── statemachine.js         # Conversation state machine
-│   │   ├── supportHours.js         # Business hours calculation
-│   │   ├── ticketStore.js          # Ticket CRUD + duplicate detection
-│   │   ├── topic.js                # Topic classification
-│   │   ├── urlExtractor.js         # URL content extraction for RAG
-│   │   ├── webChatPipeline.js      # Web chat orchestration pipeline
-│   │   ├── webhooks.js             # HMAC-signed webhook delivery with retry
-│   │   ├── pipeline/
-│   │   │   └── chatPipeline.js     # Adaptive chat pipeline (hybrid RAG)
+│   │   ├── pipeline/chatPipeline.js   # Adaptive RAG pipeline (FAST/STANDARD/DEEP)
 │   │   ├── rag/
-│   │   │   ├── queryAnalyzer.js    # Query intent analysis
-│   │   │   ├── reranker.js         # LLM + Cohere reranker
-│   │   │   ├── cragEvaluator.js    # Corrective RAG evaluation
-│   │   │   └── contextualChunker.js # Context-aware document chunking
+│   │   │   ├── queryAnalyzer.js       # Query intent analysis
+│   │   │   ├── reranker.js            # 3-tier reranker (Cohere > LLM > text)
+│   │   │   ├── cragEvaluator.js       # Corrective RAG evaluation
+│   │   │   └── contextualChunker.js   # Context-aware document chunking
 │   │   ├── intelligence/
-│   │   │   ├── qualityScorer.js    # Response quality scoring
-│   │   │   ├── reflexion.js        # Self-reflection on low-quality answers
-│   │   │   └── graphBuilder.js     # Knowledge graph builder
-│   │   └── memory/
-│   │       └── coreMemory.js       # Persistent user fact memory
-│   ├── prompt/
-│   │   └── builder.js              # System prompt assembly with token budgeting
+│   │   │   ├── qualityScorer.js       # Response quality scoring
+│   │   │   ├── reflexion.js           # Self-reflection on low-quality answers
+│   │   │   └── graphBuilder.js        # Knowledge graph builder
+│   │   ├── memory/coreMemory.js       # MemGPT-style persistent user memory
+│   │   ├── webChatPipeline.js         # Web chat orchestration
+│   │   ├── chatProcessor.js           # Chat message processing
+│   │   ├── topic.js                   # Topic classification (keyword + AI)
+│   │   ├── escalation.js              # Escalation rule evaluation
+│   │   ├── conversationManager.js     # Conversation CRUD + state tracking
+│   │   ├── ticketStore.js             # Ticket CRUD + duplicate detection
+│   │   ├── analytics.js               # Event buffer + daily aggregation
+│   │   ├── knowledge.js               # KB search + content gaps
+│   │   ├── webhooks.js                # HMAC-signed delivery with retry
+│   │   ├── llmHealth.js               # LLM circuit breaker
+│   │   ├── supportHours.js            # Business hours calculation
+│   │   └── responseValidator.js       # Bot response safety validation
+│   ├── prompt/builder.js              # System prompt assembly + token budgeting
 │   ├── middleware/
-│   │   ├── auth.js                 # Admin token authentication
-│   │   ├── rateLimiter.js          # Per-IP rate limiting
-│   │   ├── security.js             # CORS, Helmet, security headers
-│   │   └── injectionGuard.js       # Prompt injection detection + output validation
+│   │   ├── auth.js                    # Admin token authentication
+│   │   ├── rateLimiter.js             # Per-IP rate limiting
+│   │   ├── security.js                # CORS, Helmet, security headers
+│   │   └── injectionGuard.js          # Prompt injection detection (regex + LLM)
 │   └── utils/
-│       ├── adminHelpers.js         # CSV data + .env file management
-│       ├── conversationHelpers.js  # Message parsing utilities
-│       ├── errorHelper.js          # Safe error serialization
-│       ├── logger.js               # Structured logger [ISO] [LEVEL] [context]
-│       ├── sanitizer.js            # PII masking, text normalization
-│       ├── session.js              # Session ID generation
-│       ├── ticketHelpers.js        # Ticket record building + duplicate detection
-│       └── validators.js           # Input validators (email, phone, branch code)
+│       ├── sanitizer.js               # PII masking, text normalization
+│       ├── logger.js                  # Structured logger [ISO] [LEVEL] [context]
+│       ├── validators.js              # Input validators (email, phone, etc.)
+│       └── ...                        # Session, error helpers, CSV tools
 ├── lib/
-│   ├── providers.js                # Multi-model LLM + embedding abstraction
-│   ├── chunker.js                  # Document chunking engine
-│   └── db.js                       # SQLite database layer
+│   ├── providers.js                   # Multi-model LLM + embedding abstraction
+│   ├── chunker.js                     # Document chunking engine
+│   └── db.js                          # SQLite database layer
+├── agent/                             # Bot personality & configuration
+│   ├── soul.md, persona.md            # Identity & tone
+│   ├── domain.md                      # Domain knowledge rules
+│   ├── topics/                        # Structured support flow definitions
+│   ├── escalation-matrix.md           # Escalation rules
+│   ├── hard-bans.md                   # Banned topics/responses
+│   ├── output-filter.md               # Output filtering rules
+│   └── templates/                     # Industry templates (e-commerce, restaurant, tech support)
 ├── tests/
-│   ├── unit/                       # 440+ tests across 60 test files
-│   └── integration/                # Integration tests
-├── agent/                          # Bot personality & rules
-│   ├── soul.md, persona.md         # Identity & tone
-│   ├── topics/                     # Structured support flows
-│   └── ...                         # Escalation, filtering, etc.
-├── memory/                         # Conversation & ticket templates
-├── public/                         # Frontend (vanilla JS, no build step)
-├── scripts/ingest.js               # CSV → LanceDB embedder
-├── Dockerfile                      # Docker image
-├── docker-compose.yml              # Container setup
-├── .github/workflows/ci.yml        # CI: lint + test + coverage
-└── data/                           # Runtime data (auto-created)
+│   ├── unit/                          # 108 test files, 560+ tests
+│   ├── eval/
+│   │   ├── scenarios.json             # 85 eval scenarios
+│   │   ├── judge.js                   # Rule-based assertion engine
+│   │   └── chatbot-eval.test.js       # Vitest eval runner
+│   └── integration/                   # Integration tests
+├── public/                            # Frontend (vanilla JS, no build step)
+│   ├── admin.html, admin.js, admin.css # Admin panel
+│   ├── embed.js                       # Embeddable widget script
+│   └── sw.js                          # Service worker (PWA)
+├── scripts/ingest.js                  # CSV → LanceDB embedding ingestion
+├── Dockerfile                         # Docker image
+├── docker-compose.yml                 # Container setup
+├── .github/workflows/ci.yml           # CI: lint + test + coverage
+└── data/                              # Runtime data (auto-created, gitignored)
 ```
 
-### Design Patterns
-
-- **Factory + DI**: Services use `createXxxService(deps)` — all dependencies injected
-- **Route mounting**: Routes use `mount(app, deps)` pattern
-- **CommonJS**: All modules use `require()` / `module.exports`
-- **Getter closures**: Mutable runtime config accessed via `() => VALUE` getters
+---
 
 ## Development
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 18+ (20+ recommended)
 - npm
 
 ### Setup
@@ -471,9 +647,18 @@ cp .env.example .env  # add your API key
 ### Running Tests
 
 ```bash
-npm test                  # Run all tests (440+ tests)
-npm run test:coverage     # Run with coverage report
+npm test                  # Run all unit + integration tests (560+)
+npm run test:coverage     # Run with V8 coverage report
 ```
+
+### Running Evals
+
+```bash
+# Start the server first, then:
+npx vitest run tests/eval/chatbot-eval.test.js
+```
+
+Or use the admin panel **Eval Management** panel for a visual interface with SSE streaming.
 
 ### Linting
 
@@ -484,28 +669,10 @@ npx eslint . --fix        # Auto-fix fixable issues
 
 ### Code Quality
 
-- **ESLint** with flat config (eslint.config.js) — enforces `eqeqeq`, `no-var`, `prefer-const`
+- **ESLint** with flat config — enforces `eqeqeq`, `no-var`, `prefer-const`
 - **Vitest** for unit + integration testing with V8 coverage
-- **CI Pipeline** runs lint + test on every push/PR to main
-
----
-
-## Qragy vs Alternatives
-
-| | **Qragy** | Dify | Botpress | Intercom |
-|---|:---:|:---:|:---:|:---:|
-| Fully self-hosted | ✅ | ⚠️ Partial | ❌ | ❌ |
-| Runs on Raspberry Pi | ✅ | ❌ | ❌ | ❌ |
-| LLM providers | **7** | 10+ | 3 | 1 |
-| Hybrid RAG | ✅ | ✅ | ❌ | ❌ |
-| Human-in-the-loop | ✅ | ❌ | ✅ | ✅ |
-| Vector DB | Embedded | External | External | Managed |
-| Min RAM | **150MB** | 4GB+ | 2GB+ | N/A |
-| Monthly cost | **$0** | Free tier limited | Free tier limited | $74+/seat |
-| Admin panel | Built-in | ✅ | ✅ | ✅ |
-| Setup time | **30 sec** | 30+ min | 15+ min | N/A |
-| Open source | MIT | Apache 2.0 | AGPL | ❌ |
-| Dependencies | 7 npm packages | Docker + Redis + Postgres | Cloud | Cloud |
+- **CI pipeline** — lint + test on every push/PR to main
+- **Eval framework** — 85 scenarios with consensus runs for regression testing
 
 ---
 
@@ -521,10 +688,10 @@ All admin endpoints require `x-admin-token` header when `ADMIN_TOKEN` is set.
 
 ### Tickets
 - `GET /api/admin/summary` — Dashboard stats
-- `GET /api/admin/tickets` — List tickets
-- `GET /api/admin/tickets/:id` — Ticket detail
+- `GET /api/admin/tickets` — List tickets (with pagination, filters)
+- `GET /api/admin/tickets/:id` — Ticket detail with full conversation
 - `PUT /api/admin/tickets/:id/assign` — Assign to team member
-- `PUT /api/admin/tickets/:id/priority` — Set priority
+- `PUT /api/admin/tickets/:id/priority` — Set priority level
 - `POST /api/admin/tickets/:id/notes` — Add internal note
 
 ### Knowledge Base
@@ -533,13 +700,14 @@ All admin endpoints require `x-admin-token` header when `ADMIN_TOKEN` is set.
 - `PUT /api/admin/knowledge/:id` — Update entry
 - `DELETE /api/admin/knowledge/:id` — Delete entry
 - `POST /api/admin/knowledge/reingest` — Rebuild vector index
-- `POST /api/admin/knowledge/upload` — Upload PDF/DOCX/TXT
+- `POST /api/admin/knowledge/upload` — Upload PDF/DOCX/XLSX/TXT
 
 ### Bot Config
 - `GET/PUT /api/admin/agent/files/:name` — Read/write agent files
 - `GET/POST/PUT/DELETE /api/admin/agent/topics/:id` — Topic CRUD
 - `GET/PUT /api/admin/agent/memory/:name` — Memory templates
 - `GET/PUT /api/admin/env` — Environment variables
+- `POST /api/admin/agent/reload` — Hot-reload config
 
 ### Agent Inbox (HITL)
 - `GET /api/admin/inbox/stream` — SSE live updates
@@ -549,7 +717,18 @@ All admin endpoints require `x-admin-token` header when `ADMIN_TOKEN` is set.
 - `POST /api/admin/inbox/:id/release` — Release conversation
 
 ### Admin Assistant
-- `POST /api/admin/assistant` — Send message (supports file upload)
+- `POST /api/admin/assistant` — Send message (supports file context)
+
+### Eval
+- `GET /api/admin/eval/scenarios` — List all scenarios
+- `GET /api/admin/eval/scenarios/:id` — Get single scenario
+- `POST /api/admin/eval/scenarios` — Create scenario
+- `PUT /api/admin/eval/scenarios/:id` — Update scenario
+- `DELETE /api/admin/eval/scenarios/:id` — Delete scenario
+- `POST /api/admin/eval/run/:id` — Run single scenario
+- `GET /api/admin/eval/run-all` — SSE stream: run all scenarios with consensus
+- `GET /api/admin/eval/history` — Run history
+- `DELETE /api/admin/eval/history` — Clear history
 
 ### Analytics & Insights
 - `GET /api/admin/analytics` — Metrics and charts
@@ -557,8 +736,6 @@ All admin endpoints require `x-admin-token` header when `ADMIN_TOKEN` is set.
 - `GET /api/admin/insights/auto-faq` — Auto-generated FAQ
 - `GET /api/admin/insights/content-gaps` — Content gap detection
 - `GET /api/admin/insights/feedback` — Feedback reports
-- `GET /api/admin/system` — Health info
-- `POST /api/admin/agent/reload` — Hot-reload config
 
 ### Webhooks
 - `GET /api/admin/webhooks/config` — Get config
@@ -567,7 +744,16 @@ All admin endpoints require `x-admin-token` header when `ADMIN_TOKEN` is set.
 
 ### Prompt Versions
 - `GET /api/admin/agent/versions` — List versions
-- `POST /api/admin/agent/versions/rollback` — Rollback
+- `POST /api/admin/agent/versions/rollback` — Rollback to previous version
+
+### System
+- `GET /api/admin/system` — Health info, uptime, memory, DB stats
+- `GET /api/health` — Basic health check
+
+### Conversation
+- `POST /api/conversation/:id/csat` — Submit CSAT rating (1-5)
+- `POST /api/conversation/:id/feedback` — Thumbs up/down + reflexion trigger
+- `POST /api/conversation/upload` — File upload (image, PDF, 5MB limit)
 
 </details>
 
@@ -581,11 +767,14 @@ All admin endpoints require `x-admin-token` header when `ADMIN_TOKEN` is set.
 | Framework | Express.js |
 | AI | Gemini, OpenAI, Anthropic, Groq, Mistral, DeepSeek, Ollama |
 | Vector DB | LanceDB (embedded, serverless) |
+| Database | SQLite (better-sqlite3) |
 | Embeddings | Gemini / OpenAI / Ollama (configurable) |
+| Reranking | Cohere API / LLM-based / text similarity (3-tier fallback) |
 | Frontend | Vanilla JS — zero build step |
-| Database | SQLite (better-sqlite3) + LanceDB |
-| Storage | JSON config files, CSV knowledge base |
+| Storage | JSON config, CSV knowledge base, LanceDB + SQLite files |
 | Container | Docker (optional) |
+| CI/CD | GitHub Actions |
+| PWA | Service worker + web push |
 
 ---
 
@@ -600,5 +789,5 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 <p align="center">
-  <sub>Built with ❤️ by <a href="https://github.com/mahsumaktas">Mahsum Aktas</a></sub>
+  <sub>Built by <a href="https://github.com/mahsumaktas">Mahsum Aktas</a></sub>
 </p>
