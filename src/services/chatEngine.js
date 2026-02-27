@@ -573,6 +573,37 @@ function buildDeterministicCollectionReply(memory, activeUserMessages, hasClosed
   return null;
 }
 
+// ── Loop Detection ──────────────────────────────────────────────────────
+
+function detectConversationLoop(userMessages) {
+  if (userMessages.length < 2) return { isLoop: false, repeatCount: 0 };
+
+  const normalized = userMessages.map(m => normalizeForMatching(m));
+  const last = normalized[normalized.length - 1];
+
+  // Son mesaji oncekilerle karsilastir
+  let exactRepeatCount = 0;
+  for (let i = normalized.length - 2; i >= 0; i--) {
+    if (normalized[i] === last) exactRepeatCount++;
+  }
+
+  // Benzerlik kontrolu: son 3 mesajin %80+ overlap'i
+  let similarCount = 0;
+  if (normalized.length >= 3) {
+    const lastThree = normalized.slice(-3);
+    const words0 = new Set(lastThree[0].split(" "));
+    for (let i = 1; i < lastThree.length; i++) {
+      const wordsI = new Set(lastThree[i].split(" "));
+      const intersection = [...words0].filter(w => wordsI.has(w)).length;
+      const union = new Set([...words0, ...wordsI]).size;
+      if (union > 0 && intersection / union > 0.8) similarCount++;
+    }
+  }
+
+  const isLoop = exactRepeatCount >= 2 || similarCount >= 2;
+  return { isLoop, repeatCount: Math.max(exactRepeatCount, similarCount) };
+}
+
 // ── Conversation Context Building ────────────────────────────────────────
 
 /**
@@ -594,7 +625,10 @@ async function buildConversationContext(memory, userMessages, opts = {}) {
     turnCount: userMessages.length,
     escalationTriggered: false,
     escalationReason: null,
-    farewellOffered: false
+    farewellOffered: false,
+    loopDetected: false,
+    loopRepeatCount: 0,
+    turnLimitReached: false,
   };
 
   if (!userMessages.length) {
@@ -645,6 +679,18 @@ async function buildConversationContext(memory, userMessages, opts = {}) {
   }
   if (memory.companyName) {
     context.collectedInfo.companyName = memory.companyName;
+  }
+
+  // Loop detection
+  const loopResult = detectConversationLoop(userMessages);
+  if (loopResult.isLoop) {
+    context.loopDetected = true;
+    context.loopRepeatCount = loopResult.repeatCount;
+  }
+
+  // Turn limit (7+)
+  if (userMessages.length >= 7) {
+    context.turnLimitReached = true;
   }
 
   return context;
@@ -821,4 +867,7 @@ module.exports = {
 
   // Conversation context
   buildConversationContext,
+
+  // Loop detection
+  detectConversationLoop,
 };

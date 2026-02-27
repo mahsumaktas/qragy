@@ -95,6 +95,8 @@ function createWebChatPipeline(deps) {
   // Optional dependencies
   const questionExtractor = deps.questionExtractor || null;
   const chatAuditLog = deps.chatAuditLog || null;
+  const qualityScorer = deps.qualityScorer || null;
+  const jobQueue = deps.jobQueue || null;
 
   // ── Shared response builder ────────────────────────────────────────────
 
@@ -476,6 +478,38 @@ function createWebChatPipeline(deps) {
       });
     }
 
+    // Quality score: onceki turlarin kalitesini oku
+    let qualityWarning = null;
+    if (qualityScorer && sessionId) {
+      try {
+        const consecutiveLow = qualityScorer.getConsecutiveLowCount(sessionId);
+
+        if (consecutiveLow >= 3) {
+          conversationContext.escalationTriggered = true;
+          conversationContext.escalationReason = "consecutive-low-quality";
+          logger.warn("webChatPipeline:quality", "3 ardisik dusuk kalite, auto-escalation", { sessionId, consecutiveLow });
+        } else {
+          const lastScores = qualityScorer.getRecentScores(sessionId, 1);
+          if (lastScores.length > 0 && lastScores[0].faithfulness !== null && lastScores[0].faithfulness < 0.4) {
+            qualityWarning = "## UYARI: SON CEVABIN KALITESI DUSUK (faithfulness: " +
+              lastScores[0].faithfulness.toFixed(2) + ")\n" +
+              "- Bu konuda bilgi tabaninda yeterli kaynak YOK olabilir.\n" +
+              "- Emin olmadigin bilgiyi VERME. Tahmin YAPMA.\n" +
+              "- Bilgin yoksa kullaniciyi canli destek temsilcisine yonlendir.";
+          }
+        }
+      } catch (err) {
+        logger.warn("webChatPipeline:quality", "Skor okuma hatasi", err);
+      }
+    }
+
+    // Loop + turn limit combined → force escalation
+    if (conversationContext.loopDetected && conversationContext.turnLimitReached && !conversationContext.escalationTriggered) {
+      conversationContext.escalationTriggered = true;
+      conversationContext.escalationReason = "loop-turn-limit";
+      logger.warn("webChatPipeline:loop", "Loop + turn limit, force escalation", { sessionId, turnCount: conversationContext.turnCount });
+    }
+
     // LLM topic classification artik buildConversationContext icinde yapiliyor (classifyTopicWithLLM callback)
 
     // Sentiment analysis
@@ -510,7 +544,7 @@ function createWebChatPipeline(deps) {
     }));
     const citations = formatCitations ? formatCitations(knowledgeResults) : [];
 
-    const systemPrompt = buildSystemPrompt(memory, conversationContext, knowledgeResults);
+    const systemPrompt = buildSystemPrompt(memory, conversationContext, knowledgeResults, { qualityWarning });
 
     logger.info("webChatPipeline", "LLM cagrisi", {
       sessionId,
@@ -644,6 +678,20 @@ function createWebChatPipeline(deps) {
           historyMsgs: contents.length,
           topicDetection: conversationContext._topicDetection || null,
         },
+      });
+    }
+
+    // Async quality scoring (sonraki turda kullanilacak)
+    if (jobQueue && !isEscalationReply) {
+      jobQueue.add("quality-score", {
+        sessionId,
+        messageId: sessionId + "-" + Date.now(),
+        query: latestUserMessage,
+        answer: reply,
+        ragResults: knowledgeResults.map(r => ({
+          answer: (r.answer || "").slice(0, 300),
+          _rerankScore: r.rrfScore || r.distance || 0,
+        })),
       });
     }
 

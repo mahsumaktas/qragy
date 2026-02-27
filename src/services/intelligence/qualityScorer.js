@@ -129,7 +129,29 @@ function createQualityScorer(deps) {
     return result;
   }
 
-  return { score };
+  function getRecentScores(sessionId, limit = 5) {
+    try {
+      return sqliteDb.getRecentQualityScores(sessionId, limit);
+    } catch (err) {
+      logger.warn("qualityScorer", "getRecentScores hatasi", err);
+      return [];
+    }
+  }
+
+  function getConsecutiveLowCount(sessionId) {
+    const recent = getRecentScores(sessionId, 5);
+    let count = 0;
+    for (const row of recent) {
+      const scores = [row.faithfulness, row.relevancy, row.confidence].filter(s => s !== null);
+      if (scores.length === 0) break;
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      if (avg < LOW_QUALITY_THRESHOLD) count++;
+      else break;
+    }
+    return count;
+  }
+
+  return { score, getRecentScores, getConsecutiveLowCount };
 }
 
 module.exports = { createQualityScorer, LOW_QUALITY_THRESHOLD };

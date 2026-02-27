@@ -122,4 +122,31 @@ describe("promptBuilder", () => {
       expect(prompt).toContain(graphText);
     });
   });
+
+  describe("quality + loop + turn limit warnings", () => {
+    it("includes quality warning when option provided", () => {
+      const prompt = builder.buildSystemPrompt(DEFAULT_MEMORY, DEFAULT_CONTEXT, [], {
+        qualityWarning: "## UYARI: SON CEVABIN KALITESI DUSUK",
+      });
+      expect(prompt).toContain("KALITESI DUSUK");
+    });
+
+    it("includes loop warning", () => {
+      const ctx = { ...DEFAULT_CONTEXT, loopDetected: true, loopRepeatCount: 3 };
+      const prompt = builder.buildSystemPrompt(DEFAULT_MEMORY, ctx, [], {});
+      expect(prompt).toContain("KONUSMA DONGUSU TESPIT EDILDI");
+    });
+
+    it("includes turn limit warning", () => {
+      const ctx = { ...DEFAULT_CONTEXT, turnLimitReached: true, turnCount: 8 };
+      const prompt = builder.buildSystemPrompt(DEFAULT_MEMORY, ctx, [], {});
+      expect(prompt).toContain("KONUSMA UZUN SUREDIR DEVAM EDIYOR");
+    });
+
+    it("does NOT include turn limit warning when escalation already triggered", () => {
+      const ctx = { ...DEFAULT_CONTEXT, turnLimitReached: true, turnCount: 8, escalationTriggered: true, escalationReason: "test" };
+      const prompt = builder.buildSystemPrompt(DEFAULT_MEMORY, ctx, [], {});
+      expect(prompt).not.toContain("KONUSMA UZUN SUREDIR DEVAM EDIYOR");
+    });
+  });
 });

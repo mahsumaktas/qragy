@@ -15,6 +15,7 @@ const {
   extractTicketMemory,
   buildConfirmationMessage,
   parseClosedTicketFromAssistantMessage,
+  detectConversationLoop,
 } = require("../../src/services/chatEngine.js");
 
 describe("isGibberishMessage", () => {
@@ -241,5 +242,22 @@ describe("buildConfirmationMessage", () => {
     const result = buildConfirmationMessage({ branchCode: "EST01", issueSummary: "Yazici sorunu" });
     expect(result).toContain("EST01");
     expect(result).toContain("Yazici sorunu");
+  });
+});
+
+describe("detectConversationLoop", () => {
+  it("returns false for < 2 messages", () => {
+    expect(detectConversationLoop(["merhaba"])).toEqual({ isLoop: false, repeatCount: 0 });
+  });
+  it("detects exact repeat (2+)", () => {
+    const result = detectConversationLoop(["yazicim calismiyor", "baska sey", "yazicim calismiyor", "yazicim calismiyor"]);
+    expect(result.isLoop).toBe(true);
+    expect(result.repeatCount).toBeGreaterThanOrEqual(2);
+  });
+  it("no loop for different messages", () => {
+    expect(detectConversationLoop(["merhaba", "yazici sorunu", "toneri degistirdim"])).toEqual({ isLoop: false, repeatCount: 0 });
+  });
+  it("returns false for empty array", () => {
+    expect(detectConversationLoop([])).toEqual({ isLoop: false, repeatCount: 0 });
   });
 });

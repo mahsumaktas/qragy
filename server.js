@@ -402,6 +402,15 @@ jobQueue.registerHandler("webhook", async (p) => {
   clearTimeout(tid);
   if (!resp.ok) throw new Error("HTTP " + resp.status);
 });
+jobQueue.registerHandler("quality-score", async (p) => {
+  await ngQualityScorer.score({
+    query: p.query,
+    answer: p.answer,
+    ragResults: p.ragResults || [],
+    sessionId: p.sessionId,
+    messageId: p.messageId,
+  });
+});
 jobQueue.registerHandler("kb-reingest", async () => {
   await reingestKnowledgeBase();
 });
@@ -659,6 +668,8 @@ const webChatPipeline = createWebChatPipeline({
   conversationSummarizer,
   logger,
   chatAuditLog,
+  qualityScorer: ngQualityScorer,
+  jobQueue,
 });
 
 // ── Chat Routes (src/routes/chat.js) ────────────────────────────────────

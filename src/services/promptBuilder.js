@@ -151,6 +151,31 @@ function createPromptBuilder(deps) {
       parts.push(options.graphContext);
     }
 
+    // Quality warning (onceki turun skor sonucu)
+    if (options?.qualityWarning) {
+      parts.push(options.qualityWarning);
+    }
+
+    // Loop warning
+    if (conversationContext?.loopDetected) {
+      parts.push(
+        "## UYARI: KONUSMA DONGUSU TESPIT EDILDI\n" +
+        `Kullanici ayni/benzer mesaji ${conversationContext.loopRepeatCount + 1} kez tekrarladi.\n` +
+        "- Farkli bir yaklasim dene veya eksik bilgi sor.\n" +
+        "- Cozum uretemiyorsan HEMEN canli destek temsilcisine yonlendir."
+      );
+    }
+
+    // Turn limit warning
+    if (conversationContext?.turnLimitReached && !conversationContext?.escalationTriggered) {
+      parts.push(
+        "## UYARI: KONUSMA UZUN SUREDIR DEVAM EDIYOR\n" +
+        `Bu konusma ${conversationContext.turnCount} tur surdu.\n` +
+        "- Sorunu cozemediysen kullaniciya canli destek secenegi sun.\n" +
+        '- Ornek: "Bu konuda size daha iyi yardimci olabilmesi icin canli destek temsilcimize aktarmami ister misiniz?"'
+      );
+    }
+
     // Zero-shot bootstrap: sektor bilgisi ile yardimci baglam
     if (options?.sectorTemplate) {
       const tmpl = options.sectorTemplate;
