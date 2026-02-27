@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/mahsumaktas/qragy/stargazers"><img src="https://img.shields.io/github/stars/mahsumaktas/qragy?style=flat&color=f5a623" alt="GitHub Stars"></a>
   <a href="https://github.com/mahsumaktas/qragy/releases"><img src="https://img.shields.io/github/v/release/mahsumaktas/qragy?color=blue" alt="Release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="AGPL-3.0 License"></a>
   <img src="https://img.shields.io/badge/node-18%2B-brightgreen.svg" alt="Node 18+">
   <img src="https://img.shields.io/badge/JavaScript-ES2022-F7DF1E?logo=javascript&logoColor=black" alt="JavaScript">
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
@@ -58,7 +58,7 @@ It uses [LanceDB](https://lancedb.com) (embedded vector DB) and [SQLite](https:/
 | Vector DB | Embedded | External | External | Managed |
 | Admin panel | Built-in (25 panels) | Yes | Yes | Yes |
 | Monthly cost | **$0** | Free tier limited | Free tier limited | $74+/seat |
-| Open source | MIT | Apache 2.0 | AGPL | No |
+| Open source | AGPL-3.0 | Apache 2.0 | AGPL | No |
 | Dependencies | 7 npm | Docker + Redis + Postgres | Cloud | Cloud |
 
 ---
@@ -784,7 +784,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-[MIT](LICENSE) — use it however you want.
+[AGPL-3.0](LICENSE) — free for open-source use. Commercial/SaaS use requires sharing your modifications under the same license.
 
 ---
 

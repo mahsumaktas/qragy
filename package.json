@@ -20,7 +20,7 @@
     "url": "https://github.com/mahsumaktas/qragy.git"
   },
   "author": "Mahsum Aktas",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "keywords": [
     "chatbot",
     "rag",
