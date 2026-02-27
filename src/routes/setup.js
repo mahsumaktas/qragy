@@ -17,6 +17,8 @@ function mount(app, deps) {
     logger: log,
   } = deps;
 
+  const jobQueue = deps.jobQueue || null;
+
   app.get("/api/setup/status", (_req, res) => {
     res.json({ setupComplete: isSetupComplete() });
   });
@@ -82,7 +84,9 @@ function mount(app, deps) {
           saveCSVData(csvData);
 
           // Reingest knowledge base to include new QA pairs
-          if (reingestKnowledgeBase) {
+          if (jobQueue) {
+            jobQueue.add("kb-reingest", {}, { priority: -1, maxAttempts: 3 });
+          } else if (reingestKnowledgeBase) {
             Promise.resolve().then(() => reingestKnowledgeBase())
               .catch(err => { if (log) log.warn("setup", "reingest hatasi", err); });
           }

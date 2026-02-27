@@ -20,6 +20,8 @@ function mount(app, deps) {
     ngReflexion, ngGraphBuilder,
   } = deps;
 
+  const jobQueue = deps.jobQueue || null;
+
   // ── Local helpers ──────────────────────────────────────────────────────
 
   function loadFeedback() {
@@ -64,9 +66,13 @@ function mount(app, deps) {
     fireWebhook("handoff_result", { ticketId, status, detail });
 
     // Trigger knowledge graph extraction on resolved/completed tickets (fire-and-forget)
-    if (ngGraphBuilder && result.ticket && /^(resolved|completed)$/i.test(result.ticket.status)) {
-      Promise.resolve().then(() => ngGraphBuilder.extractAndStore(result.ticket))
-        .catch(err => logger.warn("conversation", "graphBuilder.extractAndStore hatasi", err));
+    if (result.ticket && /^(resolved|completed)$/i.test(result.ticket.status)) {
+      if (jobQueue) {
+        jobQueue.add("graph-extract", { ticket: result.ticket });
+      } else if (ngGraphBuilder) {
+        Promise.resolve().then(() => ngGraphBuilder.extractAndStore(result.ticket))
+          .catch(err => logger.warn("conversation", "graphBuilder.extractAndStore hatasi", err));
+      }
     }
 
     return res.json({ ok: true, ticket: sanitizeTicketForList(result.ticket) });
@@ -175,9 +181,13 @@ function mount(app, deps) {
         }
         const botAnswer = botMsg?.parts?.[0]?.text || botMsg?.content || "";
         if (userQuery && botAnswer) {
-          Promise.resolve().then(() =>
-            ngReflexion.analyze({ sessionId, query: userQuery, answer: botAnswer, ragResults: [] })
-          ).catch(err => logger.warn("feedback", "reflexion.analyze hatasi", err));
+          if (jobQueue) {
+            jobQueue.add("reflexion", { sessionId, query: userQuery, answer: botAnswer, ragResults: [] });
+          } else {
+            Promise.resolve().then(() =>
+              ngReflexion.analyze({ sessionId, query: userQuery, answer: botAnswer, ragResults: [] })
+            ).catch(err => logger.warn("feedback", "reflexion.analyze hatasi", err));
+          }
         }
       }
     }

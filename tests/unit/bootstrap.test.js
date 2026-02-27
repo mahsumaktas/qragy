@@ -124,12 +124,12 @@ describe("Zero-Shot Bootstrap", () => {
 
     // Empty knowledgeResults
     const prompt = promptBuilder.buildSystemPrompt({}, {}, [], {});
-    expect(prompt).toContain("Bilgi tabaninda ilgili kayit bulunamadi");
-    expect(prompt).toContain("Detayli bilgim yok ama size yardimci olmaya calisacagim");
+    expect(prompt).toContain("Bilgi tabaninda bu konuyla ilgili kayit BULUNAMADI");
+    expect(prompt).toContain("detayli bilgim bulunmamaktadir");
 
     // null knowledgeResults
     const prompt2 = promptBuilder.buildSystemPrompt({}, {}, null, {});
-    expect(prompt2).toContain("Bilgi tabaninda ilgili kayit bulunamadi");
+    expect(prompt2).toContain("Bilgi tabaninda bu konuyla ilgili kayit BULUNAMADI");
 
     // With sectorTemplate option
     const tmpl = service.loadTemplate("e-ticaret");

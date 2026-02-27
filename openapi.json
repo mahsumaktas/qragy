@@ -37,7 +37,8 @@
     { "name": "Eval", "description": "Eval scenarios CRUD, run, run-all (SSE), history" },
     { "name": "Prompt Versions", "description": "Prompt version history and rollback" },
     { "name": "Agent Inbox", "description": "Human-in-the-loop: claim, message, release conversations" },
-    { "name": "WhatsApp", "description": "WhatsApp integration config" }
+    { "name": "WhatsApp", "description": "WhatsApp integration config" },
+    { "name": "Jobs", "description": "Persistent job queue: stats, dead jobs, retry, purge" }
   ],
   "components": {
     "securitySchemes": {
@@ -1760,6 +1761,109 @@
         },
         "responses": {
           "200": { "description": "Config updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }
+        }
+      }
+    },
+    "/api/admin/jobs/stats": {
+      "get": {
+        "tags": ["Jobs"],
+        "summary": "Get job queue stats",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": {
+            "description": "Status-based job counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "stats": {
+                      "type": "object",
+                      "properties": {
+                        "pending": { "type": "integer" },
+                        "running": { "type": "integer" },
+                        "completed": { "type": "integer" },
+                        "dead": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/jobs/dead": {
+      "get": {
+        "tags": ["Jobs"],
+        "summary": "List dead jobs",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 50 },
+            "description": "Max number of dead jobs to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of dead jobs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "jobs": { "type": "array", "items": { "type": "object" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Jobs"],
+        "summary": "Purge all dead jobs",
+        "security": [{ "AdminToken": [] }],
+        "responses": {
+          "200": {
+            "description": "Number of purged jobs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "purged": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/jobs/{id}/retry": {
+      "post": {
+        "tags": ["Jobs"],
+        "summary": "Retry a dead job",
+        "security": [{ "AdminToken": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Job ID"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Job requeued", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } },
+          "404": { "description": "Dead job not found" }
         }
       }
     }

@@ -31,6 +31,7 @@ function createChatPipeline(deps) {
   } = deps;
 
   const chatAuditLog = deps.chatAuditLog || null;
+  const jobQueue = deps.jobQueue || null;
 
   /**
    * STANDARD path: search + rerank.
@@ -320,11 +321,15 @@ function createChatPipeline(deps) {
     }
 
     // 9. Fire-and-forget async post-processing
-    Promise.resolve().then(() =>
-      memoryEngine.updateAfterConversation(userId, sessionId, chatHistory, reply),
-    ).catch((err) => {
-      logger.warn("chatPipeline", "memoryEngine async hatasi", err);
-    });
+    if (jobQueue) {
+      jobQueue.add("memory-update", { userId, sessionId, chatHistory, reply });
+    } else {
+      Promise.resolve().then(() =>
+        memoryEngine.updateAfterConversation(userId, sessionId, chatHistory, reply),
+      ).catch((err) => {
+        logger.warn("chatPipeline", "memoryEngine async hatasi", err);
+      });
+    }
 
     // 10. Audit log — tam konusma kaydı
     if (chatAuditLog) {

@@ -163,8 +163,12 @@ const analytics = createAnalyticsService({
 const { loadAnalyticsData, saveAnalyticsData, recordAnalyticsEvent, flushAnalyticsBuffer, recordCsatAnalytics } = analytics;
 analytics.startPeriodicFlush();
 
+// ── Job Queue Service ────────────────────────────────────────────────────
+const { createJobQueue } = require("./src/services/jobQueue");
+const jobQueue = createJobQueue({ sqliteDb: { getDb: () => sqliteDb.db }, logger });
+
 // ── Webhook Service ──────────────────────────────────────────────────────
-const webhookService = createWebhookService({ fs, path, crypto, logger, dataDir: DATA_DIR, nowIso });
+const webhookService = createWebhookService({ fs, path, crypto, logger, dataDir: DATA_DIR, nowIso, getJobQueue: () => jobQueue });
 const { loadWebhooks, saveWebhooks, loadWebhookDeliveryLog, fireWebhook } = webhookService;
 
 // ── Config Store Service ────────────────────────────────────────────────
@@ -361,6 +365,7 @@ const ngChatPipeline = createChatPipeline({
   getProviderConfig,
   logger,
   chatAuditLog,
+  jobQueue,
 });
 const ngUrlExtractor = createUrlExtractor({ logger });
 
@@ -374,6 +379,32 @@ const ngServices = {
 // ── Agent Queue Service ─────────────────────────────────────────────────
 const { createAgentQueue } = require("./src/services/agentQueue");
 const agentQueue = createAgentQueue({ sqliteDb: { getDb: () => sqliteDb.db }, logger });
+
+// ── Job Queue Handlers ──────────────────────────────────────────────────
+jobQueue.registerHandler("memory-update", async (p) => {
+  await ngMemoryEngine.updateAfterConversation(p.userId, p.sessionId, p.chatHistory, p.reply);
+});
+jobQueue.registerHandler("graph-extract", async (p) => {
+  await ngGraphBuilder.extractAndStore(p.ticket);
+});
+jobQueue.registerHandler("reflexion", async (p) => {
+  await ngReflexion.analyze({ sessionId: p.sessionId, query: p.query, answer: p.answer, ragResults: p.ragResults || [] });
+});
+jobQueue.registerHandler("webhook", async (p) => {
+  const body = JSON.stringify({ event: p.eventType, data: p.data, timestamp: new Date().toISOString() });
+  const headers = { "Content-Type": "application/json" };
+  if (p.hookSecret) {
+    headers["X-Qragy-Signature"] = crypto.createHmac("sha256", p.hookSecret).update(body).digest("hex");
+  }
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 5000);
+  const resp = await fetch(p.hookUrl, { method: "POST", headers, body, signal: controller.signal });
+  clearTimeout(tid);
+  if (!resp.ok) throw new Error("HTTP " + resp.status);
+});
+jobQueue.registerHandler("kb-reingest", async () => {
+  await reingestKnowledgeBase();
+});
 
 // ── LLM Topic Classification ────────────────────────────────────────────
 /**
@@ -517,6 +548,7 @@ require("./src/routes/setup").mount(app, {
   fs, agentDir: AGENT_DIR,
   loadCSVData, saveCSVData, reingestKnowledgeBase,
   logger,
+  jobQueue,
 });
 
 // ── Health Route (src/routes/health.js) ─────────────────────────────────
@@ -569,6 +601,7 @@ const conversationLifecycle = require("./src/routes/conversation").mount(app, {
   getAnalyticsData: () => analyticsData,
   FEEDBACK_FILE, UPLOADS_DIR,
   ngReflexion, ngGraphBuilder,
+  jobQueue,
 });
 
 // ── Web Chat Pipeline (src/services/webChatPipeline.js) ──────────────────
@@ -767,7 +800,7 @@ require("./src/routes/agentInbox").mount(app, {
 
 // ── Admin Routes (src/routes/admin.js) ──────────────────────────────────
 require("./src/routes/admin").mount(app, {
-  requireAdminAccess, express, fs, path, crypto, PORT,
+  requireAdminAccess, express, fs, path, crypto, PORT, jobQueue,
   sqliteDb, loadTicketsDb, saveTicketsDb,
   getAdminSummary, sanitizeTicketForList,
   TICKET_STATUS, HANDOFF_RESULT_STATUS_MAP, ACTIVE_TICKET_STATUSES,
@@ -890,6 +923,9 @@ app.get("*", (_req, res) => {
     }
     telegramIntegration.startTelegramPolling();
 
+    // Job queue worker
+    jobQueue.start({ pollIntervalMs: 2000 });
+
     // LLM health check: ilk kontrol 10s sonra, sonra her 5dk'da bir
     setTimeout(() => llmHealth.checkLLMHealth(), LLM_HEALTH_INITIAL_DELAY_MS);
     setInterval(() => llmHealth.checkLLMHealth(), LLM_HEALTH_INTERVAL_MS);
@@ -898,8 +934,9 @@ app.get("*", (_req, res) => {
   // ── Graceful Shutdown ──────────────────────────────────────────────────
   function gracefulShutdown(signal) {
     logger.info("shutdown", `${signal} Kapatiliyor...`);
-    server.close(() => {
+    server.close(async () => {
       logger.info("shutdown", "HTTP server kapatildi");
+      await jobQueue.stop();
       saveAnalyticsData();
       sqliteDb.closeDb();
       logger.info("shutdown", "Temiz cikis");

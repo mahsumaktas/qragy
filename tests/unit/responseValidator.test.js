@@ -7,8 +7,8 @@ describe("Response Validator", () => {
   it("should reject repeated sentences", () => {
     expect(validateBotResponse("Yardimci olabilirim. Yardimci olabilirim. Yardimci olabilirim.").valid).toBe(false);
   });
-  it("should reject word repetition 5+", () => {
-    expect(validateBotResponse("lutfen lutfen lutfen lutfen lutfen kontrol edin").reason).toBe("word_repetition");
+  it("should reject word repetition 10+", () => {
+    expect(validateBotResponse("lutfen lutfen lutfen lutfen lutfen lutfen lutfen lutfen lutfen lutfen kontrol edin").reason).toBe("word_repetition");
   });
   it("should reject hallucination markers", () => {
     expect(validateBotResponse("Ben bir yapay zeka olarak bunu yapamam.").valid).toBe(false);

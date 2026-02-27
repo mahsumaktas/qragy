@@ -11,7 +11,7 @@ describe("Sanitizer", () => {
   describe("sanitizeReply", () => {
     it("should remove markdown headers", () => { expect(sanitizeReply("## Baslik\nIcerik")).toBe("Baslik\nIcerik"); });
     it("should remove backticks", () => { expect(sanitizeReply("``kod``")).toBe("kod"); });
-    it("should limit to 800 chars", () => { expect(sanitizeReply("a".repeat(1000)).length).toBeLessThanOrEqual(800); });
+    it("should limit to 2000 chars", () => { expect(sanitizeReply("a".repeat(3000)).length).toBeLessThanOrEqual(2000); });
     it("should collapse multiple newlines", () => { expect(sanitizeReply("a\n\n\n\nb")).toBe("a\n\nb"); });
   });
   describe("normalizeForMatching", () => {

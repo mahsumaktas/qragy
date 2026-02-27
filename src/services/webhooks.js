@@ -10,7 +10,7 @@
  * @param {string} deps.dataDir         — absolute path to data directory
  * @param {function} deps.nowIso        — () => ISO-8601 timestamp string
  */
-function createWebhookService({ fs, path, crypto, logger, dataDir, nowIso }) {
+function createWebhookService({ fs, path, crypto, logger, dataDir, nowIso, getJobQueue }) {
   const WEBHOOKS_FILE = path.join(dataDir, "webhooks.json");
   const WEBHOOK_DELIVERY_LOG_FILE = path.join(dataDir, "webhook-delivery-log.json");
 
@@ -76,14 +76,22 @@ function createWebhookService({ fs, path, crypto, logger, dataDir, nowIso }) {
   }
 
   function fireWebhook(eventType, payload) {
+    const jq = typeof getJobQueue === "function" ? getJobQueue() : null;
     const hooks = loadWebhooks();
     let fired = 0;
     for (const hook of hooks) {
       if (!hook.active) continue;
       if (!hook.events.includes(eventType) && !hook.events.includes("*")) continue;
       if (fired >= 10) break; // Max 10 webhooks per event
-      // Fire with retry (async, fire-and-forget)
-      fireWebhookWithRetry(hook, eventType, payload).catch(() => {});
+      if (jq) {
+        jq.add("webhook", {
+          hookUrl: hook.url, hookSecret: hook.secret || "",
+          hookId: hook.id, eventType, data: payload
+        }, { priority: 1, maxAttempts: 5 });
+      } else {
+        // Fire with retry (async, fire-and-forget)
+        fireWebhookWithRetry(hook, eventType, payload).catch(() => {});
+      }
       fired++;
     }
   }

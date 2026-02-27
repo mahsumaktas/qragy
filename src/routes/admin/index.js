@@ -17,6 +17,7 @@ const webhookRoutes = require("./webhooks");
 const insightRoutes = require("./insights");
 const assistantRoutes = require("./assistant");
 const evalRoutes = require("./eval");
+const jobRoutes = require("./jobs");
 
 function mount(app, deps) {
   // System routes return audit helpers that other sub-routes need
@@ -34,6 +35,7 @@ function mount(app, deps) {
   insightRoutes.mount(app, depsWithAudit);
   assistantRoutes.mount(app, depsWithAudit);
   evalRoutes.mount(app, depsWithAudit);
+  jobRoutes.mount(app, depsWithAudit);
 }
 
 module.exports = { mount };

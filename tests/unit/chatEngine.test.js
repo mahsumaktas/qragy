@@ -106,7 +106,7 @@ describe("splitActiveTicketMessages", () => {
   it("slices after confirmation message", () => {
     const msgs = [
       { role: "user", content: "sube kodu: EST01, yazicim calismiyor" },
-      { role: "assistant", content: "Talebinizi aldim. Sube kodu: EST01. Kisa aciklama: Yazici sorunu. Destek ekibi en kisa surede donus yapacaktir." },
+      { role: "assistant", content: "Talebinizi aldim. Kullanici adi: EST01. Kisa aciklama: Yazici sorunu. Destek ekibi en kisa surede donus yapacaktir." },
       { role: "user", content: "baska bir sorunum var" },
     ];
     const result = splitActiveTicketMessages(msgs);
@@ -133,7 +133,7 @@ describe("hasRequiredFields", () => {
 
 describe("isAssistantConfirmationMessage", () => {
   it("returns true for confirmation prefix", () => {
-    const msg = { role: "assistant", content: "Talebinizi ald\u0131m. \u015Eube kodu: EST01. K\u0131sa a\u00e7\u0131klama: Test." };
+    const msg = { role: "assistant", content: "Talebinizi ald\u0131m. Kullan\u0131c\u0131 ad\u0131: EST01. K\u0131sa a\u00e7\u0131klama: Test." };
     expect(isAssistantConfirmationMessage(msg)).toBe(true);
   });
   it("returns false for regular message", () => {
@@ -209,7 +209,7 @@ describe("getLastAssistantMessage", () => {
 
 describe("parseClosedTicketFromAssistantMessage", () => {
   it("parses branch code and summary from confirmation", () => {
-    const msg = { role: "assistant", content: "Talebinizi aldim. Sube kodu: EST01. Kisa aciklama: Yazici arizasi. Destek ekibi en kisa surede donus yapacaktir." };
+    const msg = { role: "assistant", content: "Talebinizi aldim. Kullanici adi: EST01. Kisa aciklama: Yazici arizasi. Destek ekibi en kisa surede donus yapacaktir." };
     const result = parseClosedTicketFromAssistantMessage(msg);
     expect(result.branchCode).toBe("EST01");
     expect(result.issueSummary).toBe("Yazici arizasi");
