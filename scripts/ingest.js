@@ -29,7 +29,7 @@ async function embedWithRetry(text, idx) {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const values = await embedText(text);
-      return new Float32Array(values);
+      return Array.from(values);
     } catch (err) {
       if (err.status === 429 && attempt < MAX_RETRIES) {
         console.warn(`  [${idx}] Rate limit (429), ${delay}ms bekleniyor... (deneme ${attempt}/${MAX_RETRIES})`);

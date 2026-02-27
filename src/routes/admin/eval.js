@@ -288,15 +288,35 @@ function mount(app, deps) {
   // GET /api/admin/eval/run-all — SSE ile tum senaryolari calistir
   // Query params: runs=3 (consensus run sayisi), threshold=95 (green threshold %)
   app.get("/api/admin/eval/run-all", requireAdminAccess, async (req, res) => {
+    // SSE icin timeout'lari kapat (uzun sureli baglanti)
+    req.setTimeout(0);
+    res.setTimeout(0);
+    if (req.socket) req.socket.setTimeout(0);
+
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     });
 
+    let clientDisconnected = false;
+    req.on("close", () => { clientDisconnected = true; });
+
     const sendSSE = (data) => {
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
+      if (clientDisconnected) return;
+      try {
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      } catch (_) {
+        clientDisconnected = true;
+      }
     };
+
+    // Heartbeat: her 15 saniyede SSE comment gonder (baglanti canli kalmasi icin)
+    const heartbeat = setInterval(() => {
+      if (clientDisconnected) { clearInterval(heartbeat); return; }
+      try { res.write(": heartbeat\n\n"); } catch (_) { clientDisconnected = true; }
+    }, 15_000);
 
     const runs = Math.min(parseInt(req.query.runs) || DEFAULT_CONSENSUS_RUNS, 5);
     const threshold = parseFloat(req.query.threshold) || GREEN_THRESHOLD * 100;
@@ -314,6 +334,11 @@ function mount(app, deps) {
       logger.info("eval", `Toplu eval basliyor: ${total} senaryo, ${runs} run/senaryo, threshold=${threshold}%`);
 
       for (const scenario of scenarios) {
+        if (clientDisconnected) {
+          logger.info("eval", `Client baglantisi koptu, eval durduruluyor (${allResults.length}/${total} tamamlandi)`);
+          break;
+        }
+
         try {
           const result = await runScenario(scenario, runs);
           allResults.push(result);
@@ -352,25 +377,29 @@ function mount(app, deps) {
       const passRate = total > 0 ? Math.round((passed / total) * 100 * 10) / 10 : 0;
       const green = passRate >= threshold;
 
-      // Gecmise kaydet
-      const historyEntry = {
-        timestamp: new Date().toISOString(),
-        total,
-        passed,
-        failed,
-        flaky,
-        passRate,
-        green,
-        threshold,
-        consensusRuns: runs,
-        durationMs,
-        results: allResults,
-      };
+      // Gecmise kaydet (client kopsa bile sonuclari kaydet)
+      if (allResults.length > 0) {
+        const historyEntry = {
+          timestamp: new Date().toISOString(),
+          total,
+          passed,
+          failed,
+          flaky,
+          passRate,
+          green,
+          threshold,
+          consensusRuns: runs,
+          durationMs,
+          aborted: clientDisconnected,
+          completedCount: allResults.length,
+          results: allResults,
+        };
 
-      const history = loadHistory();
-      history.unshift(historyEntry);
-      if (history.length > 50) history.length = 50;
-      saveHistory(history);
+        const history = loadHistory();
+        history.unshift(historyEntry);
+        if (history.length > 50) history.length = 50;
+        saveHistory(history);
+      }
 
       sendSSE({
         type: "done",
@@ -384,6 +413,7 @@ function mount(app, deps) {
       sendSSE({ type: "error", message: err.message });
     }
 
+    clearInterval(heartbeat);
     res.end();
   });
 
