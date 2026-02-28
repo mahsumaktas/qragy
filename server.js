@@ -880,6 +880,10 @@ app.get("/admin", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
+app.get("/admin-v2", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin-v2", "index.html"));
+});
+
 app.get("*", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
