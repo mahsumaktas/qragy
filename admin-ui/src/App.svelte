@@ -48,24 +48,38 @@
   let panel = $derived(getPanel());
 </script>
 
-<Shell>
-  {#if !getToken()}
-    <div class="login-prompt">
-      <div class="login-card">
-        <h2>Admin Giris</h2>
-        <p>Devam etmek icin admin token girin.</p>
-        <input
-          type="password"
-          class="input"
-          placeholder="Admin Token"
-          onchange={(e) => {
+{#if !getToken()}
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-logo">Q</div>
+      <h2>Qragy Admin</h2>
+      <p>Devam etmek icin admin token girin.</p>
+      <input
+        type="password"
+        class="login-input"
+        placeholder="Admin Token"
+        onkeydown={(e) => {
+          if (e.key === "Enter" && e.target.value.trim()) {
             setToken(e.target.value);
             window.location.reload();
-          }}
-        />
-      </div>
+          }
+        }}
+      />
+      <button
+        class="login-btn"
+        onclick={() => {
+          const inp = document.querySelector(".login-input");
+          if (inp?.value.trim()) {
+            setToken(inp.value);
+            window.location.reload();
+          }
+        }}
+      >Giris Yap</button>
     </div>
-  {:else if panel === "dashboard"}
+  </div>
+{:else}
+<Shell>
+  {#if panel === "dashboard"}
     <Dashboard />
   {:else if panel === "live-chats"}
     <LiveChats />
@@ -123,53 +137,89 @@
     </div>
   {/if}
 </Shell>
+{/if}
 
 <Toast />
 <ConfirmDialog />
 
 <style>
-  .login-prompt {
+  .login-page {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100%;
+    height: 100vh;
+    background: var(--bg, #0f1117);
+    font-family: "Inter", -apple-system, sans-serif;
   }
 
   .login-card {
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    padding: 32px;
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--border);
+    background: var(--bg-card, #1a1b23);
+    border-radius: 12px;
+    padding: 40px 36px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border, #2a2b35);
     width: 380px;
     text-align: center;
   }
+  .login-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--accent, #2563eb);
+    color: #fff;
+    font-size: 22px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+  }
   .login-card h2 {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
+    color: var(--text, #e5e7eb);
   }
   .login-card p {
     font-size: 13px;
-    color: var(--text-muted);
-    margin-bottom: 20px;
+    color: var(--text-muted, #6b7280);
+    margin-bottom: 24px;
   }
 
-  .input {
+  .login-input {
     width: 100%;
-    padding: 10px 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    border: 1px solid var(--border, #2a2b35);
+    border-radius: 8px;
     font-size: 14px;
-    color: var(--text);
+    color: var(--text, #e5e7eb);
     font-family: inherit;
-    background: var(--bg-card);
+    background: var(--bg, #0f1117);
     outline: none;
     transition: border 0.15s;
+    box-sizing: border-box;
+    margin-bottom: 12px;
   }
-  .input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  .login-input:focus {
+    border-color: var(--accent, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  }
+
+  .login-btn {
+    width: 100%;
+    padding: 11px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent, #2563eb);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .login-btn:hover {
+    opacity: 0.9;
   }
 
   .coming-soon {
