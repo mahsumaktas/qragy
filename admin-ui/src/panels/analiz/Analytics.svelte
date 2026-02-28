@@ -38,7 +38,7 @@
   }
 
   function exportData() {
-    window.open("api/admin/analytics/export?range=" + range + "&token=" + encodeURIComponent(getToken()), "_blank");
+    window.open("../api/admin/analytics/export?range=" + range + "&token=" + encodeURIComponent(getToken()), "_blank");
   }
 
   let topTopics = $derived(

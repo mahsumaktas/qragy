@@ -19,7 +19,7 @@
     session.messages = [...session.messages, { role: "user", content: text, sender: "user" }];
 
     try {
-      const res = await fetch("api/chat", {
+      const res = await fetch("../api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Bypass-Tunnel-Reminder": "true" },
         body: JSON.stringify({ message: text, sessionId: session.sessionId }),

@@ -76,7 +76,7 @@
   function exportCsv() {
     const params = new URLSearchParams({ format: "csv", token: getToken() });
     if (statusFilter) params.set("status", statusFilter);
-    window.open("api/admin/tickets/export?" + params.toString(), "_blank");
+    window.open("../api/admin/tickets/export?" + params.toString(), "_blank");
   }
 </script>
 

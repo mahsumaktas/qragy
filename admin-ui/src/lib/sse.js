@@ -3,7 +3,7 @@ import { getToken } from "./auth.svelte.js";
 export function createSSE(path, { onMessage, onEvent, onError } = {}) {
   const token = getToken();
   const sep = path.includes("?") ? "&" : "?";
-  const url = "api/" + path + (token ? sep + "token=" + encodeURIComponent(token) : "");
+  const url = "../api/" + path + (token ? sep + "token=" + encodeURIComponent(token) : "");
 
   const es = new EventSource(url);
 

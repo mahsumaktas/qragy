@@ -28,7 +28,8 @@ async function fetchJson(url, options = {}) {
 }
 
 function apiUrl(path) {
-  return "api/" + path;
+  // admin-v2 /admin-v2/ altinda, ../api/ ile bir ust dizine cikar
+  return "../api/" + path;
 }
 
 export const api = {
