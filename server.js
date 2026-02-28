@@ -535,6 +535,11 @@ app.get("/api-docs", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "api-docs.html"));
 });
 
+// Admin v2 — express.static oncesinde tanimlanmali (301 redirect'i onlemek icin)
+app.get("/admin-v2", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin-v2", "index.html"));
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 // ── Setup Wizard Redirect ────────────────────────────────────────────────
@@ -878,10 +883,6 @@ app.get("/setup", (_req, res) => {
 
 app.get("/admin", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
-});
-
-app.get("/admin-v2", (_req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin-v2", "index.html"));
 });
 
 app.get("*", (_req, res) => {
