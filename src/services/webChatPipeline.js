@@ -128,6 +128,32 @@ function createWebChatPipeline(deps) {
   }) {
     const chatFlowConfig = getChatFlowConfig();
 
+    // Escalation session lock: escalation sonrasi ayni session'dan gelen mesajlar
+    const convDataEarly = loadConversations();
+    const existingConvEarly = convDataEarly.conversations.find(c => c.sessionId === sessionId);
+    if (existingConvEarly?.escalationStatus === "active") {
+      const isNewTopic = ISSUE_HINT_REGEX.test(normalizeForMatching(latestUserMessage)) &&
+        !isStatusFollowupMessage(latestUserMessage) &&
+        !isNonIssueMessage(latestUserMessage);
+      if (isNewTopic) {
+        // Yeni konu — escalation lock'u kaldir, normal akisa devam et
+        existingConvEarly.escalationStatus = null;
+        saveConversations(convDataEarly);
+        logger.info("webChatPipeline:earlyCheck", "Escalation lock kaldirildi, yeni konu", { sessionId });
+      } else {
+        logger.info("webChatPipeline:earlyCheck", "Escalation-locked, post-escalation mesaji", { sessionId });
+        recordAnalyticsEvent({ source: "escalation-locked", responseTimeMs: Date.now() - chatStartTime });
+        return webResponse({
+          reply: POST_ESCALATION_FOLLOWUP_MESSAGE,
+          source: "escalation-locked",
+          memory,
+          hasClosedTicketHistory,
+          handoffReady: true,
+          handoffReason: "escalation_active",
+        });
+      }
+    }
+
     // Gibberish
     if (isGibberishMessage(latestUserMessage)) {
       logger.info("webChatPipeline:earlyCheck", "Gibberish tespit edildi", { sessionId, msgPreview: latestUserMessage.slice(0, 80) });
@@ -302,6 +328,15 @@ function createWebChatPipeline(deps) {
     });
     const ticket = ticketResult.ticket;
     updateConversationTicket(sessionId, ticket.id);
+    // Topic-escalation durumunda escalation session lock
+    if (isTopicEscalation) {
+      const tcConvData = loadConversations();
+      const tcConv = tcConvData.conversations.find(c => c.sessionId === sessionId);
+      if (tcConv) {
+        tcConv.escalationStatus = "active";
+        saveConversations(tcConvData);
+      }
+    }
     const handoffReady = Boolean(supportAvailability.isOpen);
 
     const ticketsDb = loadTicketsDb();
@@ -347,9 +382,12 @@ function createWebChatPipeline(deps) {
     if (!conversationContext.escalationTriggered) return null;
 
     const supportAvailability = getSupportAvailability();
-    const escalationReply = "Sizi canl\u0131 destek temsilcimize aktar\u0131yorum. K\u0131sa s\u00fcrede yard\u0131mc\u0131 olacakt\u0131r.";
-    const aiSummary = await generateEscalationSummary(contents, memory, conversationContext);
+    const CREDENTIAL_WARNING = "Güvenliğiniz için şifre ve kullanıcı bilgilerinizi chat üzerinden paylaşmayınız. Bu bilgiler sistemimizde maskelenmiştir. ";
     const isCredentialEscalation = (conversationContext.escalationReason || "").includes("_credentials");
+    const escalationReply = isCredentialEscalation
+      ? CREDENTIAL_WARNING + "Sizi canl\u0131 destek temsilcimize aktar\u0131yorum. K\u0131sa s\u00fcrede yard\u0131mc\u0131 olacakt\u0131r."
+      : "Sizi canl\u0131 destek temsilcimize aktar\u0131yorum. K\u0131sa s\u00fcrede yard\u0131mc\u0131 olacakt\u0131r.";
+    const aiSummary = await generateEscalationSummary(contents, memory, conversationContext);
     const escalationMemory = {
       ...memory,
       issueSummary: isCredentialEscalation ? maskCredentials(aiSummary) : aiSummary
@@ -360,6 +398,13 @@ function createWebChatPipeline(deps) {
       chatHistory: chatHistorySnapshot
     });
     updateConversationTicket(sessionId, ticketResult.ticket.id);
+    // Escalation session lock: conversation'a escalationStatus yaz
+    const escConvData = loadConversations();
+    const escConv = escConvData.conversations.find(c => c.sessionId === sessionId);
+    if (escConv) {
+      escConv.escalationStatus = "active";
+      saveConversations(escConvData);
+    }
     const handoffReady = Boolean(supportAvailability.isOpen);
     recordAnalyticsEvent({ source: "escalation-trigger", responseTimeMs: Date.now() - chatStartTime, topicId: conversationContext.currentTopic || null });
     if (ticketResult.created) {
@@ -620,6 +665,13 @@ function createWebChatPipeline(deps) {
     let ticketStatus = "";
     let ticketCreated = false;
     if (isEscalationReply) {
+      // Escalation session lock
+      const aiEscConvData = loadConversations();
+      const aiEscConv = aiEscConvData.conversations.find(c => c.sessionId === sessionId);
+      if (aiEscConv) {
+        aiEscConv.escalationStatus = "active";
+        saveConversations(aiEscConvData);
+      }
       const aiSummary = await generateEscalationSummary(contents, memory, conversationContext);
       const escalationMemory = {
         ...memory,

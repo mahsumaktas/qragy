@@ -20,6 +20,16 @@ describe("validators", () => {
       expect(isLikelyBranchCode("A")).toBe(false);
       expect(isLikelyBranchCode("A".repeat(25))).toBe(false);
     });
+    it("should reject 13+ character codes (max 12)", () => {
+      expect(isLikelyBranchCode("ABCDEFGHIJ123")).toBe(false); // 13 chars
+      expect(isLikelyBranchCode("LONGBRANCHCODE1")).toBe(false); // 15 chars
+    });
+    it("should accept valid short codes", () => {
+      expect(isLikelyBranchCode("IST-01")).toBe(true);
+      expect(isLikelyBranchCode("ANK03")).toBe(true);
+      expect(isLikelyBranchCode("BRS-123")).toBe(true);
+      expect(isLikelyBranchCode("BRANCH-01")).toBe(true); // 9 chars, ok
+    });
   });
 
   describe("isGreetingOnly", () => {

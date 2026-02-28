@@ -138,6 +138,25 @@ function mount(app, deps) {
 
       const conversationContext = await buildConversationContext(memory, activeUserMessages);
 
+      // Multi-turn topic context persist
+      const topicConvData = loadConversations();
+      const topicConv = topicConvData.conversations.find(c => c.sessionId === sessionId);
+      if (conversationContext.currentTopic) {
+        // Topic bulundu — kaydet
+        if (topicConv) {
+          topicConv.lastDetectedTopic = conversationContext.currentTopic;
+          saveConversations(topicConvData);
+        }
+      } else if (topicConv?.lastDetectedTopic && latestUserMessage.split(/\s+/).length < 8) {
+        // Topic bulunamadi ama onceki topic var + kisa cevap → eski topic'i koru
+        conversationContext.currentTopic = topicConv.lastDetectedTopic;
+        conversationContext.topicConfidence = 0.6;
+        conversationContext.conversationState = "topic_guided_support";
+        if (conversationContext._topicDetection) {
+          conversationContext._topicDetection.method = "persisted";
+        }
+      }
+
       // Ticket creation (required fields met)
       const ticketResult = await webChatPipeline.handleTicketCreation({
         contents, memory, conversationContext, sessionId,

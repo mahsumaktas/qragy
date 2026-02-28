@@ -5,7 +5,7 @@ const PURE_NUMERIC_PATTERN = /^\d+$/;
 function isLikelyBranchCode(value) {
   if (!value || typeof value !== "string") return false;
   const code = value.trim();
-  if (code.length < 2 || code.length > 20) return false;
+  if (code.length < 2 || code.length > 12) return false;
   if (!/^[A-Za-z0-9-]+$/.test(code)) return false;
   if (PURE_NUMERIC_PATTERN.test(code)) return false;
   if (!/[0-9]/.test(code)) return false;

@@ -261,3 +261,53 @@ describe("detectConversationLoop", () => {
     expect(detectConversationLoop([])).toEqual({ isLoop: false, repeatCount: 0 });
   });
 });
+
+// ── Fix 1: Gibberish detection genisletme ──────────────────────────────
+describe("isGibberishMessage — extended rules", () => {
+  it("detects keyboard mash 'asdfghjkl'", () => {
+    expect(isGibberishMessage("asdfghjkl")).toBe(true);
+  });
+  it("detects keyboard mash 'qwerty'", () => {
+    expect(isGibberishMessage("qwerty")).toBe(true);
+  });
+  it("detects programming keyword 'SELECT 1+1'", () => {
+    expect(isGibberishMessage("SELECT 1+1")).toBe(true);
+  });
+  it("detects programming keyword 'null undefined NaN'", () => {
+    expect(isGibberishMessage("null undefined NaN")).toBe(true);
+  });
+  it("detects programming keyword 'console.log'", () => {
+    expect(isGibberishMessage("console.log")).toBe(true);
+  });
+  it("false positive: 'merhaba' is not gibberish", () => {
+    expect(isGibberishMessage("merhaba")).toBe(false);
+  });
+  it("false positive: 'yazicim calismiyor' is not gibberish", () => {
+    expect(isGibberishMessage("yazicim calismiyor")).toBe(false);
+  });
+  it("false positive: branch code 'EST01' is not gibberish", () => {
+    expect(isGibberishMessage("EST01")).toBe(false);
+  });
+  it("false positive: 'sorun var' is not gibberish", () => {
+    expect(isGibberishMessage("sorun var")).toBe(false);
+  });
+});
+
+// ── Fix 2: Farewell negative override ──────────────────────────────────
+describe("isFarewellMessage — negative override", () => {
+  it("'tesekkurler ama calismadi' is NOT farewell", () => {
+    expect(isFarewellMessage("tesekkurler ama calismadi", 5)).toBe(false);
+  });
+  it("'tesekkurler ama hala sorun var' is NOT farewell", () => {
+    expect(isFarewellMessage("tesekkurler ama hala sorun var", 5)).toBe(false);
+  });
+  it("'sagol ama olmadi' is NOT farewell", () => {
+    expect(isFarewellMessage("sagol ama olmadi", 5)).toBe(false);
+  });
+  it("'tesekkurler' (alone) is still farewell", () => {
+    expect(isFarewellMessage("tesekkurler", 5)).toBe(true);
+  });
+  it("'hosca kal' is still farewell", () => {
+    expect(isFarewellMessage("hosca kal", 5)).toBe(true);
+  });
+});

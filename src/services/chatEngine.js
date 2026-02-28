@@ -90,6 +90,17 @@ function isGibberishMessage(text, opts = {}) {
   if (trimmed.length >= 6 && !/[aeıioöuüAEIİOÖUÜ]/i.test(trimmed) && !/\d/.test(trimmed)) return true;
   // Very short random text (2-3 chars, not a known word)
   if (trimmed.length <= 2 && !/^(ok|no|da|de|bi|bu|şu|ne|ve|ya|ki|ha|he|hi)$/i.test(trimmed)) return true;
+  // Keyboard mash: bilinen QWERTY mash patternleri (consecutive check Turkce "-iyor" suffix'inde false positive olusturur)
+  const noSpaceMsg = trimmed.replace(/\s+/g, "").toLowerCase();
+  if (noSpaceMsg.length >= 4 && /^(asdf|qwert|zxcv|hjkl|uiop|fghj|sdfg|poiu|lkjh|mnbv|cvbn)/.test(noSpaceMsg)) return true;
+  // Programming keywords: tek basina veya kisa kombinasyon
+  const PROGRAMMING_KEYWORDS = /^(select|insert|update|delete|drop|alter|create|from|where|null|undefined|nan|console\.log|var|let|const|function|return|import|require|true|false|void|typeof|instanceof|class|int|string|float|bool|print|echo|sudo|chmod|grep|curl|wget|pip|npm|git|docker)(\s+(1\+1|\d+|null|undefined|nan|true|false|from|into|table|where|\*|\.|\w{1,8}))*[;()]*$/i;
+  if (PROGRAMMING_KEYWORDS.test(trimmed)) return true;
+  // Anlamsiz kisa metin: 5+ char, Turkce sesli harf cifti yok, alfanumerik
+  if (trimmed.length >= 5 && trimmed.length <= 20 && /^[a-zA-Z0-9]+$/.test(trimmed)) {
+    const hasVowelPair = /[aeıioöuüAEIİOÖUÜ].*[aeıioöuüAEIİOÖUÜ]/i.test(trimmed);
+    if (!hasVowelPair && !/\d/.test(trimmed)) return true;
+  }
   return false;
 }
 
@@ -108,6 +119,9 @@ function isFarewellMessage(text, turnCount, opts = {}) {
   if (!normalized) return false;
   // Uzun mesajlar farewell degildir — ek icerik var demektir
   if (normalized.split(/\s+/).length > 8) return false;
+  // Negative override: tesekkur iceren ama sorun devam eden mesajlar farewell degil
+  const NEGATIVE_OVERRIDE = /\b(ama|fakat|hala|yine|olmadi|calismadi|yapamadim|cozemedim|devam|sorun|problem|hata|sikinti|bozuk)\b/;
+  if (NEGATIVE_OVERRIDE.test(normalized)) return false;
   if (FAREWELL_WORDS.has(normalized)) return true;
   for (const word of FAREWELL_WORDS) {
     if (normalized.includes(word)) return true;
