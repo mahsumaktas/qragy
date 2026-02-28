@@ -538,9 +538,9 @@ app.get("/api-docs", (_req, res) => {
 // Admin v2 — express.static'ten once handle et (reverse proxy redirect sorununu onlemek icin)
 app.use("/admin-v2", express.static(path.join(__dirname, "public", "admin-v2"), { redirect: false }));
 app.get("/admin-v2", (_req, res) => {
-  // 302 kullan (301 degil) — 301 tarayicida kalici cache'lenir, reverse proxy arkasinda sorun yaratir
-  // Relative redirect — proxy prefix'i korunur
-  res.redirect(302, "admin-v2/");
+  // HTTP redirect KULLANMA — 301/302 tarayici/CDN tarafindan cache'lenir ve reverse proxy'de bozulur
+  // JS ile client-side redirect: cache'lenemez, proxy prefix'i korunur
+  res.type("html").send('<!DOCTYPE html><html><head><script>location.replace(location.href+"/")</script></head><body></body></html>');
 });
 
 app.use(express.static(path.join(__dirname, "public")));
