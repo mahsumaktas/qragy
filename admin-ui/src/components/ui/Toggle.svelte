@@ -1,9 +1,12 @@
 <script>
-  let { checked = $bindable(false), disabled = false, onchange } = $props();
+  let { checked = $bindable(), disabled = false, onchange } = $props();
+
+  // API'den henuz data gelmemisse undefined olabilir, false olarak kullan
+  let isOn = $derived(!!checked);
 
   function handleClick() {
     if (disabled) return;
-    checked = !checked;
+    checked = !isOn;
     onchange?.(checked);
   }
 </script>
@@ -11,10 +14,10 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <span
   class="toggle"
-  class:on={checked}
+  class:on={isOn}
   class:disabled
   role="switch"
-  aria-checked={checked}
+  aria-checked={isOn}
   tabindex="0"
   onclick={handleClick}
   onkeydown={(e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); handleClick(); } }}
