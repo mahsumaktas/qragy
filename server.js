@@ -535,9 +535,12 @@ app.get("/api-docs", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "api-docs.html"));
 });
 
-// Admin v2 — express.static oncesinde tanimlanmali (301 redirect'i onlemek icin)
+// Admin v2 — express.static'ten once handle et (reverse proxy redirect sorununu onlemek icin)
+app.use("/admin-v2", express.static(path.join(__dirname, "public", "admin-v2"), { redirect: false }));
 app.get("/admin-v2", (_req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin-v2", "index.html"));
+  // Relative redirect — reverse proxy arkasinda dogru calismasi icin
+  // Browser: /obusteknikdestekchatbot/admin-v2 → resolves "admin-v2/" → /obusteknikdestekchatbot/admin-v2/
+  res.redirect(301, "admin-v2/");
 });
 
 app.use(express.static(path.join(__dirname, "public")));
