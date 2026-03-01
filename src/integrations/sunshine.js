@@ -64,9 +64,14 @@ function createSunshineIntegration(deps) {
     return resp.ok;
   }
 
-  async function sunshinePassControl(appId, conversationId) {
+  async function sunshinePassControl(appId, conversationId, meta) {
     const baseUrl = getSunshineBaseUrl();
     const url = baseUrl + "/apps/" + appId + "/conversations/" + conversationId + "/passControl";
+    const metadata = { reason: "escalation" };
+    if (meta?.branchCode) metadata["dataCapture.systemField.custom_field.branch_code"] = meta.branchCode;
+    if (meta?.issueSummary) metadata["dataCapture.systemField.description"] = meta.issueSummary;
+    if (meta?.fullName) metadata["dataCapture.systemField.custom_field.full_name"] = meta.fullName;
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     const resp = await fetch(url, {
@@ -75,10 +80,7 @@ function createSunshineIntegration(deps) {
         "Content-Type": "application/json",
         "Authorization": getSunshineAuthHeader()
       },
-      body: JSON.stringify({
-        switchboardIntegration: "next",
-        metadata: { reason: "escalation" }
-      }),
+      body: JSON.stringify({ switchboardIntegration: "next", metadata }),
       signal: controller.signal
     }).finally(() => clearTimeout(timeoutId));
     if (!resp.ok) {
@@ -160,13 +162,21 @@ function createSunshineIntegration(deps) {
             const isEscalation = ESCALATION_MESSAGE_REGEX.test(result.reply);
             if (isEscalation) {
               const farewell = sunshineConfig.farewellMessage || (DEFAULT_SUNSHINE_CONFIG && DEFAULT_SUNSHINE_CONFIG.farewellMessage) || "";
+              // Agent'a ozet bilgi gonder (internal note olarak gorunur)
+              const parts = [];
+              if (memory.branchCode) parts.push("Sube: " + memory.branchCode);
+              if (memory.fullName) parts.push("Musteri: " + memory.fullName);
+              if (memory.issueSummary) parts.push("Sorun: " + memory.issueSummary);
+              if (parts.length) {
+                await sunshineSendMessage(appId, conversationId, "[Bot Ozeti] " + parts.join(" | "));
+              }
               await sunshineSendMessage(appId, conversationId, farewell);
-              const passed = await sunshinePassControl(appId, conversationId);
+              const passed = await sunshinePassControl(appId, conversationId, memory);
               // Escalation basarili — session'i isaretleyip bot'u durdur
               session.escalated = true;
               session.escalatedAt = Date.now();
               saveSunshineSessions(sessions);
-              logger.info("Sunshine", `Escalation ${passed ? "basarili" : "basarisiz"}`, { conversationId });
+              logger.info("Sunshine", `Escalation ${passed ? "basarili" : "basarisiz"}`, { conversationId, memory: { branchCode: memory.branchCode, issueSummary: memory.issueSummary } });
             } else {
               await sunshineSendMessage(appId, conversationId, result.reply);
             }
