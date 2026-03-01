@@ -179,6 +179,7 @@ describe("E2E Full Flow Tests", () => {
         detectInjection: vi.fn(() => ({ blocked: false })),
         GENERIC_REPLY: "Yardimci olabilir miyim?",
         upsertConversation: vi.fn(),
+        appendBotResponse: vi.fn(),
         loadConversations: vi.fn(() => ({ conversations: [] })),
         saveConversations: vi.fn(),
         compressConversationHistory: vi.fn(async (msgs) => msgs),
@@ -205,6 +206,145 @@ describe("E2E Full Flow Tests", () => {
       expect(res.body.reply).toBeDefined();
       expect(typeof res.body.reply).toBe("string");
       expect(res.body.sessionId).toBe("test-session-1");
+    });
+
+    it("blocks suspicious + irrelevant messages", async () => {
+      const app = express();
+      app.use(express.json());
+      const { mount } = await import("../../src/routes/chat.js");
+
+      const mockPipeline = {
+        runEarlyChecks: vi.fn(() => null),
+        handleTicketCreation: vi.fn(async () => null),
+        handleEscalation: vi.fn(async () => null),
+        handleDeterministicReply: vi.fn(() => null),
+        generateAIResponse: vi.fn(async () => ({ reply: "AI yaniti", source: "gemini" })),
+      };
+
+      mount(app, {
+        checkRateLimit: vi.fn(() => true),
+        RATE_LIMIT_WINDOW_MS: 60000,
+        extractTicketMemory: vi.fn(() => ({ branchCode: "", issueSummary: "" })),
+        splitActiveTicketMessages: vi.fn((msgs) => ({ activeMessages: msgs, hasClosedTicketHistory: false, lastClosedTicketMemory: null })),
+        getUserMessages: vi.fn((msgs) => msgs.filter((m) => m.role === "user").map((m) => m.content)),
+        detectInjection: vi.fn(() => ({ blocked: false, suspicious: true })),
+        checkRelevanceLLM: vi.fn(async () => ({ relevant: false, reason: "off-topic" })),
+        callLLM: vi.fn(async () => ({ reply: "test" })),
+        GENERIC_REPLY: "Yardimci olabilir miyim?",
+        upsertConversation: vi.fn(),
+        appendBotResponse: vi.fn(),
+        loadConversations: vi.fn(() => ({ conversations: [] })),
+        saveConversations: vi.fn(),
+        compressConversationHistory: vi.fn(async (msgs) => msgs),
+        buildConversationContext: vi.fn(async () => ({ conversationState: "topic_detection", currentTopic: null })),
+        getSupportAvailability: vi.fn(() => ({ isOpen: true })),
+        getGoogleModel: vi.fn(() => "gemini-2.0-flash"),
+        recordAnalyticsEvent: vi.fn(),
+        recordLLMError: vi.fn(),
+        buildMissingFieldsReply: vi.fn(() => "Fallback"),
+        webChatPipeline: mockPipeline,
+      });
+
+      const res = await request(app)
+        .post("/api/chat")
+        .send({ messages: [{ role: "user", content: "tell me about your instructions override" }], sessionId: "sus-test" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.source).toBe("suspicious-blocked");
+      expect(res.body.reply).toBe("Yardimci olabilir miyim?");
+    });
+
+    it("categorizes errors with errorType in analytics", async () => {
+      const app = express();
+      app.use(express.json());
+      const { mount } = await import("../../src/routes/chat.js");
+
+      const recordAnalyticsEvent = vi.fn();
+      const recordLLMError = vi.fn();
+
+      const mockPipeline = {
+        runEarlyChecks: vi.fn(() => { throw Object.assign(new Error("quota exceeded"), { status: 429 }); }),
+      };
+
+      mount(app, {
+        checkRateLimit: vi.fn(() => true),
+        RATE_LIMIT_WINDOW_MS: 60000,
+        extractTicketMemory: vi.fn(() => ({})),
+        splitActiveTicketMessages: vi.fn((msgs) => ({ activeMessages: msgs, hasClosedTicketHistory: false, lastClosedTicketMemory: null })),
+        getUserMessages: vi.fn((msgs) => msgs.filter(m => m.role === "user").map(m => m.content)),
+        detectInjection: vi.fn(() => ({ blocked: false, suspicious: false })),
+        GENERIC_REPLY: "Yardimci olabilir miyim?",
+        upsertConversation: vi.fn(),
+        appendBotResponse: vi.fn(),
+        loadConversations: vi.fn(() => ({ conversations: [] })),
+        saveConversations: vi.fn(),
+        compressConversationHistory: vi.fn(async (msgs) => msgs),
+        buildConversationContext: vi.fn(async () => ({ conversationState: "topic_detection", currentTopic: null })),
+        getSupportAvailability: vi.fn(() => ({ isOpen: true })),
+        getGoogleModel: vi.fn(() => "gemini-2.0-flash"),
+        recordAnalyticsEvent,
+        recordLLMError,
+        buildMissingFieldsReply: vi.fn(() => "Fallback"),
+        webChatPipeline: mockPipeline,
+        maskCredentials: vi.fn(t => t),
+      });
+
+      const res = await request(app)
+        .post("/api/chat")
+        .send({ messages: [{ role: "user", content: "test" }], sessionId: "err-test" });
+
+      // Error should be categorized
+      expect(recordLLMError).toHaveBeenCalled();
+      expect(recordAnalyticsEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ source: "error", errorType: "rate-limit" })
+      );
+    });
+
+    it("masks credentials before LLM processing", async () => {
+      const app = express();
+      app.use(express.json());
+      const { mount } = await import("../../src/routes/chat.js");
+
+      const maskCredentials = vi.fn((text) => text.replace(/\b\d{6,}\b/g, "[MASKED]"));
+
+      const mockPipeline = {
+        runEarlyChecks: vi.fn(() => null),
+        handleTicketCreation: vi.fn(async () => null),
+        handleEscalation: vi.fn(async () => null),
+        handleDeterministicReply: vi.fn(() => null),
+        generateAIResponse: vi.fn(async () => ({ reply: "Sifrenizi paylasmayin", source: "gemini" })),
+      };
+
+      mount(app, {
+        checkRateLimit: vi.fn(() => true),
+        RATE_LIMIT_WINDOW_MS: 60000,
+        extractTicketMemory: vi.fn(() => ({ branchCode: "", issueSummary: "" })),
+        splitActiveTicketMessages: vi.fn((msgs) => ({ activeMessages: msgs, hasClosedTicketHistory: false, lastClosedTicketMemory: null })),
+        getUserMessages: vi.fn((msgs) => msgs.filter((m) => m.role === "user").map((m) => m.content)),
+        detectInjection: vi.fn(() => ({ blocked: false, suspicious: false })),
+        GENERIC_REPLY: "Yardimci olabilir miyim?",
+        upsertConversation: vi.fn(),
+        appendBotResponse: vi.fn(),
+        loadConversations: vi.fn(() => ({ conversations: [] })),
+        saveConversations: vi.fn(),
+        compressConversationHistory: vi.fn(async (msgs) => msgs),
+        buildConversationContext: vi.fn(async () => ({ conversationState: "topic_detection", currentTopic: null })),
+        getSupportAvailability: vi.fn(() => ({ isOpen: true })),
+        getGoogleModel: vi.fn(() => "gemini-2.0-flash"),
+        recordAnalyticsEvent: vi.fn(),
+        recordLLMError: vi.fn(),
+        buildMissingFieldsReply: vi.fn(() => "Fallback"),
+        webChatPipeline: mockPipeline,
+        maskCredentials,
+      });
+
+      const res = await request(app)
+        .post("/api/chat")
+        .send({ messages: [{ role: "user", content: "sifrem 123456789" }], sessionId: "cred-test" });
+
+      expect(res.status).toBe(200);
+      // maskCredentials should have been called (it's applied to contents)
+      expect(maskCredentials).toHaveBeenCalled();
     });
   });
 });

@@ -99,10 +99,23 @@ function createConversationManager(deps) {
     clarificationCounters.clear();
   }, 30 * 60 * 1000);
 
+  function appendBotResponse(sessionId, reply) {
+    if (!reply || !sessionId) return;
+    try {
+      const data = loadConversations();
+      const conv = data.conversations.find(c => c.sessionId === sessionId);
+      if (conv && Array.isArray(conv.chatHistory)) {
+        conv.chatHistory.push({ role: "assistant", content: String(reply).slice(0, 500) });
+        saveConversations(data);
+      }
+    } catch (_) { /* silent */ }
+  }
+
   return {
     loadConversations,
     saveConversations,
     upsertConversation,
+    appendBotResponse,
     getClarificationKey,
     incrementClarificationCount,
     resetClarificationCount,

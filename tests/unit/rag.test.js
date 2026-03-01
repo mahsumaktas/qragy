@@ -27,19 +27,42 @@ describe("RAG", () => {
     it("should return false for single word", () => { expect(phraseMatch("yazici", "Yazici nasil kurulur?")).toBe(false); });
   });
   describe("filterByRelevance", () => {
-    it("should export RAG_DISTANCE_THRESHOLD as 0.8", () => {
-      expect(RAG_DISTANCE_THRESHOLD).toBe(0.8);
+    it("should export RAG_DISTANCE_THRESHOLD as 0.6", () => {
+      expect(RAG_DISTANCE_THRESHOLD).toBe(0.6);
     });
     it("should keep distance <= threshold", () => {
       expect(filterByRelevance([{ question: "t", _distance: 0.3 }]).length).toBe(1);
-      expect(filterByRelevance([{ question: "t", _distance: 0.7 }]).length).toBe(1);
-      expect(filterByRelevance([{ question: "t", _distance: 0.8 }]).length).toBe(1);
+      expect(filterByRelevance([{ question: "t", _distance: 0.6 }]).length).toBe(1);
+    });
+    it("should filter distance > threshold (0.7)", () => {
+      expect(filterByRelevance([{ question: "t", _distance: 0.7 }]).length).toBe(0);
+    });
+    it("should filter distance > threshold (0.8)", () => {
+      expect(filterByRelevance([{ question: "t", _distance: 0.8 }]).length).toBe(0);
     });
     it("should filter distance > threshold (0.9)", () => {
       expect(filterByRelevance([{ question: "t", _distance: 0.9 }]).length).toBe(0);
     });
     it("should filter distance > threshold (1.5)", () => {
       expect(filterByRelevance([{ question: "t", _distance: 1.5 }]).length).toBe(0);
+    });
+  });
+  describe("RAG_DISTANCE_THRESHOLD env override", () => {
+    it("should use env value when RAG_DISTANCE_THRESHOLD is set", async () => {
+      const original = process.env.RAG_DISTANCE_THRESHOLD;
+      try {
+        process.env.RAG_DISTANCE_THRESHOLD = "0.45";
+        vi.resetModules();
+        const { RAG_DISTANCE_THRESHOLD: envThreshold } = await import("../../src/services/rag.js");
+        expect(envThreshold).toBe(0.45);
+      } finally {
+        if (original !== undefined) {
+          process.env.RAG_DISTANCE_THRESHOLD = original;
+        } else {
+          delete process.env.RAG_DISTANCE_THRESHOLD;
+        }
+        vi.resetModules();
+      }
     });
   });
   describe("reciprocalRankFusion", () => {

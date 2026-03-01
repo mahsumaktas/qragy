@@ -26,6 +26,7 @@ function mount(app, deps) {
 
     // Conversation tracking
     upsertConversation,
+    appendBotResponse,
     loadConversations,
     saveConversations,
 
@@ -87,13 +88,21 @@ function mount(app, deps) {
         if (injectionCheck.blocked) {
           return res.json({ reply: GENERIC_REPLY, source: "injection-blocked", sessionId });
         }
+        // Layer 2: Suspicious flag → force relevance check
+        if (injectionCheck.suspicious && typeof checkRelevanceLLM === "function" && callLLM) {
+          const relevanceCheck = await checkRelevanceLLM(latestMsg.content, callLLM);
+          if (!relevanceCheck.relevant) {
+            return res.json({ reply: GENERIC_REPLY, source: "suspicious-blocked", sessionId });
+          }
+        }
       }
 
-      // Inject sessionId into all responses
+      // Inject sessionId into all responses + save bot reply to chat history
       const originalJson = res.json.bind(res);
       res.json = (data) => {
-        if (data && typeof data === "object" && !data.sessionId) {
-          data.sessionId = sessionId;
+        if (data && typeof data === "object") {
+          if (!data.sessionId) data.sessionId = sessionId;
+          if (data.reply) appendBotResponse(sessionId, data.reply);
         }
         return originalJson(data);
       };
@@ -135,6 +144,16 @@ function mount(app, deps) {
         .filter(m => m && m.content)
         .slice(-50)
         .map(m => ({ role: m.role, content: String(m.content).slice(0, 500) }));
+
+      // Credential masking — mask sensitive data before sending to LLM
+      if (typeof maskCredentials === "function") {
+        contents.forEach(c => {
+          if (c.parts?.[0]?.text) c.parts[0].text = maskCredentials(c.parts[0].text);
+        });
+        chatHistorySnapshot.forEach(m => {
+          if (m.content) m.content = maskCredentials(m.content);
+        });
+      }
 
       const conversationContext = await buildConversationContext(memory, activeUserMessages);
 
@@ -252,7 +271,14 @@ function mount(app, deps) {
       return res.json(aiResult);
 
     } catch (error) {
+      // Error categorization for analytics
+      const errorType = error?.status === 429 ? "rate-limit"
+        : error?.status === 503 ? "service-unavailable"
+        : error?.code === "ECONNABORTED" || error?.code === "ETIMEDOUT" ? "timeout"
+        : error?.message?.includes("quota") ? "quota-exceeded"
+        : "unknown";
       recordLLMError(error, "web-chat");
+      recordAnalyticsEvent({ source: "error", errorType, responseTimeMs: Date.now() - chatStartTime });
       const statusCode = Number(error?.status) || 500;
       if (statusCode >= 500) {
         const rawMessages = Array.isArray(req.body?.messages) ? req.body.messages : [];

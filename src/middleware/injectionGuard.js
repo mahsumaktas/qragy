@@ -9,6 +9,12 @@ const INJECTION_PATTERNS = [
   /(?<=\P{L}|^)(jailbreak|DAN|do anything now)(?=\P{L}|$)/iu,
   /(?:^|\s)new\s+instructions?\s*:/i,
   /(?:^|\s)forget\s+(everything|all|your\s+rules)/i,
+  /sistem\s*(?:prompt|talimat|komut)/i,
+  /rolu?nu?\s*(?:degistir|unut|birak)/i,
+  /(?:gercek|asil)\s*(?:gorev|amac|talimat)/i,
+  /yukaridaki\s*(?:talimat|kural|metin)/i,
+  /(?:sifirla|resetle)\s*(?:ve|sonra)/i,
+  /(?:baska\s*bir|farkli\s*bir)\s*(?:rol|karakter|kisi)\s*ol/i,
 ];
 
 const SUSPICIOUS_KEYWORDS = [

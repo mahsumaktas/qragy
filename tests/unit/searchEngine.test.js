@@ -15,7 +15,7 @@ describe("SearchEngine", () => {
     return createSearchEngine({
       embedText: overrides.embedText || null,
       knowledgeTable: overrides.knowledgeTable || null,
-      ragDistanceThreshold: overrides.ragDistanceThreshold ?? 0.8,
+      ragDistanceThreshold: overrides.ragDistanceThreshold ?? 0.6,
       logger: overrides.logger || noopLogger,
     });
   }

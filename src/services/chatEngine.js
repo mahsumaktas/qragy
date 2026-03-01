@@ -119,9 +119,13 @@ function isFarewellMessage(text, turnCount, opts = {}) {
   if (!normalized) return false;
   // Uzun mesajlar farewell degildir — ek icerik var demektir
   if (normalized.split(/\s+/).length > 8) return false;
-  // Negative override: tesekkur iceren ama sorun devam eden mesajlar farewell degil
+  // Negative override: tesekkur iceren ama sorun devam eden veya yeni soru soran mesajlar farewell degil
   const NEGATIVE_OVERRIDE = /\b(ama|fakat|hala|yine|olmadi|calismadi|yapamadim|cozemedim|devam|sorun|problem|hata|sikinti|bozuk)\b/;
   if (NEGATIVE_OVERRIDE.test(normalized)) return false;
+  // Soru iceren mesajlar farewell degil: "tesekkurler peki nasil yaparim?"
+  const QUESTION_OVERRIDE = /\b(nasil|nedir|nerede|ne zaman|ne kadar|hangi|peki|ayrica|bir de|bir sey daha)\b/;
+  if (QUESTION_OVERRIDE.test(normalized)) return false;
+  if (text.includes("?")) return false;
   if (FAREWELL_WORDS.has(normalized)) return true;
   for (const word of FAREWELL_WORDS) {
     if (normalized.includes(word)) return true;

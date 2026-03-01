@@ -210,7 +210,7 @@ const { createConversationManager } = require("./src/services/conversationManage
 const conversationMgr = createConversationManager({
   sqliteDb, logger, clarificationCounters: ctx.clarificationCounters,
 });
-const { loadConversations, saveConversations, upsertConversation,
+const { loadConversations, saveConversations, upsertConversation, appendBotResponse,
   getClarificationKey, incrementClarificationCount, resetClarificationCount } = conversationMgr;
 
 // ── Agent Config Service ──────────────────────────────────────────────────────────
@@ -661,6 +661,7 @@ const webChatPipeline = createWebChatPipeline({
   callLLM, callLLMWithFallback,
   generateEscalationSummary,
   searchKnowledge, recordContentGap,
+  cragEvaluator: ngCragEvaluator,
   buildSystemPrompt,
   buildConversationContext: (memory, userMessages) => chatEngine.buildConversationContext(memory, userMessages, { topicIndex: agentConfig.getTopicIndex(), remoteToolName: REMOTE_TOOL_NAME, classifyTopicWithLLM }),
   buildDeterministicCollectionReply: (memory, activeUserMessages, hasClosedTicketHistory) => chatEngine.buildDeterministicCollectionReply(memory, activeUserMessages, hasClosedTicketHistory, { chatFlowConfig: getChatFlowConfig(), memoryTemplate: agentConfig.getMemoryTemplate(), companyName: COMPANY_NAME }),
@@ -694,7 +695,7 @@ const chatLifecycle = require("./src/routes/chat").mount(app, {
   splitActiveTicketMessages: chatEngine.splitActiveTicketMessages,
   getUserMessages: chatEngine.getUserMessages,
   detectInjection, checkRelevanceLLM: require("./src/middleware/injectionGuard").checkRelevanceLLM, callLLM, GENERIC_REPLY,
-  upsertConversation, loadConversations, saveConversations,
+  upsertConversation, appendBotResponse, loadConversations, saveConversations,
   compressConversationHistory,
   buildConversationContext: (memory, userMessages) => chatEngine.buildConversationContext(memory, userMessages, { topicIndex: agentConfig.getTopicIndex(), remoteToolName: REMOTE_TOOL_NAME, classifyTopicWithLLM }),
   getSupportAvailability,

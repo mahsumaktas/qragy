@@ -11,12 +11,13 @@
  */
 
 const { normalizeForMatching } = require("../../utils/sanitizer.js");
+const { removeStopWords } = require("../../utils/stopWords.js");
 
 function createSearchEngine(deps) {
   const {
     embedText,
     knowledgeTable,
-    ragDistanceThreshold = 0.8,
+    ragDistanceThreshold = 0.6,
     logger = { warn: () => {}, info: () => {} },
   } = deps || {};
 
@@ -53,7 +54,8 @@ function createSearchEngine(deps) {
   function fullTextSearch(knowledgeBase, query, topK = 3) {
     if (!knowledgeBase || !query) return [];
     const normalizedQuery = normalizeForMatching(query);
-    const queryWords = normalizedQuery.split(" ").filter((w) => w.length > 1);
+    const cleanedQuery = removeStopWords(normalizedQuery);
+    const queryWords = cleanedQuery.split(" ").filter((w) => w.length > 1);
     if (queryWords.length === 0) return [];
 
     const scored = [];

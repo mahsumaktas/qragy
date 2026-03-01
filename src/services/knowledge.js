@@ -6,6 +6,8 @@
  * LanceDB vector store + full-text search + RRF hybrid retrieval.
  * Factory pattern — knowledgeTable state encapsulated inside.
  */
+const { removeStopWords } = require("../utils/stopWords.js");
+
 function createKnowledgeService(deps) {
   const {
     lancedb,
@@ -40,7 +42,7 @@ function createKnowledgeService(deps) {
     for (const row of rows) {
       if (!row.question || !row.answer) continue;
       try {
-        const vector = await embedText(row.question);
+        const vector = await embedText(row.question + " " + (row.answer || "").slice(0, 200));
         records.push({ question: row.question, answer: row.answer, source: row.source || "", vector });
       } catch (err) {
         logger.warn("kb", `Embedding hatasi (skip): ${row.question?.slice(0, 40)}`, err);
@@ -63,7 +65,8 @@ function createKnowledgeService(deps) {
       const rows = loadCSVData();
       if (!rows.length) return [];
       const queryLower = query.toLowerCase();
-      const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2);
+      const cleanedQuery = removeStopWords(queryLower);
+      const queryWords = cleanedQuery.split(/\s+/).filter(w => w.length > 2);
       if (!queryWords.length) return [];
 
       const scored = [];

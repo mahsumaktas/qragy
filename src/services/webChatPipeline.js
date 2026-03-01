@@ -96,6 +96,7 @@ function createWebChatPipeline(deps) {
   const chatAuditLog = deps.chatAuditLog || null;
   const qualityScorer = deps.qualityScorer || null;
   const jobQueue = deps.jobQueue || null;
+  const cragEvaluator = deps.cragEvaluator || null;
 
   // ── Shared response builder ────────────────────────────────────────────
 
@@ -568,33 +569,60 @@ function createWebChatPipeline(deps) {
     }
     const knowledgeResults = await searchKnowledge(searchQuery);
 
+    // CRAG evaluation — filter irrelevant RAG results
+    let ragResults = knowledgeResults;
+    if (cragEvaluator && ragResults.length > 0) {
+      try {
+        const cragResult = await cragEvaluator.evaluate(searchQuery, ragResults);
+        if (cragResult.insufficient) {
+          // All results irrelevant — try query rewrite
+          const rewrittenQuery = await cragEvaluator.suggestRewrite(searchQuery, chatHistorySnapshot);
+          if (rewrittenQuery && rewrittenQuery !== searchQuery) {
+            ragResults = await searchKnowledge(rewrittenQuery);
+            logger.info("webChatPipeline:CRAG", "Query rewrite uygulanmis", {
+              sessionId, original: searchQuery.slice(0, 80), rewritten: rewrittenQuery.slice(0, 80),
+              newResultCount: ragResults.length,
+            });
+          } else {
+            ragResults = [];
+          }
+        } else {
+          // Keep only relevant + partial results
+          ragResults = [...cragResult.relevant, ...cragResult.partial];
+        }
+      } catch (cragErr) {
+        logger.warn("webChatPipeline:CRAG", "CRAG evaluator hatasi, orijinal sonuclar kullaniliyor", cragErr);
+        // Fail-open: use original results
+      }
+    }
+
     logger.info("webChatPipeline:RAG", "KB arama sonucu", {
       sessionId,
       searchQuery: searchQuery.slice(0, 100),
       queryChanged: searchQuery !== latestUserMessage,
-      resultCount: knowledgeResults.length,
-      topScore: knowledgeResults[0] ? (knowledgeResults[0].rrfScore || knowledgeResults[0].distance || 0).toFixed(3) : "N/A",
-      topQ: knowledgeResults[0] ? (knowledgeResults[0].question || "").slice(0, 80) : "N/A",
+      resultCount: ragResults.length,
+      topScore: ragResults[0] ? (ragResults[0].rrfScore || ragResults[0].distance || 0).toFixed(3) : "N/A",
+      topQ: ragResults[0] ? (ragResults[0].question || "").slice(0, 80) : "N/A",
     });
 
-    if (knowledgeResults.length === 0 && latestUserMessage.length > 10) {
+    if (ragResults.length === 0 && latestUserMessage.length > 10) {
       logger.info("webChatPipeline:RAG", "Content gap kaydedildi", { sessionId, query: latestUserMessage.slice(0, 80) });
       recordContentGap(latestUserMessage);
     }
-    const sources = knowledgeResults.map(r => ({
+    const sources = ragResults.map(r => ({
       question: r.question,
       answer: (r.answer || "").slice(0, 200),
       score: r.rrfScore || r.distance || 0
     }));
-    const citations = formatCitations ? formatCitations(knowledgeResults) : [];
+    const citations = formatCitations ? formatCitations(ragResults) : [];
 
-    const systemPrompt = buildSystemPrompt(memory, conversationContext, knowledgeResults, { qualityWarning });
+    const systemPrompt = buildSystemPrompt(memory, conversationContext, ragResults, { qualityWarning });
 
     logger.info("webChatPipeline", "LLM cagrisi", {
       sessionId,
       state: conversationContext?.conversationState,
       topic: conversationContext?.currentTopic || null,
-      kbResults: knowledgeResults.length,
+      kbResults: ragResults.length,
       promptLen: systemPrompt.length,
       historyMsgs: contents.length,
     });
@@ -715,7 +743,7 @@ function createWebChatPipeline(deps) {
         source: chatSource,
         memory,
         conversationContext,
-        ragResults: knowledgeResults,
+        ragResults: ragResults,
         promptLen: systemPrompt.length,
         finishReason: geminiResult.finishReason,
         searchQuery: searchQuery !== latestUserMessage ? searchQuery : null,
@@ -739,7 +767,7 @@ function createWebChatPipeline(deps) {
         messageId: sessionId + "-" + Date.now(),
         query: latestUserMessage,
         answer: reply,
-        ragResults: knowledgeResults.map(r => ({
+        ragResults: ragResults.map(r => ({
           answer: (r.answer || "").slice(0, 300),
           _rerankScore: r.rrfScore || r.distance || 0,
         })),

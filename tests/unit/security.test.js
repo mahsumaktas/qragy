@@ -4,7 +4,7 @@ const { securityHeaders } = require("../../src/middleware/security.js");
 describe("Security Middleware", () => {
   it("should set all security headers", () => {
     const headers = {};
-    const req = { secure: false, headers: {} };
+    const req = { secure: false, headers: {}, path: "/" };
     const res = { setHeader(k, v) { headers[k] = v; } };
     let nextCalled = false;
     securityHeaders(req, res, () => { nextCalled = true; });
@@ -21,7 +21,7 @@ describe("Security Middleware", () => {
 
   it("should set HSTS when req.secure is true", () => {
     const headers = {};
-    const req = { secure: true, headers: {} };
+    const req = { secure: true, headers: {}, path: "/" };
     const res = { setHeader(k, v) { headers[k] = v; } };
     securityHeaders(req, res, () => {});
     expect(headers["Strict-Transport-Security"]).toBe("max-age=31536000; includeSubDomains");
@@ -29,7 +29,7 @@ describe("Security Middleware", () => {
 
   it("should set HSTS when x-forwarded-proto is https", () => {
     const headers = {};
-    const req = { secure: false, headers: { "x-forwarded-proto": "https" } };
+    const req = { secure: false, headers: { "x-forwarded-proto": "https" }, path: "/" };
     const res = { setHeader(k, v) { headers[k] = v; } };
     securityHeaders(req, res, () => {});
     expect(headers["Strict-Transport-Security"]).toBe("max-age=31536000; includeSubDomains");
@@ -37,7 +37,7 @@ describe("Security Middleware", () => {
 
   it("should NOT set HSTS on plain HTTP", () => {
     const headers = {};
-    const req = { secure: false, headers: {} };
+    const req = { secure: false, headers: {}, path: "/" };
     const res = { setHeader(k, v) { headers[k] = v; } };
     securityHeaders(req, res, () => {});
     expect(headers["Strict-Transport-Security"]).toBeUndefined();

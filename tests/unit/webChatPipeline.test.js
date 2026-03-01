@@ -234,6 +234,83 @@ describe("webChatPipeline", () => {
     expect(deps.fireWebhook).toHaveBeenCalledWith("ticket_created", expect.any(Object));
   });
 
+  it("filters irrelevant RAG results with CRAG evaluator", async () => {
+    const mockCragEvaluator = {
+      evaluate: vi.fn(async () => ({
+        relevant: [{ question: "Yazici nasil kurulur?", answer: "Ayarlar > Yazicilar" }],
+        partial: [],
+        irrelevant: [{ question: "Unrelated", answer: "Not useful" }],
+        insufficient: false,
+      })),
+      suggestRewrite: vi.fn(async () => "yazici kurulumu"),
+    };
+
+    deps.cragEvaluator = mockCragEvaluator;
+    deps.searchKnowledge = vi.fn(async () => [
+      { question: "Yazici nasil kurulur?", answer: "Ayarlar > Yazicilar", rrfScore: 0.8 },
+      { question: "Unrelated", answer: "Not useful", rrfScore: 0.3 },
+    ]);
+    pipeline = createWebChatPipeline(deps);
+
+    const result = await pipeline.generateAIResponse({
+      contents: [{ role: "user", parts: [{ text: "yazicim calismiyor" }] }],
+      latestUserMessage: "yazicim calismiyor",
+      memory: { branchCode: "EST01" },
+      conversationContext: { currentTopic: null, conversationState: "topic_detection" },
+      hasClosedTicketHistory: false,
+      chatHistorySnapshot: [{ role: "user", content: "yazicim calismiyor" }],
+      sessionId: "crag-test",
+      chatStartTime: Date.now(),
+    });
+
+    expect(mockCragEvaluator.evaluate).toHaveBeenCalled();
+    // Only relevant result should be passed to buildSystemPrompt
+    expect(deps.buildSystemPrompt).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.any(Object),
+      expect.arrayContaining([expect.objectContaining({ question: "Yazici nasil kurulur?" })]),
+      expect.any(Object)
+    );
+    // The irrelevant result should NOT be in the system prompt call
+    const systemPromptArgs = deps.buildSystemPrompt.mock.calls[0][2];
+    expect(systemPromptArgs).not.toContainEqual(expect.objectContaining({ question: "Unrelated" }));
+  });
+
+  it("rewrites query when CRAG finds all results insufficient", async () => {
+    const mockCragEvaluator = {
+      evaluate: vi.fn(async () => ({
+        relevant: [], partial: [], irrelevant: [{ question: "X", answer: "Y" }],
+        insufficient: true,
+      })),
+      suggestRewrite: vi.fn(async () => "yeniden yazilmis sorgu"),
+    };
+
+    let callCount = 0;
+    deps.cragEvaluator = mockCragEvaluator;
+    deps.searchKnowledge = vi.fn(async () => {
+      callCount++;
+      if (callCount === 1) return [{ question: "X", answer: "Y", rrfScore: 0.2 }];
+      return [{ question: "Good result", answer: "Useful", rrfScore: 0.9 }];
+    });
+    pipeline = createWebChatPipeline(deps);
+
+    const result = await pipeline.generateAIResponse({
+      contents: [{ role: "user", parts: [{ text: "test query" }] }],
+      latestUserMessage: "test query",
+      memory: {},
+      conversationContext: { currentTopic: null, conversationState: "topic_detection" },
+      hasClosedTicketHistory: false,
+      chatHistorySnapshot: [],
+      sessionId: "crag-rewrite",
+      chatStartTime: Date.now(),
+    });
+
+    expect(mockCragEvaluator.suggestRewrite).toHaveBeenCalled();
+    // searchKnowledge should be called twice: original + rewritten
+    expect(deps.searchKnowledge).toHaveBeenCalledTimes(2);
+    expect(deps.searchKnowledge).toHaveBeenLastCalledWith("yeniden yazilmis sorgu");
+  });
+
   it("detects escalation pattern", async () => {
     const result = await pipeline.handleEscalation({
       contents: [{ role: "user", parts: [{ text: "temsilci istiyorum" }] }],
