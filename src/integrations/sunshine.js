@@ -162,14 +162,7 @@ function createSunshineIntegration(deps) {
             const isEscalation = ESCALATION_MESSAGE_REGEX.test(result.reply);
             if (isEscalation) {
               const farewell = sunshineConfig.farewellMessage || (DEFAULT_SUNSHINE_CONFIG && DEFAULT_SUNSHINE_CONFIG.farewellMessage) || "";
-              // Agent'a ozet bilgi gonder (internal note olarak gorunur)
-              const parts = [];
-              if (memory.branchCode) parts.push("Sube: " + memory.branchCode);
-              if (memory.fullName) parts.push("Musteri: " + memory.fullName);
-              if (memory.issueSummary) parts.push("Sorun: " + memory.issueSummary);
-              if (parts.length) {
-                await sunshineSendMessage(appId, conversationId, "[Bot Ozeti] " + parts.join(" | "));
-              }
+              // Ozet sadece passControl metadata'sinda gider, kullaniciya mesaj olarak gonderilmez
               await sunshineSendMessage(appId, conversationId, farewell);
               const passed = await sunshinePassControl(appId, conversationId, memory);
               // Escalation basarili — session'i isaretleyip bot'u durdur
