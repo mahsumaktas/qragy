@@ -889,6 +889,7 @@ app.get("/admin", (_req, res) => {
 });
 
 app.get("*", (_req, res) => {
+  res.set("Cache-Control", "no-cache, no-store, must-revalidate");
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
