@@ -9,7 +9,6 @@ function mount(app, deps) {
     fs,
     path,
     loadAllAgentConfig,
-    readTextFileSafe,
     readJsonFileSafe,
     isValidFilename,
     savePromptVersion,

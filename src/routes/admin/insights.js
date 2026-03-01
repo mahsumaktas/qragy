@@ -14,7 +14,6 @@ function mount(app, deps) {
     saveCSVData,
     reingestKnowledgeBase,
     loadContentGaps,
-    saveContentGaps,
     loadFeedback,
     callLLM,
     getProviderConfig,

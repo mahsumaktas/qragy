@@ -3,7 +3,7 @@ const prettier = require("eslint-config-prettier");
 
 module.exports = [
   {
-    ignores: ["node_modules/", "data/", ".worktrees/", "coverage/", "public/"],
+    ignores: ["node_modules/", "data/", ".worktrees/", "coverage/", "public/", "admin-ui/"],
   },
   js.configs.recommended,
   prettier,

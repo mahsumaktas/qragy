@@ -8,7 +8,6 @@ function mount(app, deps) {
     requireAdminAccess,
     fs,
     path,
-    sqliteDb,
     loadTicketsDb,
     getAdminSummary,
     loadConversations,

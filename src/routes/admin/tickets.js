@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Admin Ticket Routes — CRUD, bulk operations, export, assign, notes, priority, prompt versions
+ * Admin Ticket Routes — CRUD, export, assign, notes, priority, prompt versions
  */
 function mount(app, deps) {
   const {
@@ -10,7 +10,6 @@ function mount(app, deps) {
     saveTicketsDb,
     sanitizeTicketForList,
     nowIso,
-    calculateQualityScore,
     recordAuditEvent,
     safeError,
     Papa,
