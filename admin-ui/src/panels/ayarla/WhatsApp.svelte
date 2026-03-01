@@ -47,6 +47,12 @@
       <div class="form-row"><span class="lbl">Aktif</span><Toggle bind:checked={config.enabled} /></div>
     </div>
   </div>
+
+  <div class="card webhook-card">
+    <div class="card-title">Webhook URL</div>
+    <p class="desc">Meta Developer Portal'dan asagidaki URL'yi webhook olarak ekleyin. Verify Token yukaridaki degerle ayni olmali.</p>
+    <input class="input webhook-url" value={config.webhookUrl || ""} readonly onclick={(e) => { e.target.select(); navigator.clipboard?.writeText(e.target.value); showToast("Kopyalandi", "success"); }} />
+  </div>
 {/if}
 
 <style>
@@ -59,4 +65,8 @@
   .form-row { display: flex; align-items: center; justify-content: space-between; }
   .lbl { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
   .input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; color: var(--text); outline: none; }
+  .webhook-card { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .card-title { font-size: 14px; font-weight: 600; margin: 0; }
+  .desc { font-size: 12px; color: var(--text-secondary); margin: 0; }
+  .webhook-url { background: var(--bg-hover); cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: 12px; }
 </style>
