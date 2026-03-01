@@ -536,13 +536,19 @@ app.get("/api-docs", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "api-docs.html"));
 });
 
-// Admin v2 — express.static'ten once handle et (reverse proxy redirect sorununu onlemek icin)
-app.use("/admin-v2", express.static(path.join(__dirname, "public", "admin-v2"), { redirect: false }));
+// Admin v2 — reverse proxy prefix kaybi sorununu onlemek icin redirect YOK
+// /admin-v2 (slash'siz) icin <base> tag inject ederek asset path'leri duzelt
+const ADMIN_V2_DIR = path.join(__dirname, "public", "admin-v2");
+let _adminV2Html = "";
 app.get("/admin-v2", (_req, res) => {
-  // HTTP redirect KULLANMA — 301/302 tarayici/CDN tarafindan cache'lenir ve reverse proxy'de bozulur
-  // JS ile client-side redirect: cache'lenemez, proxy prefix'i korunur
-  res.type("html").send('<!DOCTYPE html><html><head><script>location.replace(location.href+"/")</script></head><body></body></html>');
+  if (!_adminV2Html) {
+    _adminV2Html = fs.readFileSync(path.join(ADMIN_V2_DIR, "index.html"), "utf8");
+  }
+  // <base href="admin-v2/"> relative — browser mevcut URL'e gore cozumler
+  // /proxy-prefix/admin-v2 → base = /proxy-prefix/admin-v2/ → asset'ler dogru yuklenir
+  res.type("html").send(_adminV2Html.replace("<head>", '<head><base href="admin-v2/">'));
 });
+app.use("/admin-v2", express.static(ADMIN_V2_DIR, { redirect: false }));
 
 app.use(express.static(path.join(__dirname, "public")));
 
