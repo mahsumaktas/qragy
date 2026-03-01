@@ -68,9 +68,10 @@ function createSunshineIntegration(deps) {
     const baseUrl = getSunshineBaseUrl();
     const url = baseUrl + "/apps/" + appId + "/conversations/" + conversationId + "/passControl";
     const metadata = { reason: "escalation" };
-    if (meta?.branchCode) metadata["dataCapture.systemField.custom_field.branch_code"] = meta.branchCode;
-    if (meta?.issueSummary) metadata["dataCapture.systemField.description"] = meta.issueSummary;
-    if (meta?.fullName) metadata["dataCapture.systemField.custom_field.full_name"] = meta.fullName;
+    // Tags: Zendesk ticket'a etiket olarak eklenir, agent gorebilir
+    const tags = ["bot-escalation"];
+    if (meta?.branchCode) tags.push("sube-" + meta.branchCode);
+    metadata["dataCapture.systemField.tags"] = tags.join(",");
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
