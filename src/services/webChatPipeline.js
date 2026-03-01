@@ -743,7 +743,7 @@ function createWebChatPipeline(deps) {
         source: chatSource,
         memory,
         conversationContext,
-        ragResults: ragResults,
+        ragResults,
         promptLen: systemPrompt.length,
         finishReason: geminiResult.finishReason,
         searchQuery: searchQuery !== latestUserMessage ? searchQuery : null,

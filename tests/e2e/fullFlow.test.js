@@ -142,6 +142,38 @@ describe("E2E Full Flow Tests", () => {
   });
 
   describe("POST /api/chat", () => {
+    function baseChatDeps(overrides = {}) {
+      const nullPipeline = {
+        runEarlyChecks: vi.fn(() => null),
+        handleTicketCreation: vi.fn(async () => null),
+        handleEscalation: vi.fn(async () => null),
+        handleDeterministicReply: vi.fn(() => null),
+        generateAIResponse: vi.fn(async () => ({ reply: "AI yaniti", source: "gemini" })),
+      };
+      return {
+        checkRateLimit: vi.fn(() => true),
+        RATE_LIMIT_WINDOW_MS: 60000,
+        extractTicketMemory: vi.fn(() => ({ branchCode: "", issueSummary: "" })),
+        splitActiveTicketMessages: vi.fn((msgs) => ({ activeMessages: msgs, hasClosedTicketHistory: false, lastClosedTicketMemory: null })),
+        getUserMessages: vi.fn((msgs) => msgs.filter((m) => m.role === "user").map((m) => m.content)),
+        detectInjection: vi.fn(() => ({ blocked: false, suspicious: false })),
+        GENERIC_REPLY: "Yardimci olabilir miyim?",
+        upsertConversation: vi.fn(),
+        appendBotResponse: vi.fn(),
+        loadConversations: vi.fn(() => ({ conversations: [] })),
+        saveConversations: vi.fn(),
+        compressConversationHistory: vi.fn(async (msgs) => msgs),
+        buildConversationContext: vi.fn(async () => ({ conversationState: "topic_detection", currentTopic: null })),
+        getSupportAvailability: vi.fn(() => ({ isOpen: true })),
+        getGoogleModel: vi.fn(() => "gemini-2.0-flash"),
+        recordAnalyticsEvent: vi.fn(),
+        recordLLMError: vi.fn(),
+        buildMissingFieldsReply: vi.fn(() => "Fallback"),
+        webChatPipeline: nullPipeline,
+        ...overrides,
+      };
+    }
+
     it("chat endpoint handles message", async () => {
       const app = express();
       app.use(express.json());
@@ -158,42 +190,10 @@ describe("E2E Full Flow Tests", () => {
         handleTicketCreation: vi.fn(async () => null),
         handleEscalation: vi.fn(async () => null),
         handleDeterministicReply: vi.fn(() => null),
-        generateAIResponse: vi.fn(async () => ({
-          reply: "AI yaniti",
-          source: "gemini",
-        })),
+        generateAIResponse: vi.fn(async () => ({ reply: "AI yaniti", source: "gemini" })),
       };
 
-      mount(app, {
-        checkRateLimit: vi.fn(() => true),
-        RATE_LIMIT_WINDOW_MS: 60000,
-        extractTicketMemory: vi.fn(() => ({ branchCode: "", issueSummary: "" })),
-        splitActiveTicketMessages: vi.fn((msgs) => ({
-          activeMessages: msgs,
-          hasClosedTicketHistory: false,
-          lastClosedTicketMemory: null,
-        })),
-        getUserMessages: vi.fn((msgs) =>
-          msgs.filter((m) => m.role === "user").map((m) => m.content)
-        ),
-        detectInjection: vi.fn(() => ({ blocked: false })),
-        GENERIC_REPLY: "Yardimci olabilir miyim?",
-        upsertConversation: vi.fn(),
-        appendBotResponse: vi.fn(),
-        loadConversations: vi.fn(() => ({ conversations: [] })),
-        saveConversations: vi.fn(),
-        compressConversationHistory: vi.fn(async (msgs) => msgs),
-        buildConversationContext: vi.fn(async () => ({
-          conversationState: "topic_detection",
-          currentTopic: null,
-        })),
-        getSupportAvailability: vi.fn(() => ({ isOpen: true })),
-        getGoogleModel: vi.fn(() => "gemini-2.0-flash"),
-        recordAnalyticsEvent: vi.fn(),
-        recordLLMError: vi.fn(),
-        buildMissingFieldsReply: vi.fn(() => "Fallback mesaji"),
-        webChatPipeline: mockPipeline,
-      });
+      mount(app, baseChatDeps({ webChatPipeline: mockPipeline }));
 
       const res = await request(app)
         .post("/api/chat")
@@ -213,37 +213,11 @@ describe("E2E Full Flow Tests", () => {
       app.use(express.json());
       const { mount } = await import("../../src/routes/chat.js");
 
-      const mockPipeline = {
-        runEarlyChecks: vi.fn(() => null),
-        handleTicketCreation: vi.fn(async () => null),
-        handleEscalation: vi.fn(async () => null),
-        handleDeterministicReply: vi.fn(() => null),
-        generateAIResponse: vi.fn(async () => ({ reply: "AI yaniti", source: "gemini" })),
-      };
-
-      mount(app, {
-        checkRateLimit: vi.fn(() => true),
-        RATE_LIMIT_WINDOW_MS: 60000,
-        extractTicketMemory: vi.fn(() => ({ branchCode: "", issueSummary: "" })),
-        splitActiveTicketMessages: vi.fn((msgs) => ({ activeMessages: msgs, hasClosedTicketHistory: false, lastClosedTicketMemory: null })),
-        getUserMessages: vi.fn((msgs) => msgs.filter((m) => m.role === "user").map((m) => m.content)),
+      mount(app, baseChatDeps({
         detectInjection: vi.fn(() => ({ blocked: false, suspicious: true })),
         checkRelevanceLLM: vi.fn(async () => ({ relevant: false, reason: "off-topic" })),
         callLLM: vi.fn(async () => ({ reply: "test" })),
-        GENERIC_REPLY: "Yardimci olabilir miyim?",
-        upsertConversation: vi.fn(),
-        appendBotResponse: vi.fn(),
-        loadConversations: vi.fn(() => ({ conversations: [] })),
-        saveConversations: vi.fn(),
-        compressConversationHistory: vi.fn(async (msgs) => msgs),
-        buildConversationContext: vi.fn(async () => ({ conversationState: "topic_detection", currentTopic: null })),
-        getSupportAvailability: vi.fn(() => ({ isOpen: true })),
-        getGoogleModel: vi.fn(() => "gemini-2.0-flash"),
-        recordAnalyticsEvent: vi.fn(),
-        recordLLMError: vi.fn(),
-        buildMissingFieldsReply: vi.fn(() => "Fallback"),
-        webChatPipeline: mockPipeline,
-      });
+      }));
 
       const res = await request(app)
         .post("/api/chat")
@@ -261,39 +235,21 @@ describe("E2E Full Flow Tests", () => {
 
       const recordAnalyticsEvent = vi.fn();
       const recordLLMError = vi.fn();
-
       const mockPipeline = {
         runEarlyChecks: vi.fn(() => { throw Object.assign(new Error("quota exceeded"), { status: 429 }); }),
       };
 
-      mount(app, {
-        checkRateLimit: vi.fn(() => true),
-        RATE_LIMIT_WINDOW_MS: 60000,
-        extractTicketMemory: vi.fn(() => ({})),
-        splitActiveTicketMessages: vi.fn((msgs) => ({ activeMessages: msgs, hasClosedTicketHistory: false, lastClosedTicketMemory: null })),
-        getUserMessages: vi.fn((msgs) => msgs.filter(m => m.role === "user").map(m => m.content)),
-        detectInjection: vi.fn(() => ({ blocked: false, suspicious: false })),
-        GENERIC_REPLY: "Yardimci olabilir miyim?",
-        upsertConversation: vi.fn(),
-        appendBotResponse: vi.fn(),
-        loadConversations: vi.fn(() => ({ conversations: [] })),
-        saveConversations: vi.fn(),
-        compressConversationHistory: vi.fn(async (msgs) => msgs),
-        buildConversationContext: vi.fn(async () => ({ conversationState: "topic_detection", currentTopic: null })),
-        getSupportAvailability: vi.fn(() => ({ isOpen: true })),
-        getGoogleModel: vi.fn(() => "gemini-2.0-flash"),
+      mount(app, baseChatDeps({
         recordAnalyticsEvent,
         recordLLMError,
-        buildMissingFieldsReply: vi.fn(() => "Fallback"),
         webChatPipeline: mockPipeline,
         maskCredentials: vi.fn(t => t),
-      });
+      }));
 
       const res = await request(app)
         .post("/api/chat")
         .send({ messages: [{ role: "user", content: "test" }], sessionId: "err-test" });
 
-      // Error should be categorized
       expect(recordLLMError).toHaveBeenCalled();
       expect(recordAnalyticsEvent).toHaveBeenCalledWith(
         expect.objectContaining({ source: "error", errorType: "rate-limit" })
@@ -307,43 +263,13 @@ describe("E2E Full Flow Tests", () => {
 
       const maskCredentials = vi.fn((text) => text.replace(/\b\d{6,}\b/g, "[MASKED]"));
 
-      const mockPipeline = {
-        runEarlyChecks: vi.fn(() => null),
-        handleTicketCreation: vi.fn(async () => null),
-        handleEscalation: vi.fn(async () => null),
-        handleDeterministicReply: vi.fn(() => null),
-        generateAIResponse: vi.fn(async () => ({ reply: "Sifrenizi paylasmayin", source: "gemini" })),
-      };
-
-      mount(app, {
-        checkRateLimit: vi.fn(() => true),
-        RATE_LIMIT_WINDOW_MS: 60000,
-        extractTicketMemory: vi.fn(() => ({ branchCode: "", issueSummary: "" })),
-        splitActiveTicketMessages: vi.fn((msgs) => ({ activeMessages: msgs, hasClosedTicketHistory: false, lastClosedTicketMemory: null })),
-        getUserMessages: vi.fn((msgs) => msgs.filter((m) => m.role === "user").map((m) => m.content)),
-        detectInjection: vi.fn(() => ({ blocked: false, suspicious: false })),
-        GENERIC_REPLY: "Yardimci olabilir miyim?",
-        upsertConversation: vi.fn(),
-        appendBotResponse: vi.fn(),
-        loadConversations: vi.fn(() => ({ conversations: [] })),
-        saveConversations: vi.fn(),
-        compressConversationHistory: vi.fn(async (msgs) => msgs),
-        buildConversationContext: vi.fn(async () => ({ conversationState: "topic_detection", currentTopic: null })),
-        getSupportAvailability: vi.fn(() => ({ isOpen: true })),
-        getGoogleModel: vi.fn(() => "gemini-2.0-flash"),
-        recordAnalyticsEvent: vi.fn(),
-        recordLLMError: vi.fn(),
-        buildMissingFieldsReply: vi.fn(() => "Fallback"),
-        webChatPipeline: mockPipeline,
-        maskCredentials,
-      });
+      mount(app, baseChatDeps({ maskCredentials }));
 
       const res = await request(app)
         .post("/api/chat")
         .send({ messages: [{ role: "user", content: "sifrem 123456789" }], sessionId: "cred-test" });
 
       expect(res.status).toBe(200);
-      // maskCredentials should have been called (it's applied to contents)
       expect(maskCredentials).toHaveBeenCalled();
     });
   });

@@ -2,7 +2,7 @@
 
 const TURKISH_STOP_WORDS = new Set([
   "bir", "bu", "su", "o", "ve", "ile", "de", "da", "den", "dan",
-  "icin", "ki", "mi", "mu", "mi", "mi", "ne", "ama", "fakat", "ancak",
+  "icin", "ki", "mi", "mu", "ne", "ama", "fakat", "ancak",
   "gibi", "kadar", "daha", "en", "cok", "az", "her", "hic", "bazi",
   "tum", "butun", "benim", "senin", "onun", "bizim", "sizin", "onlarin",
   "ben", "sen", "biz", "siz", "onlar", "ise", "veya", "ya", "hem",

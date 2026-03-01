@@ -148,7 +148,7 @@ function mount(app, deps) {
       // Credential masking — mask sensitive data before sending to LLM
       if (typeof maskCredentials === "function") {
         contents.forEach(c => {
-          if (c.parts?.[0]?.text) c.parts[0].text = maskCredentials(c.parts[0].text);
+          if (c.parts) c.parts.forEach(p => { if (p.text) p.text = maskCredentials(p.text); });
         });
         chatHistorySnapshot.forEach(m => {
           if (m.content) m.content = maskCredentials(m.content);
