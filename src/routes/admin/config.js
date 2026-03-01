@@ -134,23 +134,124 @@ function mount(app, deps) {
     }
   });
 
-  app.post("/api/admin/sunshine-config/test", requireAdminAccess, async (_req, res) => {
-    try {
-      const sunshineConfigVal = getSunshineConfig();
-      const scVars = getZendeskScVars();
-      const appId = sunshineConfigVal.appId || scVars.ZENDESK_SC_APP_ID;
-      const keyId = sunshineConfigVal.keyId || scVars.ZENDESK_SC_KEY_ID;
-      const keySecret = sunshineConfigVal.keySecret || scVars.ZENDESK_SC_KEY_SECRET;
-      const subdomain = sunshineConfigVal.subdomain || scVars.ZENDESK_SC_SUBDOMAIN;
+  // ── Sunshine Helpers ────────────────────────────────────────────────────
+  const ZD_ANSWER_BOT = "zd:answerBot";
+  const ZD_AGENT_WORKSPACE = "zd:agentWorkspace";
+  const ZD_BUILTIN_TYPES = new Set([ZD_ANSWER_BOT, ZD_AGENT_WORKSPACE]);
 
-      if (!appId || !keyId || !keySecret || !subdomain) {
-        return res.json({ ok: false, error: "Eksik ayarlar: appId, keyId, keySecret ve subdomain zorunludur." });
+  function resolveSunshineCredentials() {
+    const cfg = getSunshineConfig();
+    const env = getZendeskScVars();
+    const appId = cfg.appId || env.ZENDESK_SC_APP_ID;
+    const keyId = cfg.keyId || env.ZENDESK_SC_KEY_ID;
+    const keySecret = cfg.keySecret || env.ZENDESK_SC_KEY_SECRET;
+    const subdomain = cfg.subdomain || env.ZENDESK_SC_SUBDOMAIN;
+    if (!appId || !keyId || !keySecret || !subdomain) return null;
+    const baseUrl = "https://" + subdomain + ".zendesk.com/sc/v2";
+    const headers = {
+      "Authorization": "Basic " + Buffer.from(keyId + ":" + keySecret).toString("base64"),
+      "Content-Type": "application/json"
+    };
+    return { appId, baseUrl, headers };
+  }
+
+  async function zdFetch(url, opts, label) {
+    const resp = await fetch(url, opts);
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => "");
+      return { ok: false, error: label + ": HTTP " + resp.status + " " + errText.slice(0, 200) };
+    }
+    const data = await resp.json().catch(() => ({}));
+    return { ok: true, data };
+  }
+
+  // ── Switchboard Auto-Setup ──────────────────────────────────────────────
+  app.post("/api/admin/sunshine-config/setup-switchboard", requireAdminAccess, async (_req, res) => {
+    try {
+      const creds = resolveSunshineCredentials();
+      if (!creds) return res.json({ ok: false, error: "Eksik ayarlar: once baglanti bilgilerini girin ve test edin." });
+      const { appId, baseUrl, headers: hdrs } = creds;
+
+      // 1. Switchboard listele
+      const swResult = await zdFetch(baseUrl + "/apps/" + appId + "/switchboards", { headers: hdrs }, "Switchboard listelenemedi");
+      if (!swResult.ok) return res.json(swResult);
+      const switchboards = swResult.data.switchboards || [];
+      if (!switchboards.length) return res.json({ ok: false, error: "Switchboard bulunamadi. Zendesk'te Switchboard'u aktif edin." });
+      const switchboardId = switchboards[0].id || switchboards[0]._id;
+
+      // 2. Switchboard entegrasyonlarini listele
+      const siResult = await zdFetch(baseUrl + "/apps/" + appId + "/switchboards/" + switchboardId + "/switchboardIntegrations", { headers: hdrs }, "Switchboard entegrasyonlari listelenemedi");
+      if (!siResult.ok) return res.json(siResult);
+      const swIntegrations = siResult.data.switchboardIntegrations || [];
+
+      // 3. App entegrasyonlarini listele
+      const intResult = await zdFetch(baseUrl + "/apps/" + appId + "/integrations", { headers: hdrs }, "Entegrasyonlar listelenemedi");
+      if (!intResult.ok) return res.json(intResult);
+      const integrations = intResult.data.integrations || [];
+
+      // answerBot ve agentWorkspace bul
+      const agentWorkspace = swIntegrations.find(i => i.name === "zd-agentWorkspace" || i.integrationType === ZD_AGENT_WORKSPACE);
+      if (!agentWorkspace) return res.json({ ok: false, error: "agentWorkspace bulunamadi. Zendesk Switchboard'da Agent Workspace aktif olmali." });
+      const agentWorkspaceSwId = agentWorkspace.id || agentWorkspace._id;
+
+      const answerBot = swIntegrations.find(i => i.name === "zd-answerBot" || i.integrationType === ZD_ANSWER_BOT);
+
+      // Custom bot entegrasyonunu bul (Zendesk built-in olmayan)
+      const customInt = integrations.find(i => !ZD_BUILTIN_TYPES.has(i.type) && i.status !== "inactive");
+      if (!customInt) return res.json({ ok: false, error: "Ozel bot entegrasyonu bulunamadi. Zendesk'te bir Custom/API entegrasyonu olusturun." });
+      const customIntId = customInt.id || customInt._id;
+
+      // Bot zaten switchboard'da mi?
+      const swBase = baseUrl + "/apps/" + appId + "/switchboards/" + switchboardId + "/switchboardIntegrations";
+      const existingBot = swIntegrations.find(i => i.integrationId === customIntId);
+      let botSwId;
+
+      if (existingBot) {
+        botSwId = existingBot.id || existingBot._id;
+        const r = await zdFetch(swBase + "/" + botSwId, {
+          method: "PATCH", headers: hdrs,
+          body: JSON.stringify({ nextSwitchboardIntegrationId: agentWorkspaceSwId })
+        }, "Bot entegrasyonu guncellenemedi");
+        if (!r.ok) return res.json(r);
+      } else {
+        const r = await zdFetch(swBase, {
+          method: "POST", headers: hdrs,
+          body: JSON.stringify({
+            name: customInt.displayName || "qragy-bot",
+            integrationId: customIntId,
+            nextSwitchboardIntegrationId: agentWorkspaceSwId,
+            deliverStandbyEvents: false
+          })
+        }, "Bot switchboard'a eklenemedi");
+        if (!r.ok) return res.json(r);
+        botSwId = (r.data.switchboardIntegration || {}).id || (r.data.switchboardIntegration || {})._id;
       }
 
-      const url = "https://" + subdomain + ".zendesk.com/sc/v2/apps/" + appId;
-      const resp = await fetch(url, {
+      // answerBot → bot yonlendirmesi
+      if (answerBot) {
+        const answerBotSwId = answerBot.id || answerBot._id;
+        const r = await zdFetch(swBase + "/" + answerBotSwId, {
+          method: "PATCH", headers: hdrs,
+          body: JSON.stringify({ nextSwitchboardIntegrationId: botSwId })
+        }, "answerBot yonlendirmesi guncellenemedi");
+        if (!r.ok) return res.json(r);
+      }
+
+      const chain = answerBot ? "answerBot -> Qragy Bot -> agentWorkspace" : "Qragy Bot -> agentWorkspace";
+      res.json({ ok: true, message: "Switchboard yapilandirildi! Zincir: " + chain });
+    } catch (err) {
+      res.json({ ok: false, error: safeError(err, "switchboard-setup") });
+    }
+  });
+
+  app.post("/api/admin/sunshine-config/test", requireAdminAccess, async (_req, res) => {
+    try {
+      const creds = resolveSunshineCredentials();
+      if (!creds) return res.json({ ok: false, error: "Eksik ayarlar: appId, keyId, keySecret ve subdomain zorunludur." });
+
+      const resp = await fetch(creds.baseUrl + "/apps/" + creds.appId, {
         method: "GET",
-        headers: { "Authorization": "Basic " + Buffer.from(keyId + ":" + keySecret).toString("base64") }
+        headers: creds.headers
       });
 
       if (resp.ok) {
