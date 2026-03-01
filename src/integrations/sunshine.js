@@ -76,7 +76,7 @@ function createSunshineIntegration(deps) {
         "Authorization": getSunshineAuthHeader()
       },
       body: JSON.stringify({
-        switchboardIntegration: { next: true },
+        switchboardIntegration: "next",
         metadata: { reason: "escalation" }
       }),
       signal: controller.signal
@@ -131,6 +131,14 @@ function createSunshineIntegration(deps) {
             }
 
             const session = sessions[sessionKey];
+
+            // Escalation sonrasi bot cevap vermemeli — kontrolu agent'a birakmis
+            if (session.escalated) {
+              logger.info("Sunshine", "Escalated session, bot atlandi", { conversationId });
+              saveSunshineSessions(sessions);
+              return;
+            }
+
             const userText = (message.content.text || "").slice(0, 1000);
             session.messages.push({ role: "user", content: userText });
             session.lastActivity = Date.now();
@@ -153,7 +161,12 @@ function createSunshineIntegration(deps) {
             if (isEscalation) {
               const farewell = sunshineConfig.farewellMessage || (DEFAULT_SUNSHINE_CONFIG && DEFAULT_SUNSHINE_CONFIG.farewellMessage) || "";
               await sunshineSendMessage(appId, conversationId, farewell);
-              await sunshinePassControl(appId, conversationId);
+              const passed = await sunshinePassControl(appId, conversationId);
+              // Escalation basarili — session'i isaretleyip bot'u durdur
+              session.escalated = true;
+              session.escalatedAt = Date.now();
+              saveSunshineSessions(sessions);
+              logger.info("Sunshine", `Escalation ${passed ? "basarili" : "basarisiz"}`, { conversationId });
             } else {
               await sunshineSendMessage(appId, conversationId, result.reply);
             }
