@@ -78,20 +78,6 @@ function mount(app, deps) {
     }
   });
 
-  // ── Topics: Get one ─────────────────────────────────────────────────────
-  app.get("/api/admin/agent/topics/:topicId", requireAdminAccess, (req, res) => {
-    try {
-      const index = readJsonFileSafe(path.join(TOPICS_DIR, "_index.json"), { topics: [] });
-      const topic = index.topics.find(t => t.id === req.params.topicId);
-      if (!topic) return res.status(404).json({ error: "Konu bulunamadi." });
-
-      const content = readTextFileSafe(path.join(TOPICS_DIR, topic.file), "");
-      return res.json({ ok: true, topic, content });
-    } catch (err) {
-      return res.status(500).json({ error: safeError(err, "api") });
-    }
-  });
-
   // ── Topics: Update ──────────────────────────────────────────────────────
   app.put("/api/admin/agent/topics/:topicId", requireAdminAccess, (req, res) => {
     try {

@@ -27,3 +27,11 @@ kb_doc*
 qa-report*
 tests/manual/
 tests/eval/history.json
+
+# Screenshots & design artifacts (root)
+*.png
+docs/plans/
+
+# Stress test outputs
+tests/stress-results.jsonl
+tests/stress-summary.txt

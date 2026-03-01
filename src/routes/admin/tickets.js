@@ -100,52 +100,6 @@ function mount(app, deps) {
     });
   });
 
-  // ── Bulk Ticket Operations ──────────────────────────────────────────────
-  app.post("/api/admin/tickets/bulk", requireAdminAccess, (req, res) => {
-    const { ticketIds, action, value } = req.body || {};
-    if (!Array.isArray(ticketIds) || !ticketIds.length) {
-      return res.status(400).json({ error: "ticketIds dizisi zorunludur." });
-    }
-    const validActions = ["close", "assign", "priority"];
-    if (!validActions.includes(action)) {
-      return res.status(400).json({ error: "action: close/assign/priority olmalidir." });
-    }
-
-    const db = loadTicketsDb();
-    const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
-    let updated = 0;
-
-    for (const ticketId of ticketIds.slice(0, 100)) {
-      const ticket = db.tickets.find(t => t.id === ticketId);
-      if (!ticket) continue;
-
-      const timestamp = nowIso();
-      ticket.updatedAt = timestamp;
-      ticket.events = Array.isArray(ticket.events) ? ticket.events : [];
-
-      if (action === "close") {
-        ticket.status = "handoff_success";
-        ticket.resolvedAt = timestamp;
-        ticket.qualityScore = calculateQualityScore(ticket);
-        ticket.events.push({ at: timestamp, type: "bulk_closed", message: "Toplu islemle kapatildi." });
-      } else if (action === "assign") {
-        ticket.assignedTo = String(value || "").trim().slice(0, 100);
-        ticket.events.push({ at: timestamp, type: "bulk_assigned", message: `Toplu islemle ${ticket.assignedTo || "?"} atandi.` });
-      } else if (action === "priority") {
-        const validPriority = ["low", "normal", "high"];
-        if (validPriority.includes(value)) {
-          ticket.priority = value;
-          ticket.events.push({ at: timestamp, type: "bulk_priority", message: `Toplu islemle oncelik ${value} yapildi.` });
-        }
-      }
-      updated++;
-    }
-
-    saveTicketsDb(db);
-    recordAuditEvent("bulk_" + action, `${updated} ticket guncellendi`, clientIp);
-    return res.json({ ok: true, updated });
-  });
-
   // ── Export (CSV/JSON) ───────────────────────────────────────────────────
   app.get("/api/admin/tickets/export", requireAdminAccess, (req, res) => {
     const format = String(req.query.format || "json").toLowerCase();

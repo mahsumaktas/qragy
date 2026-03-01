@@ -1,5 +1,6 @@
 const { detectInjection, validateOutput } = require("../../src/middleware/injectionGuard.js");
-const { fullTextSearch } = require("../../src/services/rag.js");
+const { createSearchEngine } = require("../../src/services/rag/searchEngine");
+const { fullTextSearch } = createSearchEngine({});
 const { detectTopicByKeyword } = require("../../src/services/topic.js");
 const { validateBotResponse } = require("../../src/services/responseValidator.js");
 

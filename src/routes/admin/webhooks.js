@@ -9,7 +9,6 @@ function mount(app, deps) {
     crypto,
     loadWebhooks,
     saveWebhooks,
-    loadWebhookDeliveryLog,
     safeError,
   } = deps;
 
@@ -51,12 +50,6 @@ function mount(app, deps) {
     if (secret !== undefined) hook.secret = secret;
     saveWebhooks(hooks);
     return res.json({ ok: true, webhook: hook });
-  });
-
-  // ── Webhooks: Deliveries ────────────────────────────────────────────────
-  app.get("/api/admin/webhooks/deliveries", requireAdminAccess, (_req, res) => {
-    const data = loadWebhookDeliveryLog();
-    return res.json({ ok: true, deliveries: (data.deliveries || []).slice(-50).reverse() });
   });
 
   // ── Webhooks: Delete ────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 "use strict";
 
-const { formatCitations } = require("../../src/services/rag.js");
+const { createSearchEngine } = require("../../src/services/rag/searchEngine");
+const { formatCitations } = createSearchEngine({});
 
 describe("formatCitations", () => {
   it("formats results correctly", () => {

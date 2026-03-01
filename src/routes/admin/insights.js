@@ -183,18 +183,6 @@ function mount(app, deps) {
     return res.json({ ok: true, gaps: sorted });
   });
 
-  app.delete("/api/admin/content-gaps/:index", requireAdminAccess, (req, res) => {
-    const data = loadContentGaps();
-    const idx = Number(req.params.index);
-    const sorted = (data.gaps || []).sort((a, b) => b.count - a.count);
-    if (idx >= 0 && idx < sorted.length) {
-      const query = sorted[idx].query;
-      data.gaps = data.gaps.filter(g => g.query !== query);
-      saveContentGaps(data);
-    }
-    return res.json({ ok: true });
-  });
-
   // ── Feedback ────────────────────────────────────────────────────────────
   app.get("/api/admin/feedback", requireAdminAccess, (_req, res) => {
     const data = loadFeedback();

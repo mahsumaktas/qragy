@@ -35,24 +35,16 @@
     }
   });
 
-  async function selectFile(fileObj) {
+  function selectFile(fileObj) {
     const filename = fileObj.name || fileObj;
     selectedFile = filename;
-    // Eger hash map'ten gelen data varsa, direkt kullan (gereksiz API call yapma)
+    // onMount'ta tum data yukleniyor — files state'indeki mevcut data'yi kullan
     if (fileObj.data !== undefined) {
       content = typeof fileObj.data === "string" ? fileObj.data : JSON.stringify(fileObj.data, null, 2);
-      checkJson(content);
-      return;
-    }
-    try {
-      const res = await api.get("admin/agent/memory/" + encodeURIComponent(filename));
-      content = typeof res.content === "string" ? res.content : JSON.stringify(res.content || res, null, 2);
-      checkJson(content);
-    } catch (e) {
-      showToast("Dosya okunamadi: " + e.message, "error");
+    } else {
       content = "";
-      jsonValid = null;
     }
+    checkJson(content);
   }
 
   async function save() {

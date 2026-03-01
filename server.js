@@ -36,7 +36,7 @@ const { detectInjection, validateOutput, GENERIC_REPLY } = require("./src/middle
 const { maskPII, normalizeForMatching, maskCredentials } = require("./src/utils/sanitizer.js");
 const { validateBotResponse: validateBotResponseFn } = require("./src/services/responseValidator.js");
 const { invalidateTopicCache } = require("./src/services/topic.js");
-const { RAG_DISTANCE_THRESHOLD, formatCitations } = require("./src/services/rag.js");
+const RAG_DISTANCE_THRESHOLD = parseFloat(process.env.RAG_DISTANCE_THRESHOLD) || 0.6;
 const { safeError } = require("./src/utils/errorHelper.js");
 const chatEngine = require("./src/services/chatEngine");
 const { createAnalyticsService } = require("./src/services/analytics");
@@ -338,6 +338,7 @@ const ngSearchEngine = createSearchEngine({
   ragDistanceThreshold: RAG_DISTANCE_THRESHOLD,
   logger,
 });
+const formatCitations = ngSearchEngine.formatCitations;
 const ngReranker = createReranker({
   callLLM, getProviderConfig, logger,
   cohereApiKey: process.env.COHERE_API_KEY || "",
