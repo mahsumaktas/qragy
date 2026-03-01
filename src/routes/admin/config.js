@@ -104,10 +104,11 @@ function mount(app, deps) {
     const masked = { ...sunshineConfigVal };
     if (masked.keySecret) masked.keySecret = masked.keySecret.slice(0, 4) + "****" + masked.keySecret.slice(-4);
     if (masked.webhookSecret) masked.webhookSecret = masked.webhookSecret.slice(0, 4) + "****" + masked.webhookSecret.slice(-4);
-    // Webhook URL'yi otomatik hesapla — kullanici bunu Zendesk'e yapistirmali
-    const proto = req.headers["x-forwarded-proto"] || req.protocol || "https";
-    const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3001";
-    masked.webhookUrl = `${proto}://${host}/api/sunshine/webhook`;
+    // Webhook URL — PUBLIC_URL env'den al (reverse proxy prefix dahil)
+    const publicUrl = (process.env.PUBLIC_URL || "").replace(/\/+$/, "");
+    masked.webhookUrl = publicUrl
+      ? `${publicUrl}/api/sunshine/webhook`
+      : `${req.protocol}://${req.headers.host || "localhost:3001"}/api/sunshine/webhook`;
     res.json({ ok: true, config: masked, defaults: DEFAULT_SUNSHINE_CONFIG });
   });
 
