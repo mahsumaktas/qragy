@@ -73,6 +73,54 @@
     }
   }
 
+  // ── Ticket Actions ─────────────────────────────────────────
+  let assignInput = $state("");
+  let priorityInput = $state("");
+  let noteInput = $state("");
+
+  async function reloadTicket(id) {
+    try {
+      const res = await api.get("admin/tickets/" + encodeURIComponent(id));
+      selectedTicket = res.ticket || res;
+    } catch (_) { /* silent */ }
+  }
+
+  async function assignTicket() {
+    if (!assignInput.trim()) return;
+    try {
+      await api.put("admin/tickets/" + encodeURIComponent(selectedTicket.id) + "/assign", { assignedTo: assignInput.trim() });
+      showToast("Atandi: " + assignInput.trim(), "success");
+      assignInput = "";
+      await reloadTicket(selectedTicket.id);
+    } catch (e) {
+      showToast("Atama hatasi: " + e.message, "error");
+    }
+  }
+
+  async function changePriority() {
+    if (!priorityInput) return;
+    try {
+      await api.put("admin/tickets/" + encodeURIComponent(selectedTicket.id) + "/priority", { priority: priorityInput });
+      showToast("Oncelik degistirildi: " + priorityInput, "success");
+      priorityInput = "";
+      await reloadTicket(selectedTicket.id);
+    } catch (e) {
+      showToast("Oncelik hatasi: " + e.message, "error");
+    }
+  }
+
+  async function addNote() {
+    if (!noteInput.trim()) return;
+    try {
+      await api.post("admin/tickets/" + encodeURIComponent(selectedTicket.id) + "/notes", { note: noteInput.trim() });
+      showToast("Not eklendi", "success");
+      noteInput = "";
+      await reloadTicket(selectedTicket.id);
+    } catch (e) {
+      showToast("Not hatasi: " + e.message, "error");
+    }
+  }
+
   function exportCsv() {
     const params = new URLSearchParams({ format: "csv", token: getToken() });
     if (statusFilter) params.set("status", statusFilter);
@@ -125,6 +173,34 @@
     <div class="detail-header">
       <h2>{selectedTicket.id}</h2>
       <Badge variant={statusColors[selectedTicket.status] || "gray"}>{selectedTicket.status?.replace(/_/g, " ")}</Badge>
+    </div>
+    <div class="ticket-actions">
+      <div class="action-group">
+        <label>Atama</label>
+        <div class="action-row">
+          <input class="input action-input" type="text" placeholder="Temsilci adi" bind:value={assignInput} />
+          <Button onclick={assignTicket} variant="primary" size="sm">Ata</Button>
+        </div>
+      </div>
+      <div class="action-group">
+        <label>Oncelik</label>
+        <div class="action-row">
+          <select class="select" bind:value={priorityInput}>
+            <option value="">Sec...</option>
+            <option value="low">Dusuk</option>
+            <option value="normal">Normal</option>
+            <option value="high">Yuksek</option>
+          </select>
+          <Button onclick={changePriority} variant="primary" size="sm">Degistir</Button>
+        </div>
+      </div>
+      <div class="action-group">
+        <label>Not Ekle</label>
+        <div class="action-row">
+          <textarea class="input action-textarea" placeholder="Dahili not..." bind:value={noteInput} rows="2"></textarea>
+          <Button onclick={addNote} variant="primary" size="sm">Ekle</Button>
+        </div>
+      </div>
     </div>
     <div class="detail-grid">
       <div class="info-card">
@@ -244,4 +320,11 @@
   .note-item { padding: 8px 0; border-bottom: 1px solid var(--border-light); }
   .note-meta { font-size: 11px; color: var(--text-muted); }
   .note-item p { font-size: 13px; margin-top: 4px; }
+
+  .ticket-actions { display: flex; gap: 16px; flex-wrap: wrap; padding: 12px 16px; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-light); box-shadow: var(--shadow); }
+  .action-group { display: flex; flex-direction: column; gap: 4px; min-width: 180px; flex: 1; }
+  .action-group label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
+  .action-row { display: flex; gap: 6px; align-items: flex-start; }
+  .action-input { flex: 1; min-width: 0; }
+  .action-textarea { flex: 1; min-width: 0; resize: vertical; font-family: inherit; font-size: 13px; }
 </style>

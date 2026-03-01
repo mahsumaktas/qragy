@@ -114,7 +114,11 @@
           <tr>
             <td class="mono">{w.url}</td>
             <td>{(w.events || []).join(", ")}</td>
-            <td><Badge variant={w.active !== false ? "green" : "gray"}>{w.active !== false ? "aktif" : "pasif"}</Badge></td>
+            <td>
+              <button class="status-toggle" class:active={w.active !== false} onclick={() => toggleActive(w)} title={w.active !== false ? "Devre disi birak" : "Etkinlestir"}>
+                <Badge variant={w.active !== false ? "green" : "gray"}>{w.active !== false ? "aktif" : "pasif"}</Badge>
+              </button>
+            </td>
             <td class="actions">
               <Button onclick={() => testHook(w.id || w._id)} variant="ghost" size="sm">Test</Button>
               <Button onclick={() => openEdit(w)} variant="ghost" size="sm">Duzenle</Button>
@@ -160,6 +164,8 @@
   td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); color: var(--text-secondary); }
   .mono { font-family: "JetBrains Mono", monospace; font-size: 12px; }
   .actions { display: flex; gap: 4px; }
+  .status-toggle { background: none; border: none; cursor: pointer; padding: 2px 4px; border-radius: var(--radius-sm); transition: background 0.15s; }
+  .status-toggle:hover { background: var(--bg-hover); }
   .empty-row { text-align: center; color: var(--text-muted); padding: 32px; }
   .form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 4px; }
   .lbl { font-size: 12px; font-weight: 600; color: var(--text-secondary); }

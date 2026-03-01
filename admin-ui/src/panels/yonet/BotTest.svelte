@@ -5,6 +5,7 @@
 
   let sessions = $state([{ id: 1, messages: [], sessionId: crypto.randomUUID() }]);
   let nextId = 2;
+  let sending = $state({});
 
   function addSession() {
     if (sessions.length >= 4) return;
@@ -16,18 +17,28 @@
   }
 
   async function sendMessage(session, text) {
+    if (sending[session.id]) return;
+    sending[session.id] = true;
+
     session.messages = [...session.messages, { role: "user", content: text, sender: "user" }];
+
+    const messages = session.messages.map((m) => ({
+      role: m.sender === "user" ? "user" : "assistant",
+      content: m.text || m.content,
+    }));
 
     try {
       const res = await fetch("../api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Bypass-Tunnel-Reminder": "true" },
-        body: JSON.stringify({ message: text, sessionId: session.sessionId }),
+        body: JSON.stringify({ messages, sessionId: session.sessionId }),
       });
       const data = await res.json();
       session.messages = [...session.messages, { role: "assistant", content: data.reply || data.message || "...", sender: "bot" }];
     } catch {
       session.messages = [...session.messages, { role: "assistant", content: "Hata olustu", sender: "system" }];
+    } finally {
+      sending[session.id] = false;
     }
   }
 
@@ -58,7 +69,7 @@
         </div>
       </div>
       <ChatThread messages={session.messages} />
-      <ChatInput onsend={(text) => sendMessage(session, text)} />
+      <ChatInput onsend={(text) => sendMessage(session, text)} disabled={sending[session.id]} />
     </div>
   {/each}
 </div>

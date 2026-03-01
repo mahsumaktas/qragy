@@ -9,7 +9,7 @@
   let entries = $state([]);
   let updates = $state({});
 
-  const MASKED_KEYS = ["ADMIN_TOKEN", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GROQ_API_KEY"];
+  const MASKED_KEYS = ["ADMIN_TOKEN", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GROQ_API_KEY", "LLM_API_KEY", "EMBEDDING_API_KEY", "MISTRAL_API_KEY", "DEEPSEEK_API_KEY"];
 
   onMount(async () => {
     try {

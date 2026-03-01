@@ -7,14 +7,16 @@
   import Modal from "../../components/ui/Modal.svelte";
   import Tag from "../../components/ui/Tag.svelte";
   import Badge from "../../components/ui/Badge.svelte";
+  import Toggle from "../../components/ui/Toggle.svelte";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
 
   let loading = $state(true);
   let topics = $state([]);
   let editOpen = $state(false);
-  let editTopic = $state({ title: "", description: "", keywords: [], enabled: true });
+  let editTopic = $state({ title: "", description: "", keywords: [], enabled: true, requiresEscalation: false, canResolveDirectly: true, requiredInfo: [] });
   let editId = $state(null);
   let newKeyword = $state("");
+  let requiredInfoText = $state("");
 
   onMount(() => loadTopics());
 
@@ -32,18 +34,29 @@
 
   function openNew() {
     editId = null;
-    editTopic = { title: "", description: "", keywords: [], enabled: true };
+    editTopic = { title: "", description: "", keywords: [], enabled: true, requiresEscalation: false, canResolveDirectly: true, requiredInfo: [] };
+    requiredInfoText = "";
     editOpen = true;
   }
 
   function openEdit(t) {
     editId = t.id || t._id;
-    editTopic = { title: t.title, description: t.description || "", keywords: [...(t.keywords || [])], enabled: t.enabled !== false };
+    editTopic = {
+      title: t.title,
+      description: t.description || "",
+      keywords: [...(t.keywords || [])],
+      enabled: t.enabled !== false,
+      requiresEscalation: t.requiresEscalation || false,
+      canResolveDirectly: t.canResolveDirectly !== false,
+      requiredInfo: [...(t.requiredInfo || [])]
+    };
+    requiredInfoText = (t.requiredInfo || []).join(", ");
     editOpen = true;
   }
 
   async function save() {
     if (!editTopic.title.trim()) return;
+    editTopic.requiredInfo = requiredInfoText.split(",").map(s => s.trim()).filter(Boolean);
     try {
       if (editId) {
         await api.put("admin/agent/topics/" + editId, editTopic);
@@ -118,6 +131,17 @@
         {#if t.description}
           <p class="topic-desc">{t.description}</p>
         {/if}
+        <div class="topic-meta">
+          {#if t.requiresEscalation}
+            <Badge variant="orange">Eskalasyon</Badge>
+          {/if}
+          {#if t.canResolveDirectly !== false}
+            <Badge variant="blue">Dogrudan cozum</Badge>
+          {/if}
+        </div>
+        {#if t.requiredInfo?.length}
+          <p class="topic-info">Gerekli: {t.requiredInfo.join(", ")}</p>
+        {/if}
         {#if t.keywords?.length}
           <div class="topic-tags">
             {#each t.keywords.slice(0, 5) as kw}
@@ -164,6 +188,21 @@
       {/each}
     </div>
   </div>
+  <div class="form-group">
+    <label>Gerekli Bilgiler (virgul ile ayirin)
+      <input class="input" bind:value={requiredInfoText} placeholder="ad soyad, telefon, siparis no..." />
+    </label>
+  </div>
+  <div class="form-row">
+    <label>Eskalasyon Gerektirir
+      <Toggle bind:checked={editTopic.requiresEscalation} />
+    </label>
+  </div>
+  <div class="form-row">
+    <label>Dogrudan Cozulebilir
+      <Toggle bind:checked={editTopic.canResolveDirectly} />
+    </label>
+  </div>
   <div class="modal-actions">
     <Button onclick={() => (editOpen = false)} variant="secondary">Iptal</Button>
     <Button onclick={save} variant="primary">Kaydet</Button>
@@ -180,6 +219,8 @@
   .topic-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .topic-header h3 { font-size: 14px; font-weight: 600; }
   .topic-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .topic-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+  .topic-info { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
   .topic-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
   .more { font-size: 11px; color: var(--text-muted); }
   .topic-actions { display: flex; gap: 4px; }
@@ -190,6 +231,8 @@
   .input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; color: var(--text); outline: none; }
   .input:focus { border-color: var(--accent); }
   .textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; color: var(--text); resize: vertical; outline: none; }
+  .form-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .form-row label { font-size: 12px; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between; width: 100%; }
   .kw-input-row { display: flex; gap: 8px; margin-bottom: 8px; }
   .kw-tags { display: flex; flex-wrap: wrap; gap: 4px; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }

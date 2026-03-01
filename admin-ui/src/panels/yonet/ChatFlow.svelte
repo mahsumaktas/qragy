@@ -81,6 +81,21 @@
             <input class="input" type="number" bind:value={config.inactivityWarningMinutes} />
           </label>
         </div>
+        <div class="form-group">
+          <label>Mesaj Biriktirme Penceresi (ms)
+            <input class="input" type="number" bind:value={config.messageAggregationWindowMs} />
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Bot Yanit Gecikmesi (ms)
+            <input class="input" type="number" bind:value={config.botResponseDelayMs} />
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Yazma Gostergesi
+            <Toggle bind:checked={config.typingIndicatorEnabled} />
+          </label>
+        </div>
       </div>
     </div>
 
@@ -102,20 +117,76 @@
             <input class="input" type="number" bind:value={config.maxClarifications} />
           </label>
         </div>
+        <div class="form-row">
+          <label>Gibberish Algilama
+            <Toggle bind:checked={config.gibberishDetectionEnabled} />
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Gibberish Mesaji
+            <textarea class="textarea" bind:value={config.gibberishMessage} rows="2"></textarea>
+          </label>
+        </div>
       </div>
     </div>
 
     <div class="card">
       <h2>Kapanis</h2>
       <div class="form-grid">
+        <div class="form-row">
+          <label>Kapanis Akisi Aktif
+            <Toggle bind:checked={config.closingFlowEnabled} />
+          </label>
+        </div>
         <div class="form-group">
           <label>Kapanis Mesaji
             <textarea class="textarea" bind:value={config.closingMessage} rows="2"></textarea>
           </label>
         </div>
+        <div class="form-group">
+          <label>Baska Bir Sey Var Mi? Mesaji
+            <textarea class="textarea" bind:value={config.anythingElseMessage} rows="2"></textarea>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Veda Mesaji
+            <textarea class="textarea" bind:value={config.farewellMessage} rows="2"></textarea>
+          </label>
+        </div>
         <div class="form-row">
           <label>CSAT Anketi
             <Toggle bind:checked={config.csatEnabled} />
+          </label>
+        </div>
+        <div class="form-group">
+          <label>CSAT Mesaji
+            <textarea class="textarea" bind:value={config.csatMessage} rows="2"></textarea>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Nudge</h2>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Nudge Aktif
+            <Toggle bind:checked={config.nudgeEnabled} />
+          </label>
+        </div>
+        <div class="form-group">
+          <label>%75 Nudge Mesaji
+            <textarea class="textarea" bind:value={config.nudgeAt75Message} rows="2"></textarea>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>%90 Nudge Mesaji
+            <textarea class="textarea" bind:value={config.nudgeAt90Message} rows="2"></textarea>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Inaktiflik Kapanis Mesaji
+            <textarea class="textarea" bind:value={config.inactivityCloseMessage} rows="2"></textarea>
           </label>
         </div>
       </div>

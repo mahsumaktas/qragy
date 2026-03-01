@@ -24,6 +24,18 @@
       loading = false;
     }
   }
+
+  async function rollback(v) {
+    if (!confirm(`"${v.filename || v.file}" dosyasini bu versiyona geri almak istediginize emin misiniz?`)) return;
+    try {
+      await api.post("admin/prompt-versions/" + (v.id || v._id) + "/rollback");
+      showToast("Geri alindi: " + (v.filename || v.file), "success");
+      selectedVersion = null;
+      await loadVersions();
+    } catch (e) {
+      showToast("Geri alma hatasi: " + e.message, "error");
+    }
+  }
 </script>
 
 <div class="page-header">
@@ -37,25 +49,32 @@
   <div class="detail">
     <Button onclick={() => (selectedVersion = null)} variant="ghost" size="sm">← Geri</Button>
     <div class="version-card">
-      <h2>{selectedVersion.filename || selectedVersion.file}</h2>
-      <p class="meta">Versiyon: {selectedVersion.version} &middot; {fmtDate(selectedVersion.createdAt)}</p>
+      <div class="version-header">
+        <div>
+          <h2>{selectedVersion.filename || selectedVersion.file}</h2>
+          <p class="meta">{fmtDate(selectedVersion.savedAt || selectedVersion.createdAt)}</p>
+        </div>
+        <Button onclick={() => rollback(selectedVersion)} variant="danger" size="sm">Geri Al</Button>
+      </div>
       <pre class="content-pre">{selectedVersion.content || ""}</pre>
     </div>
   </div>
 {:else}
   <div class="card">
     <table>
-      <thead><tr><th>Dosya</th><th>Versiyon</th><th>Tarih</th><th></th></tr></thead>
+      <thead><tr><th>Dosya</th><th>Tarih</th><th></th></tr></thead>
       <tbody>
         {#each versions as v}
           <tr>
             <td>{v.filename || v.file}</td>
-            <td><Badge variant="blue">v{v.version}</Badge></td>
-            <td>{fmtDate(v.createdAt)}</td>
-            <td><Button onclick={() => (selectedVersion = v)} variant="ghost" size="sm">Goruntule</Button></td>
+            <td>{fmtDate(v.savedAt || v.createdAt)}</td>
+            <td class="action-col">
+              <Button onclick={() => (selectedVersion = v)} variant="ghost" size="sm">Goruntule</Button>
+              <Button onclick={() => rollback(v)} variant="danger" size="sm">Geri Al</Button>
+            </td>
           </tr>
         {:else}
-          <tr><td colspan="4" class="empty-row">Versiyon yok</td></tr>
+          <tr><td colspan="3" class="empty-row">Versiyon yok</td></tr>
         {/each}
       </tbody>
     </table>
@@ -73,7 +92,9 @@
   .empty-row { text-align: center; color: var(--text-muted); padding: 32px; }
   .detail { display: flex; flex-direction: column; gap: 16px; }
   .version-card { background: var(--bg-card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--border-light); }
+  .version-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
   .version-card h2 { font-size: 16px; font-weight: 600; }
+  .action-col { display: flex; gap: 4px; }
   .meta { font-size: 12px; color: var(--text-muted); margin: 4px 0 12px; }
   .content-pre { font-family: "JetBrains Mono", monospace; font-size: 12px; line-height: 1.6; padding: 12px; background: var(--bg); border-radius: var(--radius-sm); overflow-x: auto; white-space: pre-wrap; }
 </style>

@@ -40,7 +40,7 @@
 {:else}
   <div class="card">
     <div class="form-grid">
-      <div class="form-group"><span class="lbl">API Token</span><input class="input" type="password" bind:value={config.apiToken} /></div>
+      <div class="form-group"><span class="lbl">API Token</span><input class="input" type="password" bind:value={config.accessToken} /></div>
       <div class="form-group"><span class="lbl">Telefon ID</span><input class="input" bind:value={config.phoneNumberId} /></div>
       <div class="form-group"><span class="lbl">Verify Token</span><input class="input" bind:value={config.verifyToken} /></div>
       <div class="form-group"><span class="lbl">Business Account ID</span><input class="input" bind:value={config.businessAccountId} /></div>
