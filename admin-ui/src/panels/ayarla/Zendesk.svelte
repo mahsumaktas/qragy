@@ -56,11 +56,16 @@
 {:else}
   <div class="card">
     <div class="form-grid">
-      <div class="form-group"><span class="lbl">App ID</span><input class="input" bind:value={config.appId} /></div>
-      <div class="form-group"><span class="lbl">Key ID</span><input class="input" bind:value={config.keyId} /></div>
-      <div class="form-group"><span class="lbl">Secret</span><input class="input" type="password" bind:value={config.secret} /></div>
-      <div class="form-group"><span class="lbl">Subdomain</span><input class="input" bind:value={config.subdomain} /></div>
-      <div class="form-group"><span class="lbl">Webhook URL</span><input class="input" bind:value={config.webhookUrl} readonly /></div>
+      <div class="form-group"><span class="lbl">Subdomain</span><input class="input" bind:value={config.subdomain} placeholder="sirketiniz (.zendesk.com)" /></div>
+      <div class="form-group"><span class="lbl">App ID</span><input class="input" bind:value={config.appId} placeholder="Sunshine Conversations App ID" /></div>
+      <div class="form-group"><span class="lbl">Key ID</span><input class="input" bind:value={config.keyId} placeholder="API Key ID" /></div>
+      <div class="form-group"><span class="lbl">Key Secret</span><input class="input" type="password" bind:value={config.keySecret} placeholder="API Key Secret" /></div>
+      <div class="form-group"><span class="lbl">Webhook Secret</span><input class="input" type="password" bind:value={config.webhookSecret} placeholder="Webhook dogrulama secret" /></div>
+      <div class="form-group">
+        <span class="lbl">Webhook URL</span>
+        <input class="input webhook-url" value={config.webhookUrl || ""} readonly onclick={(e) => { e.target.select(); navigator.clipboard?.writeText(e.target.value); showToast("Kopyalandi", "success"); }} />
+        <span class="hint">Bu URL'yi Zendesk Sunshine webhook ayarina yapistirin</span>
+      </div>
       <div class="form-row"><span class="lbl">Aktif</span><Toggle bind:checked={config.enabled} /></div>
     </div>
   </div>
@@ -77,4 +82,7 @@
   .form-row { display: flex; align-items: center; justify-content: space-between; }
   .lbl { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
   .input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; color: var(--text); outline: none; }
+  .input::placeholder { color: var(--text-muted); opacity: 0.6; }
+  .webhook-url { background: var(--bg-hover); cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: 12px; }
+  .hint { font-size: 11px; color: var(--text-muted); }
 </style>

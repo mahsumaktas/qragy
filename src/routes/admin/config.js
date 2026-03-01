@@ -99,11 +99,15 @@ function mount(app, deps) {
   });
 
   // ── Sunshine Config ─────────────────────────────────────────────────────
-  app.get("/api/admin/sunshine-config", requireAdminAccess, (_req, res) => {
+  app.get("/api/admin/sunshine-config", requireAdminAccess, (req, res) => {
     const sunshineConfigVal = getSunshineConfig();
     const masked = { ...sunshineConfigVal };
     if (masked.keySecret) masked.keySecret = masked.keySecret.slice(0, 4) + "****" + masked.keySecret.slice(-4);
     if (masked.webhookSecret) masked.webhookSecret = masked.webhookSecret.slice(0, 4) + "****" + masked.webhookSecret.slice(-4);
+    // Webhook URL'yi otomatik hesapla — kullanici bunu Zendesk'e yapistirmali
+    const proto = req.headers["x-forwarded-proto"] || req.protocol || "https";
+    const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3001";
+    masked.webhookUrl = `${proto}://${host}/api/sunshine/webhook`;
     res.json({ ok: true, config: masked, defaults: DEFAULT_SUNSHINE_CONFIG });
   });
 
