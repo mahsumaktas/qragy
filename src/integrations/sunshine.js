@@ -191,7 +191,7 @@ function createSunshineIntegration(deps) {
     let changed = false;
 
     for (const [sessionKey, session] of Object.entries(sessions)) {
-      if (!session.lastActivity || session.closed) continue;
+      if (!session.lastActivity || session.closed || session.escalated) continue;
       if (!session.appId) continue;
       const elapsed = now - session.lastActivity;
       const conversationId = sessionKey.startsWith("zd-") ? sessionKey.slice(3) : sessionKey;
