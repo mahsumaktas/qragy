@@ -125,8 +125,11 @@ function createSunshineIntegration(deps) {
             const sessionKey = "zd-" + conversationId;
             const sessions = loadSunshineSessions();
             if (!sessions[sessionKey]) {
+              // Zendesk widget karsilama mesajini gosteriyor — ayni mesaji
+              // history'ye inject et ki LLM tekrar karsilama yapmasin
+              const greeting = sunshineConfig.greetingMessage || "";
               sessions[sessionKey] = {
-                messages: [],
+                messages: greeting ? [{ role: "assistant", content: greeting }] : [],
                 appId,
                 userId: message.author?.userId || "",
                 lastActivity: Date.now()

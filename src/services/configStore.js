@@ -96,6 +96,7 @@ function createConfigStore(deps) {
     keyId: "",
     keySecret: "",
     webhookSecret: "",
+    greetingMessage: "Merhaba, ben OBUS Teknik Destek. Size nasıl yardımcı olabilirim?",
     farewellMessage: "Sizi canlı destek temsilcisine aktarıyorum. İyi günler!"
   };
 

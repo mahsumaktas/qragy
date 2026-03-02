@@ -86,6 +86,7 @@
       <div class="form-group"><span class="lbl">Key ID</span><input class="input" bind:value={config.keyId} oninput={() => testPassed = false} placeholder="API Key ID" /></div>
       <div class="form-group"><span class="lbl">Key Secret</span><input class="input" type="password" bind:value={config.keySecret} oninput={() => testPassed = false} placeholder="API Key Secret" /></div>
       <div class="form-group"><span class="lbl">Webhook Secret (X-API-Key)</span><input class="input" type="password" bind:value={config.webhookSecret} placeholder="Webhook dogrulama secret" /></div>
+      <div class="form-group"><span class="lbl">Karsilama Mesaji</span><input class="input" bind:value={config.greetingMessage} placeholder="Merhaba, ben OBUS Teknik Destek. Size nasil yardimci olabilirim?" /><span class="hint">Zendesk widget'indaki karsilama mesajiyla ayni olmali</span></div>
       <div class="form-group"><span class="lbl">Eskalasyon Veda Mesaji</span><input class="input" bind:value={config.farewellMessage} placeholder="Sizi canli destek temsilcisine aktariyorum. Iyi gunler!" /></div>
       <div class="form-row"><span class="lbl">Entegrasyon Aktif</span><Toggle bind:checked={config.enabled} /></div>
     </div>
