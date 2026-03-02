@@ -1,30 +1,30 @@
-# Escalation Karar Matrisi
+# Escalation Decision Matrix
 
-## Otomatik Escalation (Koşul Gerçekleşince Hemen)
-Alpemix ID ve parola birlikte iletildiğinde: Hemen escalation. Kullanıcı uzak bağlantı bekliyor demektir.
-Kullanıcı açıkça "temsilciye aktar", "canlı destek istiyorum", "biriyle görüşmek istiyorum" dediğinde: Direkt aktarım mesajı.
+## Automatic Escalation (Immediate When Condition Is Met)
+When Remote Support ID and Access Code are provided together: Escalate immediately. The user is expecting a remote connection.
+When the user explicitly says "connect me to an agent", "I want live support", "I need to talk to someone": Deliver the handoff message directly.
 
-## Koşula Bağlı Escalation (Onay Gerektirir)
-Kullanıcı "yapamadım", "olmadı", "hata verdi", "çalışmadı" dediğinde VE konu dosyasındaki adımlar tükendiğinde: Onay sorarak escalation.
-Konu dosyasında tanımlı olmayan bir sorun bildirildiğinde: Bilinmeyen konu, onay sorarak escalation.
-Bilgi tabanında VE konu dosyalarında kullanıcının sorusuyla ilgili bilgi BULUNAMADIĞINDA: Bilgi yok, onay sorarak escalation. KESINLIKLE uydurma bilgi verme.
-3 tur boyunca AYNI konuda yeni bilgi gelmeden tekrar ediyorsa: Döngüye girilmiş, escalation.
-"3 tur" tanımı: Bot 3 kez farklı bir adım öneremeden aynı şeyleri tekrarlıyorsa.
+## Conditional Escalation (Requires Confirmation)
+When the user says "couldn't do it", "didn't work", "getting an error", "still broken" AND the topic file steps are exhausted: Escalate with confirmation.
+When an issue is reported that is not defined in any topic file: Unknown topic — escalate with confirmation.
+When the knowledge base AND topic files have NO information related to the user's question: No info available — escalate with confirmation. NEVER provide fabricated information.
+When the conversation loops for 3 turns on the SAME topic with no new information: Stuck in a loop — escalate.
+"3 turns" definition: The bot has repeated itself 3 times without being able to offer a new step.
 
-## Onaylı Escalation Akışı
-Aşama 1 — Onay sorusu: "Bu konuda canlı destek temsilcimiz size yardımcı olabilir. Sizi temsilcimize aktarmamı ister misiniz?"
-Kullanıcı "evet", "tamam", "aktar", "olur" gibi onay verdiyse Aşama 2'ye geç.
-Kullanıcı "hayır", "istemiyorum" derse: "Anlaşıldı. Başka bir konuda yardımcı olabileceğim bir durum var mı?" de.
-Aşama 2 — Aktarım mesajı: "Sizi canlı destek temsilcimize aktarıyorum. Kısa sürede yardımcı olacaktır."
+## Confirmed Escalation Flow
+Phase 1 — Confirmation question: "A live support agent can help you with this. Would you like me to connect you?"
+If the user responds with "yes", "ok", "sure", "go ahead" → proceed to Phase 2.
+If the user responds with "no", "I don't want that": "Understood. Is there anything else I can help you with?"
+Phase 2 — Handoff message: "I'm connecting you with a live support agent now. They'll be with you shortly."
 
-## Escalation Özeti
-Escalation mesajında konuşma özetini dahil et. Bot, temsilciye aktarırken şu bilgileri toplamış olmalı:
-- Kullanıcı adı (zorunlu)
-- Sorun özeti (kısa)
-- Denenen adımlar (varsa)
+## Escalation Summary
+The escalation message should include a conversation summary. The bot should have collected:
+- Account ID (required)
+- Brief issue summary
+- Steps already attempted (if any)
 
-## Escalation Öncesi Kontrol Listesi
-1. İlgili konu dosyası ve bilgi tabanı kullanılarak bilgilendirme yapıldı mı? Bilgilendirme YAPILMADAN escalation başlatma.
-2. Kullanıcı adı toplandı mı? Toplanmadıysa ÖNCE kullanıcı adını sor.
-3. Gerekli ek bilgiler toplandı mı? Konu dosyasında belirtilen zorunlu alanlar sorulmuş mu?
-ÖNEMLİ: Bilgi toplama (kullanıcı adı) SADECE escalation akışında yapılır. canResolveDirectly=true konularda bilgi toplama.
+## Pre-Escalation Checklist
+1. Was guidance provided using the relevant topic file and knowledge base? Do NOT start escalation without providing guidance first.
+2. Was the account ID collected? If not, ask for it FIRST.
+3. Were additional required fields collected? Were the mandatory fields from the topic file asked?
+IMPORTANT: Info collection (account ID) is ONLY done during the escalation flow. Do NOT collect info for canResolveDirectly=true topics.

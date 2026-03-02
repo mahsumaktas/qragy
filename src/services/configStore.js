@@ -16,18 +16,18 @@ function createConfigStore(deps) {
     typingIndicatorEnabled: true,
     inactivityTimeoutMs: 600000,
     nudgeEnabled: true,
-    nudgeAt75Message: "Hala buradayım. Size nasıl yardımcı olabilirim?",
-    nudgeAt90Message: "Son birkaç dakikadır mesaj almadım. Yardımcı olabilir miyim?",
-    inactivityCloseMessage: "Uzun süredir mesaj almadığım için sohbeti sonlandırıyorum. İhtiyacınız olursa tekrar yazabilirsiniz.",
+    nudgeAt75Message: "I'm still here. How can I help you?",
+    nudgeAt90Message: "I haven't received a message in a while. Can I help with anything?",
+    inactivityCloseMessage: "I'm closing this chat due to inactivity. Feel free to reach out again anytime.",
     maxClarificationRetries: 3,
     gibberishDetectionEnabled: true,
-    gibberishMessage: "Mesajınızı anlayamadım. Lütfen sorununuzu daha detaylı açıklar mısınız?",
+    gibberishMessage: "I couldn't understand your message. Could you please describe your issue in more detail?",
     closingFlowEnabled: true,
-    anythingElseMessage: "Başka yardımcı olabileceğim bir konu var mı?",
-    farewellMessage: "İyi günler dilerim! İhtiyacınız olursa tekrar yazabilirsiniz.",
+    anythingElseMessage: "Is there anything else I can help you with?",
+    farewellMessage: "Have a great day! Feel free to reach out again anytime.",
     csatEnabled: true,
-    csatMessage: "Deneyiminizi değerlendirir misiniz?",
-    welcomeMessage: "Merhaba, OBUS Teknik Destek hattına hoş geldiniz. Size nasıl yardımcı olabilirim?",
+    csatMessage: "Would you like to rate your experience?",
+    welcomeMessage: "Hello! Welcome to Technical Support. How can I help you?",
     questionExtractionEnabled: true,
     conversationSummaryEnabled: true,
     summaryThreshold: 15
@@ -54,19 +54,19 @@ function createConfigStore(deps) {
 
   // ── Site Branding Configuration ─────────────────────────────────────────
   const DEFAULT_SITE_CONFIG = {
-    pageTitle: "Teknik Destek",
-    heroTitle: "Teknik Destek",
-    heroDescription: "Teknik destek taleplerinizi AI katmanında toplayalım.",
-    heroButtonText: "Canlı Destek",
-    heroHint: "AI gerekli bilgileri topladığında temsilciye otomatik aktarım yapılır.",
-    headerTitle: "Teknik Destek",
+    pageTitle: "Technical Support",
+    heroTitle: "Technical Support",
+    heroDescription: "Let our AI assistant help with your support requests.",
+    heroButtonText: "Live Support",
+    heroHint: "When the AI gathers the necessary info, you'll be automatically connected to an agent.",
+    headerTitle: "Technical Support",
     logoUrl: "",
     themeColor: "#2563EB",
     primaryColor: "",
     headerBg: "",
     chatBubbleColor: "",
-    inputPlaceholder: "Mesajınızı yazın...",
-    sendButtonText: "Gönder"
+    inputPlaceholder: "Type your message...",
+    sendButtonText: "Send"
   };
 
   let siteConfig = { ...DEFAULT_SITE_CONFIG };
@@ -96,8 +96,8 @@ function createConfigStore(deps) {
     keyId: "",
     keySecret: "",
     webhookSecret: "",
-    greetingMessage: "Merhaba, ben OBUS Teknik Destek. Size nasıl yardımcı olabilirim?",
-    farewellMessage: "Sizi canlı destek temsilcisine aktarıyorum. İyi günler!"
+    greetingMessage: "Hello, I'm the Technical Support Assistant. How can I help you?",
+    farewellMessage: "I'm connecting you with a live support agent now. Have a great day!"
   };
 
   let sunshineConfig = { ...DEFAULT_SUNSHINE_CONFIG };

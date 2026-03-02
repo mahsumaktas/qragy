@@ -78,7 +78,7 @@ describe("Widget Theme System", () => {
     expect(siteConfig.headerBg).toBe("#0f172a");
     expect(siteConfig.chatBubbleColor).toBe("#e2e8f0");
     // Diger alanlar bozulmamis olmali
-    expect(siteConfig.pageTitle).toBe("Teknik Destek");
-    expect(siteConfig.headerTitle).toBe("Teknik Destek");
+    expect(siteConfig.pageTitle).toBe("Technical Support");
+    expect(siteConfig.headerTitle).toBe("Technical Support");
   });
 });

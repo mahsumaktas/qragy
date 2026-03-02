@@ -1,36 +1,35 @@
-# Alan Bilgisi
+# Domain Knowledge
 
 ## Platform
-OBUS, Türkiye genelinde 500'den fazla otobüs firmasının kullandığı otobüs işletme ve biletleme platformudur. Sefer planlama, bilet satışı, koltuk yönetimi, hesap fişi, e-yolcu listesi, UETDS bildirimleri ve finansal raporlama gibi işlemleri kapsar.
+This is a SaaS platform that provides business management, team collaboration, and operational tools. It covers user management, billing and subscriptions, reporting and analytics, integrations with third-party services, data management, and compliance reporting.
 
-## Kullanıcı Profilleri
-Firma yetkilisi: Genel müdür veya operasyon sorumlusu. Sistem genelinde karar alır, kullanıcı yönetimi yapar.
-Şube personeli: Günlük bilet satışı, sefer operasyonları ve müşteri işlemlerini yürütür.
-Muhasebe personeli: Hesap fişi, kontör yönetimi ve finansal raporlarla ilgilenir.
+## User Profiles
+Administrator: Organization owner or operations manager. Makes system-wide decisions, manages users and settings.
+Team Member: Day-to-day platform user. Handles operational tasks, generates reports, and manages data.
+Billing Manager: Responsible for subscription management, invoice tracking, payment methods, and financial reports.
 
-## Temel İş Süreçleri
-Bilet satışı: Sefer seçimi, koltuk ataması, yolcu bilgileri girişi ve ödeme işlemi.
-Sefer yönetimi: Sefer oluşturma, güzergah tanımlama, araç atama ve ek sefer açma.
-Hesap fişi ve belgeler: İşlemler menüsünden Dökümanlar bölümüne erişim.
-UETDS bildirimleri: e-Yolcu listesi gönderimi ve UETDS uyumluluk kontrolü.
-Raporlama: Satış, doluluk, gelir ve operasyonel raporlar.
-Kontör yönetimi: Firma kontör bakiyesi takibi ve yükleme işlemleri.
+## Core Business Processes
+User Management: Adding team members, assigning roles, setting permissions, and deactivating accounts.
+Billing & Subscriptions: Plan selection, payment processing, invoice generation, and license renewal.
+Reports & Analytics: Generating operational, financial, and compliance reports in various formats.
+Integrations: Connecting third-party services via API keys, webhooks, and OAuth.
+Data Management: Importing, exporting, archiving, and migrating data across the platform.
+Compliance: Audit logs, activity tracking, data retention policies, and regulatory reporting.
 
-## Terminoloji Sözlüğü
-Panel: OBUS yönetim arayüzü. Kullanıcılar bu arayüz üzerinden sisteme erişir.
-Alpemix: Uzak masaüstü erişim aracı. Canlı destek ekibi bu araç üzerinden kullanıcının ekranına bağlanır.
-Kullanıcı adı: OBUS sistemine giriş için kullanılan benzersiz kimlik. Destek taleplerinde zorunlu bilgidir.
-Kontör: Bilet basımı ve işlem yapabilmek için gereken dijital kredi birimi.
-UETDS: Ulaştırma Elektronik Takip ve Denetim Sistemi. Yasal zorunluluk.
-e-Yolcu listesi: UETDS'ye gönderilen yolcu bildirim listesi.
-Hesap fişi: Bilet satışı sonrası oluşturulan mali belge.
-PNR: Yolcu isim kaydı. Her bilete atanan benzersiz takip numarası.
-Sefer: Belirli güzergah ve tarihte planlanan otobüs seferi.
-Koltuk planı: Araçtaki koltuk düzeni ve müsaitlik durumu.
-Şube kodu: Her şubenin platformda tanımlı benzersiz kodu.
+## Terminology Glossary
+Dashboard: The main interface where users view key metrics and navigate the platform.
+Admin Panel: The management interface for administrators to configure settings and manage users.
+Workspace: The organizational unit containing teams, projects, and data.
+Organization: The top-level account entity that owns one or more workspaces.
+API Key: A unique identifier used to authenticate API requests to the platform.
+Webhook: An HTTP callback that sends real-time notifications to external services when events occur.
+SSO (Single Sign-On): Authentication method allowing users to log in with a single set of credentials across multiple services.
+Role: A predefined set of permissions assigned to a user (e.g., Admin, Editor, Viewer).
+Account ID: A unique identifier assigned to each user account on the platform.
+Audit Log: A chronological record of system activities for compliance and security monitoring.
 
-## Mevsimsel ve Zamansal Bağlam
-Bayram ve tatil dönemleri: Bilet satışı ve sefer yoğunluğu artar.
-Dönem sonları: Raporlama talepleri artar.
-UETDS denetim dönemleri: e-Yolcu listesi sorunları yoğunlaşır.
-Mesai saatleri dışında: Gelen talepler genellikle acil niteliktedir.
+## Seasonal and Temporal Context
+End of quarter/year: Report generation and compliance requests increase.
+License renewal periods: Billing and subscription inquiries peak.
+After platform updates: Users may experience unfamiliar UI changes or new features.
+Outside business hours: Incoming requests are typically more urgent.

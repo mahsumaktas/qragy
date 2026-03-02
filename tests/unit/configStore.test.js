@@ -90,7 +90,7 @@ describe("ConfigStore", () => {
     const { store, tmpDir: d } = makeStore();
     tmpDir = d;
     const cfg = store.getSiteConfig();
-    expect(cfg.pageTitle).toBe("Teknik Destek");
+    expect(cfg.pageTitle).toBe("Technical Support");
     expect(cfg.themeColor).toBe("#2563EB");
   });
 

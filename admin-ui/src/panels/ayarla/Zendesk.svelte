@@ -17,7 +17,7 @@
       const res = await api.get("admin/sunshine-config");
       config = res.config || res || {};
     } catch (e) {
-      showToast("Zendesk config yuklenemedi: " + e.message, "error");
+      showToast("Failed to load Zendesk config: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -26,9 +26,9 @@
   async function save() {
     try {
       await api.put("admin/sunshine-config", { config });
-      showToast("Kaydedildi", "success");
+      showToast("Saved", "success");
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 
@@ -39,12 +39,12 @@
       const res = await api.post("admin/sunshine-config/test", {});
       if (res.ok) {
         testPassed = true;
-        showToast(res.message || "Baglanti basarili", "success");
+        showToast(res.message || "Connection successful", "success");
       } else {
-        showToast(res.error || "Test basarisiz", "error");
+        showToast(res.error || "Test failed", "error");
       }
     } catch (e) {
-      showToast("Test basarisiz: " + e.message, "error");
+      showToast("Test failed: " + e.message, "error");
     } finally {
       testing = false;
     }
@@ -57,10 +57,10 @@
       if (res.ok) {
         showToast(res.message, "success");
       } else {
-        showToast(res.error || "Switchboard yapilandirilamadi", "error");
+        showToast(res.error || "Switchboard setup failed", "error");
       }
     } catch (e) {
-      showToast("Switchboard hatasi: " + e.message, "error");
+      showToast("Switchboard error: " + e.message, "error");
     } finally {
       settingUp = false;
     }
@@ -68,44 +68,44 @@
 </script>
 
 <div class="page-header">
-  <div><h1>Zendesk Sunshine Conversations</h1><p>Zendesk chat widget uzerinden gelen mesajlari Qragy ile karsilayin. Eskalasyonda canli temsilciye otomatik aktarim yapilir.</p></div>
+  <div><h1>Zendesk Sunshine Conversations</h1><p>Handle messages from the Zendesk chat widget with Qragy. On escalation, conversations are automatically handed off to a live agent.</p></div>
   <div class="actions">
-    <Button onclick={test} variant="secondary" size="sm" disabled={testing}>{testing ? "Test ediliyor..." : "Baglanti Test"}</Button>
-    <Button onclick={save} variant="primary" size="sm">Kaydet</Button>
+    <Button onclick={test} variant="secondary" size="sm" disabled={testing}>{testing ? "Testing..." : "Test Connection"}</Button>
+    <Button onclick={save} variant="primary" size="sm">Save</Button>
   </div>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="card">
-    <div class="card-title">Baglanti Ayarlari</div>
+    <div class="card-title">Connection Settings</div>
     <div class="form-grid">
-      <div class="form-group"><span class="lbl">Subdomain</span><input class="input" bind:value={config.subdomain} oninput={() => testPassed = false} placeholder="sirketiniz (.zendesk.com)" /></div>
+      <div class="form-group"><span class="lbl">Subdomain</span><input class="input" bind:value={config.subdomain} oninput={() => testPassed = false} placeholder="yourcompany (.zendesk.com)" /></div>
       <div class="form-group"><span class="lbl">App ID</span><input class="input" bind:value={config.appId} oninput={() => testPassed = false} placeholder="Sunshine Conversations App ID" /></div>
       <div class="form-group"><span class="lbl">Key ID</span><input class="input" bind:value={config.keyId} oninput={() => testPassed = false} placeholder="API Key ID" /></div>
       <div class="form-group"><span class="lbl">Key Secret</span><input class="input" type="password" bind:value={config.keySecret} oninput={() => testPassed = false} placeholder="API Key Secret" /></div>
-      <div class="form-group"><span class="lbl">Webhook Secret (X-API-Key)</span><input class="input" type="password" bind:value={config.webhookSecret} placeholder="Webhook dogrulama secret" /></div>
-      <div class="form-group"><span class="lbl">Karsilama Mesaji</span><input class="input" bind:value={config.greetingMessage} placeholder="Merhaba, ben OBUS Teknik Destek. Size nasil yardimci olabilirim?" /><span class="hint">Zendesk widget'indaki karsilama mesajiyla ayni olmali</span></div>
-      <div class="form-group"><span class="lbl">Eskalasyon Veda Mesaji</span><input class="input" bind:value={config.farewellMessage} placeholder="Sizi canli destek temsilcisine aktariyorum. Iyi gunler!" /></div>
-      <div class="form-row"><span class="lbl">Entegrasyon Aktif</span><Toggle bind:checked={config.enabled} /></div>
+      <div class="form-group"><span class="lbl">Webhook Secret (X-API-Key)</span><input class="input" type="password" bind:value={config.webhookSecret} placeholder="Webhook verification secret" /></div>
+      <div class="form-group"><span class="lbl">Greeting Message</span><input class="input" bind:value={config.greetingMessage} placeholder="Hello, I'm the Technical Support Assistant. How can I help you?" /><span class="hint">Should match the greeting message in the Zendesk widget</span></div>
+      <div class="form-group"><span class="lbl">Escalation Farewell Message</span><input class="input" bind:value={config.farewellMessage} placeholder="I'm connecting you with a live support agent. Have a great day!" /></div>
+      <div class="form-row"><span class="lbl">Integration Active</span><Toggle bind:checked={config.enabled} /></div>
     </div>
   </div>
 
   <div class="card">
     <div class="card-title">Webhook URL</div>
-    <p class="desc">Zendesk Sunshine Conversations ayarlarindan asagidaki URL'yi webhook olarak ekleyin. Trigger: <strong>conversation:message</strong></p>
-    <input class="input webhook-url" value={config.webhookUrl || ""} readonly onclick={(e) => { e.target.select(); navigator.clipboard?.writeText(e.target.value); showToast("Kopyalandi", "success"); }} />
+    <p class="desc">Add the following URL as a webhook in your Zendesk Sunshine Conversations settings. Trigger: <strong>conversation:message</strong></p>
+    <input class="input webhook-url" value={config.webhookUrl || ""} readonly onclick={(e) => { e.target.select(); navigator.clipboard?.writeText(e.target.value); showToast("Copied", "success"); }} />
   </div>
 
   <div class="card switchboard-card">
-    <div class="card-title">Switchboard Yapilandirmasi</div>
-    <p class="desc">Baglanti testi basarili olduktan sonra Switchboard zincirini otomatik yapilandirir: answerBot → Qragy Bot → agentWorkspace</p>
+    <div class="card-title">Switchboard Setup</div>
+    <p class="desc">After a successful connection test, this automatically configures the Switchboard chain: answerBot → Qragy Bot → agentWorkspace</p>
     <Button onclick={setupSwitchboard} variant="secondary" size="sm" disabled={!testPassed || settingUp}>
-      {settingUp ? "Yapilandiriliyor..." : "Switchboard Yapilandir"}
+      {settingUp ? "Setting up..." : "Setup Switchboard"}
     </Button>
     {#if !testPassed}
-      <span class="hint">Once baglanti testini basarili gecirin</span>
+      <span class="hint">Pass the connection test first</span>
     {/if}
   </div>
 {/if}
