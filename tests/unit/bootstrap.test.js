@@ -60,8 +60,8 @@ describe("Zero-Shot Bootstrap", () => {
     tmpDir = d;
     const tmpl = service.loadTemplate("teknik-destek");
     expect(tmpl).not.toBeNull();
-    expect(tmpl.sector).toBe("teknik-destek");
-    expect(tmpl.title).toBe("Teknik Destek");
+    expect(tmpl.sector).toBe("tech-support");
+    expect(tmpl.title).toBe("Tech Support");
   });
 
   it("loadTemplate returns null for unknown sector", () => {
@@ -124,22 +124,22 @@ describe("Zero-Shot Bootstrap", () => {
 
     // Empty knowledgeResults
     const prompt = promptBuilder.buildSystemPrompt({}, {}, [], {});
-    expect(prompt).toContain("Bilgi tabaninda bu konuyla ilgili kayit BULUNAMADI");
-    expect(prompt).toContain("detayli bilgim bulunmamaktadir");
+    expect(prompt).toContain("No records found in the knowledge base for this topic");
+    expect(prompt).toContain("I don't have detailed information on this topic");
 
     // null knowledgeResults
     const prompt2 = promptBuilder.buildSystemPrompt({}, {}, null, {});
-    expect(prompt2).toContain("Bilgi tabaninda bu konuyla ilgili kayit BULUNAMADI");
+    expect(prompt2).toContain("No records found in the knowledge base for this topic");
 
     // With sectorTemplate option
     const tmpl = service.loadTemplate("e-ticaret");
     const prompt3 = promptBuilder.buildSystemPrompt({}, {}, [], { sectorTemplate: tmpl });
-    expect(prompt3).toContain("Sektor Bilgisi: E-Ticaret");
-    expect(prompt3).toContain("Online alisveris");
-    expect(prompt3).toContain("Siparis numarasi ile sorgulama yap");
+    expect(prompt3).toContain("Sector Information: E-Commerce");
+    expect(prompt3).toContain("online shopping");
+    expect(prompt3).toContain("Look up orders using the order number");
 
     // With NON-empty knowledgeResults, fallback should NOT appear
     const prompt4 = promptBuilder.buildSystemPrompt({}, {}, [{ question: "test", answer: "answer" }], {});
-    expect(prompt4).not.toContain("Bilgi tabaninda ilgili kayit bulunamadi");
+    expect(prompt4).not.toContain("No records found in the knowledge base");
   });
 });

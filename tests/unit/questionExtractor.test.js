@@ -44,11 +44,11 @@ describe("questionExtractor", () => {
     const messagesArg = mockCallLLM.mock.calls[0][0];
     expect(Array.isArray(messagesArg)).toBe(true);
     const promptArg = messagesArg[0].parts[0].text;
-    expect(promptArg).toContain("Sohbet Gecmisi:");
-    expect(promptArg).toContain("Kullanici: Ankara subesi hakkinda bilgi verir misiniz?");
+    expect(promptArg).toContain("Chat History:");
+    expect(promptArg).toContain("User: Ankara subesi hakkinda bilgi verir misiniz?");
     expect(promptArg).toContain("Bot: Ankara subemiz Kizilay'da bulunmaktadir.");
-    expect(promptArg).toContain("Son Mesaj: Oraya nasil basvuru yaparim?");
-    expect(promptArg).toContain("Bagimsiz Soru:");
+    expect(promptArg).toContain("Latest Message: Oraya nasil basvuru yaparim?");
+    expect(promptArg).toContain("Independent Question:");
   });
 
   it("returns extracted question on success", async () => {

@@ -16,7 +16,7 @@ function isLikelyBranchCode(value) {
 }
 
 const GREETING_PATTERNS = [
-  /^(merhaba|selam|selamlar|hey|hello|hi|gunaydin|iyi\s*(gunler|aksamlar|geceler))[\s!.,]*$/i,
+  /^(hello|hi|hey|greetings|good\s*(morning|afternoon|evening|day))[\s!.,]*$/i,
 ];
 
 function isGreetingOnly(text) {
@@ -26,8 +26,8 @@ function isGreetingOnly(text) {
   return GREETING_PATTERNS.some((p) => p.test(trimmed));
 }
 
-const FAREWELL_POSITIVE = /\b(tesekkur\w*|sagol\w*|saol\w*|eyv\w*|tamam\w*|oldu|cozuldu|calisti|harika|super|anladim)\b/i;
-const FAREWELL_NEGATIVE_OVERRIDE = /\b(ama|fakat|hala|yine|olmadi|calismadi|yapamadim|cozemedim|devam)\b/i;
+const FAREWELL_POSITIVE = /\b(thanks?\w*|thank\s*you|cheers|bye\w*|goodbye|great|awesome|perfect|resolved|fixed|worked|got\s*it|understood)\b/i;
+const FAREWELL_NEGATIVE_OVERRIDE = /\b(but|however|still|again|didn'?t\s*work|not\s*working|can'?t|couldn'?t|failed|issue|problem)\b/i;
 
 function isFarewellMessage(text) {
   if (!text || typeof text !== "string") return false;

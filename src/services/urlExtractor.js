@@ -30,7 +30,7 @@ function createUrlExtractor(deps) {
 
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("text/html") && !contentType.includes("text/plain")) {
-      throw new Error("Desteklenmeyen icerik tipi: " + contentType);
+      throw new Error("Unsupported content type: " + contentType);
     }
 
     const html = await response.text();

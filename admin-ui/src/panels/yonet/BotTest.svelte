@@ -36,7 +36,7 @@
       const data = await res.json();
       session.messages = [...session.messages, { role: "assistant", content: data.reply || data.message || "...", sender: "bot" }];
     } catch {
-      session.messages = [...session.messages, { role: "assistant", content: "Hata olustu", sender: "system" }];
+      session.messages = [...session.messages, { role: "assistant", content: "An error occurred", sender: "system" }];
     } finally {
       sending[session.id] = false;
     }
@@ -51,20 +51,20 @@
 <div class="page-header">
   <div>
     <h1>Bot Test</h1>
-    <p>Canli bot testi — multi-session</p>
+    <p>Live bot testing — multi-session</p>
   </div>
-  <Button onclick={addSession} variant="primary" size="sm" disabled={sessions.length >= 4}>+ Oturum Ekle</Button>
+  <Button onclick={addSession} variant="primary" size="sm" disabled={sessions.length >= 4}>+ Add Session</Button>
 </div>
 
 <div class="test-grid" class:single={sessions.length === 1} class:double={sessions.length === 2}>
   {#each sessions as session (session.id)}
     <div class="test-card">
       <div class="test-header">
-        <span class="test-label">Oturum #{session.id}</span>
+        <span class="test-label">Session #{session.id}</span>
         <div class="test-actions">
-          <Button onclick={() => clearSession(session)} variant="ghost" size="sm">Temizle</Button>
+          <Button onclick={() => clearSession(session)} variant="ghost" size="sm">Clear</Button>
           {#if sessions.length > 1}
-            <Button onclick={() => removeSession(session.id)} variant="ghost" size="sm">Kapat</Button>
+            <Button onclick={() => removeSession(session.id)} variant="ghost" size="sm">Close</Button>
           {/if}
         </div>
       </div>

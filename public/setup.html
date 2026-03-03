@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Qragy - Kurulum Sihirbazi</title>
+    <title>Qragy - Setup Wizard</title>
     <link rel="icon" type="image/jpeg" href="qragy_logo.jpg" />
     <style>
-      /* ── Variables (admin.css ile uyumlu) ── */
+      /* ── Variables (compatible with admin.css) ── */
       :root {
         --bg: #f0f5f7;
         --card: #ffffff;
@@ -291,15 +291,15 @@
     <!-- Header -->
     <div class="setup-header">
       <img src="qragy_logo.jpg" alt="Qragy" />
-      <h1>Qragy Kurulum</h1>
+      <h1>Qragy Setup</h1>
     </div>
 
     <div class="setup-container">
 
       <!-- Step Labels -->
       <div class="step-label">
-        <span id="stepIndicator">Adim 1/4</span>
-        <span id="stepName">Sirket Bilgileri</span>
+        <span id="stepIndicator">Step 1/4</span>
+        <span id="stepName">Company Info</span>
       </div>
 
       <!-- Progress Bar -->
@@ -312,106 +312,106 @@
 
       <!-- Step 1: Company Info -->
       <div class="step-card active" id="step1">
-        <h2>Sirket Bilgileri</h2>
-        <p class="step-desc">Destek botunuzun temel bilgilerini belirleyin.</p>
+        <h2>Company Info</h2>
+        <p class="step-desc">Set the basic information for your support bot.</p>
 
         <label class="field">
-          <span>Sirket Adi *</span>
-          <input type="text" id="companyName" placeholder="Ornek: Qragy" maxlength="100" />
-          <div class="error-msg" id="companyNameError">Sirket adi zorunludur.</div>
+          <span>Company Name *</span>
+          <input type="text" id="companyName" placeholder="Example: Qragy" maxlength="100" />
+          <div class="error-msg" id="companyNameError">Company name is required.</div>
         </label>
 
         <label class="field">
-          <span>Sektor</span>
+          <span>Industry</span>
           <select id="sector">
-            <option value="teknik-destek">Teknik Destek</option>
-            <option value="e-ticaret">E-Ticaret</option>
-            <option value="restoran">Restoran</option>
-            <option value="diger">Diger</option>
+            <option value="teknik-destek">Technical Support</option>
+            <option value="e-ticaret">E-Commerce</option>
+            <option value="restoran">Restaurant</option>
+            <option value="diger">Other</option>
           </select>
         </label>
 
         <div class="btn-row">
           <div class="spacer"></div>
-          <button class="btn btn-primary" onclick="nextStep()">Devam</button>
+          <button class="btn btn-primary" onclick="nextStep()">Continue</button>
         </div>
       </div>
 
       <!-- Step 2: Branding -->
       <div class="step-card" id="step2">
-        <h2>Gorunum Ayarlari</h2>
-        <p class="step-desc">Logonuz ve tema renginizi secin. Bu ayarlari daha sonra da degistirebilirsiniz.</p>
+        <h2>Appearance Settings</h2>
+        <p class="step-desc">Choose your logo and theme color. You can change these settings later.</p>
 
         <label class="field">
-          <span>Logo URL <span class="hint">(opsiyonel)</span></span>
-          <input type="url" id="logoUrl" placeholder="https://ornek.com/logo.png" />
+          <span>Logo URL <span class="hint">(optional)</span></span>
+          <input type="url" id="logoUrl" placeholder="https://example.com/logo.png" />
         </label>
 
         <label class="field">
-          <span>Tema Rengi</span>
+          <span>Theme Color</span>
           <input type="color" id="themeColor" value="#2563EB" />
         </label>
 
         <div class="btn-row">
-          <button class="btn btn-secondary" onclick="prevStep()">Geri</button>
-          <button class="btn btn-primary" onclick="nextStep()">Devam</button>
+          <button class="btn btn-secondary" onclick="prevStep()">Back</button>
+          <button class="btn btn-primary" onclick="nextStep()">Continue</button>
         </div>
       </div>
 
       <!-- Step 3: FAQs -->
       <div class="step-card" id="step3">
-        <h2>Sikca Sorulan Sorular</h2>
-        <p class="step-desc">Musterilerinizin en cok sordugu 3 soruyu girin. Daha sonra bilgi tabanindan guncelleyebilirsiniz.</p>
+        <h2>Frequently Asked Questions</h2>
+        <p class="step-desc">Enter the 3 most common questions your customers ask. You can update these later from the knowledge base.</p>
 
         <div class="faq-group">
-          <h4>Soru 1</h4>
-          <textarea id="faq1q" placeholder="Soru..." rows="2"></textarea>
-          <textarea id="faq1a" placeholder="Cevap..." rows="2"></textarea>
+          <h4>Question 1</h4>
+          <textarea id="faq1q" placeholder="Question..." rows="2"></textarea>
+          <textarea id="faq1a" placeholder="Answer..." rows="2"></textarea>
         </div>
 
         <div class="faq-group">
-          <h4>Soru 2</h4>
-          <textarea id="faq2q" placeholder="Soru..." rows="2"></textarea>
-          <textarea id="faq2a" placeholder="Cevap..." rows="2"></textarea>
+          <h4>Question 2</h4>
+          <textarea id="faq2q" placeholder="Question..." rows="2"></textarea>
+          <textarea id="faq2a" placeholder="Answer..." rows="2"></textarea>
         </div>
 
         <div class="faq-group">
-          <h4>Soru 3</h4>
-          <textarea id="faq3q" placeholder="Soru..." rows="2"></textarea>
-          <textarea id="faq3a" placeholder="Cevap..." rows="2"></textarea>
+          <h4>Question 3</h4>
+          <textarea id="faq3q" placeholder="Question..." rows="2"></textarea>
+          <textarea id="faq3a" placeholder="Answer..." rows="2"></textarea>
         </div>
 
         <div class="btn-row">
-          <button class="btn btn-secondary" onclick="prevStep()">Geri</button>
+          <button class="btn btn-secondary" onclick="prevStep()">Back</button>
           <div style="display:flex;gap:8px;align-items:center">
-            <button class="btn-skip" onclick="nextStep()">Atla</button>
-            <button class="btn btn-primary" onclick="nextStep()">Devam</button>
+            <button class="btn-skip" onclick="nextStep()">Skip</button>
+            <button class="btn btn-primary" onclick="nextStep()">Continue</button>
           </div>
         </div>
       </div>
 
       <!-- Step 4: Preview -->
       <div class="step-card" id="step4">
-        <h2>Onizleme</h2>
-        <p class="step-desc">Ayarlarinizin nasil gorunecegini kontrol edin.</p>
+        <h2>Preview</h2>
+        <p class="step-desc">Review how your settings will look.</p>
 
         <div class="preview-box">
           <div class="preview-header">
             <div class="preview-logo" id="previewLogo">Q</div>
-            <div class="preview-title" id="previewTitle">Destek</div>
+            <div class="preview-title" id="previewTitle">Support</div>
           </div>
           <div class="preview-welcome" id="previewWelcome"></div>
           <div class="preview-theme-bar" id="previewThemeBar"></div>
 
           <div id="previewFaqSection" style="display:none">
-            <div class="preview-section-title">Sikca Sorulan Sorular</div>
+            <div class="preview-section-title">Frequently Asked Questions</div>
             <div id="previewFaqs"></div>
           </div>
         </div>
 
         <div class="btn-row">
-          <button class="btn btn-secondary" onclick="prevStep()">Geri</button>
-          <button class="btn btn-primary" id="btnComplete" onclick="completeSetup()">Tamamla</button>
+          <button class="btn btn-secondary" onclick="prevStep()">Back</button>
+          <button class="btn btn-primary" id="btnComplete" onclick="completeSetup()">Complete</button>
         </div>
       </div>
 

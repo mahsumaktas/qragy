@@ -26,7 +26,7 @@
       sla = sl;
       auditLog = audit.log || audit || [];
     } catch (e) {
-      showToast("Sistem durumu yuklenemedi: " + e.message, "error");
+      showToast("Failed to load system status: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -35,30 +35,30 @@
   async function forceCheck() {
     try {
       system = await api.get("admin/system?forceCheck=1");
-      showToast("Kontrol tamamlandi", "success");
+      showToast("Check completed", "success");
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>Sistem Durumu</h1><p>Sistem sagligi ve denetim</p></div>
-  <Button onclick={forceCheck} variant="secondary" size="sm">Kontrol Et</Button>
+  <div><h1>System Status</h1><p>System health and audit</p></div>
+  <Button onclick={forceCheck} variant="secondary" size="sm">Check</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="status-grid">
     {#if system}
       <div class="card">
-        <h2>Sistem</h2>
+        <h2>System</h2>
         <div class="info-rows">
-          <div class="info-row"><span>Durum</span><Badge variant={system.status === "ok" || system.healthy ? "green" : "red"}>{system.status || (system.healthy ? "saglikli" : "sorunlu")}</Badge></div>
+          <div class="info-row"><span>Status</span><Badge variant={system.status === "ok" || system.healthy ? "green" : "red"}>{system.status || (system.healthy ? "healthy" : "unhealthy")}</Badge></div>
           <div class="info-row"><span>Uptime</span><span>{system.uptime || "-"}</span></div>
           <div class="info-row"><span>Node</span><span>{system.nodeVersion || "-"}</span></div>
-          <div class="info-row"><span>Bellek</span><span>{system.memoryUsage || "-"}</span></div>
+          <div class="info-row"><span>Memory</span><span>{system.memoryUsage || "-"}</span></div>
           <div class="info-row"><span>LLM</span><Badge variant={system.llmStatus === "ok" ? "green" : "yellow"}>{system.llmStatus || system.llm || "-"}</Badge></div>
           <div class="info-row"><span>Embedding</span><Badge variant={system.embeddingStatus === "ok" ? "green" : "yellow"}>{system.embeddingStatus || "-"}</Badge></div>
         </div>
@@ -69,9 +69,9 @@
       <div class="card">
         <h2>SLA</h2>
         <div class="info-rows">
-          <div class="info-row"><span>Ort. Yanit Suresi</span><span>{sla.avgResponseMs ? (sla.avgResponseMs / 1000).toFixed(1) + "s" : "-"}</span></div>
+          <div class="info-row"><span>Avg. Response Time</span><span>{sla.avgResponseMs ? (sla.avgResponseMs / 1000).toFixed(1) + "s" : "-"}</span></div>
           <div class="info-row"><span>Uptime</span><span>{sla.uptimePercent ? sla.uptimePercent + "%" : "-"}</span></div>
-          <div class="info-row"><span>Basari Orani</span><span>{sla.successRate ? sla.successRate + "%" : "-"}</span></div>
+          <div class="info-row"><span>Success Rate</span><span>{sla.successRate ? sla.successRate + "%" : "-"}</span></div>
         </div>
       </div>
     {/if}
@@ -79,9 +79,9 @@
 
   {#if auditLog.length}
     <div class="card audit-card">
-      <h2>Denetim Kaydi</h2>
+      <h2>Audit Log</h2>
       <table>
-        <thead><tr><th>Zaman</th><th>Islem</th><th>Detay</th></tr></thead>
+        <thead><tr><th>Time</th><th>Action</th><th>Detail</th></tr></thead>
         <tbody>
           {#each auditLog.slice(0, 50) as entry}
             <tr>

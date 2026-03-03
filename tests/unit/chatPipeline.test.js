@@ -310,7 +310,7 @@ describe("chatPipeline", () => {
       }),
     );
     // No disclaimer when not low quality
-    expect(result.reply).not.toContain("Bu cevap yetersiz olabilir");
+    expect(result.reply).not.toContain("This answer may be insufficient");
   });
 
   it("isLowQuality response gets disclaimer appended", async () => {
@@ -323,8 +323,8 @@ describe("chatPipeline", () => {
 
     const result = await pipeline.process(makeInput());
 
-    expect(result.reply).toContain("Bu cevap yetersiz olabilir");
-    expect(result.reply).toContain("canli destek temsilcimize");
+    expect(result.reply).toContain("This answer may be insufficient");
+    expect(result.reply).toContain("live support agent");
   });
 
   it("includes memory context when requiresMemory", async () => {

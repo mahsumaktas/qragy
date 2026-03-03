@@ -63,10 +63,10 @@ function loadConfig(env = process.env) {
 function validateConfig(config) {
   const warnings = [];
   if (!config.googleApiKey) {
-    warnings.push("GOOGLE_API_KEY (veya GEMINI_API_KEY) tanimlanmamis — LLM cagrilari basarisiz olacak");
+    warnings.push("GOOGLE_API_KEY (or GEMINI_API_KEY) is not set — LLM calls will fail");
   }
   if (!config.adminToken) {
-    warnings.push("ADMIN_TOKEN tanimlanmamis — admin paneli korumasiz");
+    warnings.push("ADMIN_TOKEN is not set — admin panel is unprotected");
   }
   return warnings;
 }
@@ -82,10 +82,10 @@ function validateConfigStrict(config, env = process.env) {
   // ADMIN_TOKEN: missing/empty is an error in production
   if (!config.adminToken) {
     if (!isTestOrDev) {
-      errors.push("ADMIN_TOKEN tanimlanmamis — admin paneli korumasiz. Sunucu baslatilmiyor.");
+      errors.push("ADMIN_TOKEN is not set — admin panel is unprotected. Server will not start.");
     }
   } else if (config.adminToken.length < MIN_ADMIN_TOKEN_LENGTH && nodeEnv !== "test") {
-    errors.push(`ADMIN_TOKEN en az ${MIN_ADMIN_TOKEN_LENGTH} karakter olmali (mevcut: ${config.adminToken.length}). Sunucu baslatilmiyor.`);
+    errors.push(`ADMIN_TOKEN must be at least ${MIN_ADMIN_TOKEN_LENGTH} characters (current: ${config.adminToken.length}). Server will not start.`);
   }
 
   // GOOGLE_API_KEY: warning only (some setups use LLM_API_KEY instead)

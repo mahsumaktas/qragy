@@ -6,66 +6,67 @@ const { isLikelyBranchCode } = require("../utils/validators.js");
 // ── Constants ────────────────────────────────────────────────────────────
 
 const FAREWELL_WORDS = new Set([
-  "hosca kal", "hoscakal", "gorusuruz", "gorusmek uzere",
-  "iyi gunler", "iyi aksamlar", "iyi geceler", "iyi calismalar",
-  "bye", "goodbye", "kendine iyi bak",
-  "hoscakalin", "hosca kalin", "bay bay", "bb",
-  "hayirli gunler", "hayirli isler", "hayirli aksamlar",
-  "sagolun", "sag olun", "sagolasin", "sagolasiniz", "eyvallah", "eyv",
-  "tesekkurler", "tesekkur ederim", "tesekkur ediyorum", "tsk", "tskler",
-  "sagol", "cok tesekkurler", "cok sagol",
-  "cok tesekkur ederim", "tamam tesekkurler", "anladim tesekkurler",
-  "tamamdir sagol", "tamamdir tesekkurler", "oldu tesekkurler",
-  "kolay gelsin", "hadi gorusuruz", "allaha ismarladik"
+  "bye", "goodbye", "see you", "see ya", "take care",
+  "have a good day", "have a nice day", "have a great day",
+  "good night", "good evening", "good bye",
+  "thanks bye", "thank you bye", "thanks goodbye",
+  "cheers", "later", "talk later", "ttyl",
+  "thanks", "thank you", "thx", "ty",
+  "thank you so much", "thanks a lot", "many thanks",
+  "ok thanks", "got it thanks", "understood thanks",
+  "ok thank you", "alright thanks", "done thanks",
+  "appreciate it", "much appreciated"
 ]);
 
 const NON_ISSUE_MESSAGE_SET = new Set([
-  "tesekkurler",
-  "tesekkur ederim",
-  "sagol",
-  "sag olun",
+  "thanks",
+  "thank you",
+  "thx",
+  "ty",
   "ok",
-  "tamam",
-  "anlasildi",
-  "peki",
-  "teyit",
-  "rica ederim",
-  "merhaba",
-  "selam",
-  "iyi gunler",
-  "iyi aksamlar",
-  "iyi calismalar"
+  "okay",
+  "alright",
+  "got it",
+  "understood",
+  "sure",
+  "you're welcome",
+  "hello",
+  "hi",
+  "hey",
+  "good morning",
+  "good evening",
+  "good afternoon"
 ]);
 
-const CONFIRMATION_PREFIX_REGEX = /^Talebinizi ald[ıi]m\.\s*Kullan[ıi]c[ıi] ad[ıi]:/i;
-const ESCALATION_MESSAGE_REGEX = /sizi canl[ıi] destek temsilci(?:mize|sine) aktar[ıi]yorum/i;
+const CONFIRMATION_PREFIX_REGEX = /^I['']ve noted your request\.\s*Account ID:/i;
+const ESCALATION_MESSAGE_REGEX = /connecting you with a live support agent/i;
 const POST_ESCALATION_FOLLOWUP_MESSAGE =
-  "Talebiniz canlı destek ekibine iletildi. En kısa sürede bir temsilci size yardımcı olacaktır. Lütfen bekleyiniz.";
+  "Your request has been forwarded to the live support team. An agent will assist you shortly. Please hold on.";
 
-const FIELD_CLARIFICATION_REGEX = /(?:kullanici\s*ad(?:i|ı)?|sube\s*kod(?:u)?|firma\s*adi|ad\s*soyad|telefon|branch\s*code)/i;
+const FIELD_CLARIFICATION_REGEX = /(?:account\s*id|user\s*(?:name|id)|email|branch\s*code|organization)/i;
 const QUESTION_INTENT_REGEX =
-  /(?:nerede|nerde|nasil|nasil|gerekli|lazim|zorunlu|hangi|ne|yaziyor|yazilir|nereden)/i;
+  /(?:where|how|what|which|required|needed|mandatory|find|locate)/i;
 const STATUS_FOLLOWUP_REGEX =
-  /(?:bekliyorum|beklemedeyim|durum|ne zaman|donus|donus yapacak|hadi|hala|halen|acil|sirada)/i;
+  /(?:waiting|status|update|when|how long|still|urgent|any news|follow.?up|progress)/i;
 const ISSUE_HINT_REGEX =
-  /(?:hata|kesemiyor|baglan|odeme|yazici|program|acilm|donuyor|yanlis|iptal|koltuk|pnr|sefer|bilet)/i;
-const NEW_TICKET_INTENT_REGEX = /(?:yeni\s*talep|yeniden\s*talep|baska\s*talep|tekrar\s*talep)/i;
+  /(?:error|can't|cannot|broken|fail|crash|bug|issue|problem|not working|slow|stuck|freeze|wrong|printer|report|billing|login)/i;
+const NEW_TICKET_INTENT_REGEX = /(?:new\s*(?:request|ticket|issue)|another\s*(?:request|issue)|start\s*over)/i;
 const BRANCH_LOCATION_QUESTION_REGEX =
-  /(?:(?:kullanici\s*ad|sube\s*kodu?).*(?:nerede|nerden|nereden|ne)|nerede.*(?:kullanici\s*ad|sube\s*kodu?))/i;
+  /(?:(?:account\s*id|user\s*(?:name|id)).*(?:where|find|what)|(?:where|find).*(?:account\s*id|user\s*(?:name|id)))/i;
 const FIELD_REQUIREMENT_QUESTION_REGEX =
-  /(?:firma\s*adi|ad\s*soyad|telefon).*(?:gerekli|zorunlu|lazim|sart)|(?:gerekli|zorunlu|lazim|sart).*(?:firma\s*adi|ad\s*soyad|telefon)/i;
+  /(?:(?:name|email|phone).*(?:required|needed|mandatory)|(?:required|needed|mandatory).*(?:name|email|phone))/i;
 
 const DEFAULT_MEMORY_TEMPLATE = {
   requiredFields: ["branchCode", "issueSummary"],
   optionalFields: ["fullName", "phone"],
   confirmationTemplate:
-    "Talebinizi aldım. Kullanıcı adı: {{branchCode}}. Sorun özeti: {{issueSummary}}. Destek ekibi en kısa sürede dönüş yapacaktır."
+    "I've noted your request. Account ID: {{branchCode}}. Issue: {{issueSummary}}. Our support team will follow up shortly."
 };
 
 const CLOSED_TICKET_STATUS_MESSAGE =
-  "Talebiniz daha önce alındı ve destek ekibine iletildi. Dönüş bekleniyor. Yeni bir talep açmak isterseniz kullanıcı adınızı ve sorun özetini yazabilirsiniz.";
+  "Your request was previously received and forwarded to the support team. We're waiting for a response. If you'd like to open a new request, please share your account ID and a brief description of the issue.";
 const OUTSIDE_SUPPORT_HOURS_MESSAGE =
-  "Canlı destek şu an mesai dışındadır. Talebiniz kayda alındı; mesai saatlerinde temsilciye aktarılacaktır.";
+  "Live support is currently unavailable outside business hours. Your request has been logged and will be forwarded to an agent during business hours.";
 
 // ── Message Classification ───────────────────────────────────────────────
 
@@ -89,16 +90,16 @@ function isGibberishMessage(text, opts = {}) {
   // Random consonant strings (no vowels in 6+ chars) — but exempt branch codes, phone numbers, order numbers
   if (trimmed.length >= 6 && !/[aeıioöuüAEIİOÖUÜ]/i.test(trimmed) && !/\d/.test(trimmed)) return true;
   // Very short random text (2-3 chars, not a known word)
-  if (trimmed.length <= 2 && !/^(ok|no|da|de|bi|bu|şu|ne|ve|ya|ki|ha|he|hi)$/i.test(trimmed)) return true;
-  // Keyboard mash: bilinen QWERTY mash patternleri (consecutive check Turkce "-iyor" suffix'inde false positive olusturur)
+  if (trimmed.length <= 2 && !/^(ok|no|hi|go|up|am|an|as|at|be|by|do|if|in|is|it|me|my|of|on|or|so|to|us|we)$/i.test(trimmed)) return true;
+  // Keyboard mash: known QWERTY mash patterns (explicit pattern matching to avoid false positives)
   const noSpaceMsg = trimmed.replace(/\s+/g, "").toLowerCase();
   if (noSpaceMsg.length >= 4 && /^(asdf|qwert|zxcv|hjkl|uiop|fghj|sdfg|poiu|lkjh|mnbv|cvbn)/.test(noSpaceMsg)) return true;
-  // Programming keywords: tek basina veya kisa kombinasyon
+  // Programming keywords: standalone or short combinations
   const PROGRAMMING_KEYWORDS = /^(select|insert|update|delete|drop|alter|create|from|where|null|undefined|nan|console\.log|var|let|const|function|return|import|require|true|false|void|typeof|instanceof|class|int|string|float|bool|print|echo|sudo|chmod|grep|curl|wget|pip|npm|git|docker)(\s+(1\+1|\d+|null|undefined|nan|true|false|from|into|table|where|\*|\.|\w{1,8}))*[;()]*$/i;
   if (PROGRAMMING_KEYWORDS.test(trimmed)) return true;
-  // Anlamsiz kisa metin: 5+ char, Turkce sesli harf cifti yok, alfanumerik
+  // Meaningless short text: 5+ chars, no vowel pair, purely alphanumeric
   if (trimmed.length >= 5 && trimmed.length <= 20 && /^[a-zA-Z0-9]+$/.test(trimmed)) {
-    const hasVowelPair = /[aeıioöuüAEIİOÖUÜ].*[aeıioöuüAEIİOÖUÜ]/i.test(trimmed);
+    const hasVowelPair = /[aeiouAEIOU].*[aeiouAEIOU]/i.test(trimmed);
     if (!hasVowelPair && !/\d/.test(trimmed)) return true;
   }
   return false;
@@ -113,17 +114,17 @@ function isGibberishMessage(text, opts = {}) {
 function isFarewellMessage(text, turnCount, opts = {}) {
   const { chatFlowConfig = {} } = opts;
   if (chatFlowConfig.closingFlowEnabled === false) return false;
-  // Konusmanin basinda (ilk 2 tur) tesekkur/sagol farewell degil, kibarliktir
+  // In the first 2 turns, thanks/thank you is politeness, not farewell
   if (turnCount !== undefined && turnCount < 3) return false;
   const normalized = normalizeForMatching(text);
   if (!normalized) return false;
-  // Uzun mesajlar farewell degildir — ek icerik var demektir
+  // Long messages are not farewells — they contain additional content
   if (normalized.split(/\s+/).length > 8) return false;
-  // Negative override: tesekkur iceren ama sorun devam eden veya yeni soru soran mesajlar farewell degil
-  const NEGATIVE_OVERRIDE = /\b(ama|fakat|hala|yine|olmadi|calismadi|yapamadim|cozemedim|devam|sorun|problem|hata|sikinti|bozuk)\b/;
+  // Negative override: messages with thanks but ongoing issue or new question are not farewells
+  const NEGATIVE_OVERRIDE = /\b(but|however|still|again|didn'?t work|not working|can'?t|couldn'?t|failed|issue|problem|error|broken)\b/;
   if (NEGATIVE_OVERRIDE.test(normalized)) return false;
-  // Soru iceren mesajlar farewell degil: "tesekkurler peki nasil yaparim?"
-  const QUESTION_OVERRIDE = /\b(nasil|nedir|nerede|ne zaman|ne kadar|hangi|peki|ayrica|bir de|bir sey daha)\b/;
+  // Messages containing questions are not farewells: "thanks but how do I do it?"
+  const QUESTION_OVERRIDE = /\b(how|what|where|when|which|also|another|one more|by the way)\b/;
   if (QUESTION_OVERRIDE.test(normalized)) return false;
   if (text.includes("?")) return false;
   if (FAREWELL_WORDS.has(normalized)) return true;
@@ -176,7 +177,7 @@ function isGreetingOnlyMessage(text) {
     return true;
   }
 
-  return /^(hi|hello|selamlar|merhabalar)$/.test(normalized);
+  return /^(hi|hello|hey|greetings|good morning|good afternoon|good evening)$/.test(normalized);
 }
 
 function getLastAssistantMessage(messages) {
@@ -240,10 +241,10 @@ function extractBranchCodeFromText(text) {
   }
 
   const patterns = [
-    /(?:kullan[ıi]c[ıi])\s*(?:ad[ıi])?\s*[:=-]\s*([A-Za-z0-9_.@-]{2,40})/i,
-    /(?:kullan[ıi]c[ıi])\s*(?:ad[ıi])?\s+([A-Za-z0-9_.@-]{2,40})/i,
-    /(?:sube|[\u015f\u015e]ube)\s*(?:kodu|kod)?\s*[:=-]\s*([A-Za-z0-9-]{2,20})/i,
-    /(?:sube|[\u015f\u015e]ube)\s*(?:kodu|kod)?\s+([A-Za-z0-9-]{2,20})/i,
+    /(?:account)\s*(?:id)?\s*[:=-]\s*([A-Za-z0-9_.@-]{2,40})/i,
+    /(?:account)\s*(?:id)?\s+([A-Za-z0-9_.@-]{2,40})/i,
+    /(?:user)\s*(?:name|id)?\s*[:=-]\s*([A-Za-z0-9_.@-]{2,40})/i,
+    /(?:user)\s*(?:name|id)?\s+([A-Za-z0-9_.@-]{2,40})/i,
     /(?:branch)\s*(?:code)?\s*[:=-]\s*([A-Za-z0-9-]{2,20})/i,
     /(?:branch)\s*(?:code)?\s+([A-Za-z0-9-]{2,20})/i
   ];
@@ -256,30 +257,30 @@ function extractBranchCodeFromText(text) {
       return candidate;
     }
 
-    // Explicit "sube kodu" baglami varsa pure numeric de kabul et (2-10 hane)
+    // If explicit "account id" context exists, accept pure numeric (2-10 digits)
     if (candidate && /^\d{2,10}$/.test(candidate)) {
       return candidate;
     }
   }
 
-  // Standalone text — kullanıcı adı olarak kabul et (2-40 karakter, tek kelime veya kısa metin)
+  // Standalone text — accept as account ID (2-40 chars, single word or short text)
   const standaloneMatch = text.match(/^\s*([A-Za-z0-9_.@-]{2,40})\s*$/);
   const standaloneCandidate = standaloneMatch?.[1] || "";
 
-  // Selamlama veya genel mesajları kullanıcı adı olarak kabul etme
+  // Don't accept greetings or generic messages as account IDs
   if (standaloneCandidate && (isNonIssueMessage(standaloneCandidate) || isGreetingOnlyMessage(standaloneCandidate))) {
-    // "Merhaba", "Selam", "Tamam" vb. kullanıcı adı değil
+    // "Hello", "Hi", "Ok" etc. are not account IDs
   } else {
     if (isLikelyBranchCode(standaloneCandidate.toUpperCase())) {
       return standaloneCandidate;
     }
 
-    // Standalone pure numeric (2-6 hane) — kullanıcı kodu olarak kabul et
+    // Standalone pure numeric (2-6 digits) — accept as account ID
     if (standaloneCandidate && /^\d{2,6}$/.test(standaloneCandidate)) {
       return standaloneCandidate;
     }
 
-    // Standalone kısa alfanumerik — kullanıcı adı olarak kabul et
+    // Standalone short alphanumeric — accept as account ID
     if (standaloneCandidate && standaloneCandidate.length >= 3 && /[A-Za-z]/.test(standaloneCandidate)) {
       return standaloneCandidate;
     }
@@ -315,14 +316,14 @@ function extractBranchCodeFromText(text) {
 
 function sanitizeIssueSummary(text, branchCode = "") {
   let cleaned = text
-    .replace(/(?:kullan[ıi]c[ıi])\s*(?:ad[ıi])?\s*[:=-]?\s*[A-Za-z0-9_.@-]{2,40}/gi, "")
-    .replace(/(?:sube|[\u015f\u015e]ube)\s*(?:kodu|kod)?\s*[:=-]?\s*[A-Za-z0-9-]{2,20}/gi, "")
-    .replace(/(?:ad\s*soyad|telefon|firma(?:\s*adi)?)\s*[:=-]?\s*[^,.;\n]+/gi, "")
+    .replace(/(?:account)\s*(?:id)?\s*[:=-]?\s*[A-Za-z0-9_.@-]{2,40}/gi, "")
+    .replace(/(?:user)\s*(?:name|id)?\s*[:=-]?\s*[A-Za-z0-9_.@-]{2,40}/gi, "")
+    .replace(/(?:(?:full\s*)?name|phone|email|organization)\s*[:=-]?\s*[^,.;\n]+/gi, "")
     .replace(
-      /^((merhaba|selam|iyi\s*g(?:u|\u00fc)nler|iyi\s*ak(?:s|\u015f)amlar|iyi\s*cali(?:s|\u015f)malar)[,.\s-]*)+/i,
+      /^((hello|hi|hey|good\s*morning|good\s*afternoon|good\s*evening)[,.\s-]*)+/i,
       ""
     )
-    .replace(/^yeni\s*talep\s*[:-]?\s*/i, "")
+    .replace(/^new\s*(?:request|ticket)\s*[:-]?\s*/i, "")
     .replace(/,\s*\./g, ".")
     .replace(/\s+([,.;:!?])/g, "$1")
     .replace(/([.]){2,}/g, ".")
@@ -335,8 +336,8 @@ function sanitizeIssueSummary(text, branchCode = "") {
     const escapedBranch = String(branchCode).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     cleaned = cleaned
       .replace(new RegExp(`\\b${escapedBranch}\\b`, "gi"), "")
-      .replace(/^\s*ve\s+/i, "")
-      .replace(/\s+ve\s+$/i, "")
+      .replace(/^\s*and\s+/i, "")
+      .replace(/\s+and\s+$/i, "")
       .replace(/\s+/g, " ")
       .trim();
   }
@@ -361,11 +362,11 @@ function parseClosedTicketFromAssistantMessage(message) {
   }
 
   const text = String(message.content || "");
-  const branchCode = text.match(/Kullan[ıi]c[ıi] ad[ıi]:\s*([^.\n]+)\./i)?.[1]?.trim() ||
-    text.match(/Sube kodu:\s*([^.\n]+)\./i)?.[1]?.trim() || "";
+  const branchCode = text.match(/Account ID:\s*([^.\n]+)\./i)?.[1]?.trim() ||
+    text.match(/Branch code:\s*([^.\n]+)\./i)?.[1]?.trim() || "";
   const issueSummary =
-    text.match(/Sorun [öo]zeti:\s*([\s\S]+?)\.\s*Destek ekibi/i)?.[1]?.trim() ||
-    text.match(/Kisa aciklama:\s*([\s\S]+?)\.\s*Destek ekibi/i)?.[1]?.trim() || "";
+    text.match(/Issue:\s*([\s\S]+?)\.\s*(?:Our )?support team/i)?.[1]?.trim() ||
+    text.match(/Summary:\s*([\s\S]+?)\.\s*(?:Our )?support team/i)?.[1]?.trim() || "";
 
   if (!branchCode || !issueSummary) {
     return null;
@@ -419,7 +420,7 @@ function extractTicketMemory(activeMessages) {
 
     if (!memory.companyName) {
       const companyMatch = text.match(
-        /(?:firma(?:\s*adi)?|company)\s*[:=-]?\s*([A-Za-z0-9 .,&-]{2,80})/i
+        /(?:(?:company|organization)(?:\s*name)?)\s*[:=-]?\s*([A-Za-z0-9 .,&-]{2,80})/i
       );
       if (companyMatch?.[1]) {
         memory.companyName = companyMatch[1].trim();
@@ -428,7 +429,7 @@ function extractTicketMemory(activeMessages) {
 
     if (!memory.fullName) {
       const fullNameMatch = text.match(
-        /(?:ad\s*soyad|isim|yetkili)\s*[:=-]?\s*([A-Za-z .,'-]{3,80})/i
+        /(?:(?:full\s*)?name|contact\s*person)\s*[:=-]?\s*([A-Za-z .,'-]{3,80})/i
       );
       if (fullNameMatch?.[1]) {
         memory.fullName = fullNameMatch[1].trim();
@@ -507,9 +508,9 @@ function buildMissingFieldsReply(memory, latestUserMessage = "", opts = {}) {
   const { companyName: _companyName = "" } = opts;
 
   const fieldRequirementMessage =
-    "Talep açmak için kullanıcı adı ve sorun özeti zorunludur. Ad soyad ve telefon bilgileri isteğe bağlıdır.";
+    "To open a support request, your account ID and a brief issue description are required. Full name and phone number are optional.";
   const branchLocationMessage =
-    "Kullanıcı adı, OBUS sistemine giriş yaparken kullandığınız kimlik bilgisidir. Emin değilseniz firma yöneticinizden teyit edip iletebilirsiniz.";
+    "Your account ID is the unique identifier you use to log in to the platform. If you're not sure, you can check with your organization administrator.";
 
   const normalizedLatest = normalizeForMatching(latestUserMessage);
 
@@ -521,7 +522,7 @@ function buildMissingFieldsReply(memory, latestUserMessage = "", opts = {}) {
     return branchLocationMessage;
   }
 
-  // Bilgi toplama LLM'e bırakılır — konu dosyasında gerektiğinde LLM sorar
+  // Info collection is delegated to the LLM — it asks when needed based on topic files
   return null;
 }
 
@@ -544,11 +545,11 @@ function buildDeterministicCollectionReply(memory, activeUserMessages, hasClosed
   const replyOpts = { companyName, botName };
 
   const welcomeMessage =
-    `Merhaba, ben OBUS Teknik Destek Asistanı. Size nasıl yardımcı olabilirim?`;
+    `Hello, I'm the Technical Support Assistant. How can I help you?`;
   const fieldRequirementMessage =
-    "Talep açmak için kullanıcı adı ve sorun özeti zorunludur. Ad soyad ve telefon bilgileri isteğe bağlıdır.";
+    "To open a support request, your account ID and a brief issue description are required. Full name and phone number are optional.";
   const branchLocationMessage =
-    "Kullanıcı adı, OBUS sistemine giriş yaparken kullandığınız kimlik bilgisidir. Emin değilseniz firma yöneticinizden teyit edip iletebilirsiniz.";
+    "Your account ID is the unique identifier you use to log in to the platform. If you're not sure, you can check with your organization administrator.";
 
   const latestUserMessage = activeUserMessages[activeUserMessages.length - 1] || "";
   const normalizedLatest = normalizeForMatching(latestUserMessage);
@@ -557,7 +558,7 @@ function buildDeterministicCollectionReply(memory, activeUserMessages, hasClosed
     return welcomeMessage;
   }
 
-  // Selamlama mesajı geldiğinde sadece karşılama yap — ama sadece ilk turda
+  // Only respond with a welcome when greeting is received — but only on the first turn
   if (activeUserMessages.length <= 1 && (isGreetingOnlyMessage(latestUserMessage) || NEW_TICKET_INTENT_REGEX.test(normalizedLatest))) {
     return welcomeMessage;
   }
@@ -584,7 +585,7 @@ function buildDeterministicCollectionReply(memory, activeUserMessages, hasClosed
       return welcomeMessage;
     }
 
-    // Konu belirlenmeden bilgi toplama — LLM'e bırak (null dön)
+    // No info collection without topic detection — delegate to LLM (return null)
     return null;
   }
 
@@ -599,13 +600,13 @@ function detectConversationLoop(userMessages) {
   const normalized = userMessages.map(m => normalizeForMatching(m));
   const last = normalized[normalized.length - 1];
 
-  // Son mesaji oncekilerle karsilastir
+  // Compare the last message with previous ones
   let exactRepeatCount = 0;
   for (let i = normalized.length - 2; i >= 0; i--) {
     if (normalized[i] === last) exactRepeatCount++;
   }
 
-  // Benzerlik kontrolu: son 3 mesajin %80+ overlap'i
+  // Similarity check: last 3 messages with 80%+ overlap
   let similarCount = 0;
   if (normalized.length >= 3) {
     const lastThree = normalized.slice(-3);
@@ -670,10 +671,10 @@ async function buildConversationContext(memory, userMessages, opts = {}) {
     context.topicConfidence = topicResult.confidence;
     context.conversationState = "topic_guided_support";
   } else if (userMessages.length <= 1 && isGreetingOnlyMessage(latestMessage)) {
-    // Sadece ilk turda greeting algıla — devam eden konuşmada "tamam", "ok" gibi mesajlar greeting değil
+    // Only detect greeting on first turn — in ongoing conversation "ok", "sure" etc. are not greetings
     context.conversationState = "welcome_or_greet";
   } else {
-    // Keyword eslesmedi — LLM-based classification dene (tum mesajlari gonder, baglam icin)
+    // Keyword matching failed — try LLM-based classification (send all messages for context)
     const llmTopicId = typeof classifyTopicWithLLM === "function"
       ? await classifyTopicWithLLM(userMessages)
       : null;
@@ -688,9 +689,9 @@ async function buildConversationContext(memory, userMessages, opts = {}) {
     }
   }
 
-  // Not: Erken escalation kaldirildi. Ilk turda her zaman KB bilgisi paylasarak yardimci ol.
-  // Failure indicator (olmuyor, yapamiyorum vb.) varsa bile once troubleshooting/KB bilgisi ver,
-  // sonraki turlarda escalation gerektiriyorsa yonlendir.
+  // Note: Early escalation removed. Always provide KB info on the first turn.
+  // Even if failure indicators (not working, can't do it, etc.) are present, provide troubleshooting/KB info first,
+  // then redirect to escalation in subsequent turns if needed.
 
   if (memory.branchCode) {
     context.collectedInfo.branchCode = memory.branchCode;
@@ -725,7 +726,7 @@ function _detectTopicFromMessages(userMessages, topicIndex) {
     return { topicId: null, confidence: 0, method: "none" };
   }
 
-  // Tum mesajlara bak (topic ilk mesajlarda belirtilir, sonraki turlarda kaybolmamali)
+  // Check all messages (topic is usually stated in early messages, should not be lost in later turns)
   const allText = userMessages.join(" ");
   const normalized = normalizeForMatching(allText);
 
@@ -755,20 +756,20 @@ function _detectTopicFromMessages(userMessages, topicIndex) {
 }
 
 /**
- * Kullanicinin mesajinda GUCLU basarisizlik ifadesi olup olmadigini tespit et.
- * Guclu = kullanici denedigini ve basaramadigini acikca bildiriyor.
- * Zayif belirtiler (hata veriyor, acilmiyor) buraya dahil DEGIL — bunlar sadece sorunu tanimlar.
+ * Detects whether the user's message contains a STRONG failure expression.
+ * Strong = user explicitly states they tried and failed.
+ * Weak indicators (showing error, not opening) are NOT included — they only describe the problem.
  */
 function _hasFailureIndicator(text) {
   const normalized = normalizeForMatching(text);
   const strongIndicators = [
-    "yapamiyorum", "yapamadim", "yapamiyor",
-    "olmuyor", "olmadi", "olmuyo",
-    "calismadi", "calismiyor",
-    "tekrar deneyiniz", "sonra tekrar",
-    "basarisiz", "basarili olamadi",
-    "cozemiyorum", "cozemedim",
-    "beceremedim", "beceremiyorum",
+    "can't do it", "couldn't do it", "unable to",
+    "not working", "didn't work", "doesn't work",
+    "still not working", "still broken",
+    "try again later", "please try again",
+    "failed", "unsuccessful",
+    "can't fix", "couldn't fix",
+    "can't resolve", "couldn't resolve",
   ];
   return strongIndicators.some(ind => normalized.includes(ind));
 }
@@ -780,53 +781,52 @@ function _hasFailureIndicator(text) {
 function _detectEscalationTriggersLocal(text, remoteToolName) {
   const normalized = normalizeForMatching(text);
 
-  // Direkt temsilci/canli destek istegi
-  // Not: "canli destek" tek basina cok genis — saat/bilgi sorularini da yakaliyor.
-  // "canli destek" icin bilgi sorusu mu yoksa talep mi ayirimi yap.
+  // Direct agent/live support request
+  // Note: "live support" alone is too broad — it also catches hour/info questions.
+  // Distinguish between info questions and actual requests for "live support".
   const DIRECT_AGENT_PATTERNS = [
-    "canli destek istiyorum", "canli destege bagla",
-    "temsilci istiyorum", "temsilci ile gorusmek", "temsilciye bagla",
-    "gercek kisi", "gercek birisi",
-    "insan ile", "insanla konusmak",
-    "yetkili ile", "yetkiliyle",
-    "operatore bagla",
-    "mudur ile gorusmek",
+    "i want live support", "connect me to support",
+    "i want an agent", "talk to an agent", "connect me to an agent",
+    "real person", "real human",
+    "speak to someone", "talk to someone",
+    "speak to a manager", "talk to a manager",
+    "transfer me", "escalate this",
   ];
   if (DIRECT_AGENT_PATTERNS.some(p => normalized.includes(normalizeForMatching(p)))) {
     return { shouldEscalate: true, reason: "direct_agent_request" };
   }
-  // "canli destek" genel pattern: sadece bilgi sorusu degilse escalation yap
-  const INFO_QUESTION_WORDS = ["saat", "ne zaman", "kacta", "saatleri", "acilis", "kapanis", "mesai", "calisma"];
-  if (normalized.includes("canli destek") && !INFO_QUESTION_WORDS.some(w => normalized.includes(w))) {
+  // "live support" general pattern: only escalate if it's not an info question
+  const INFO_QUESTION_WORDS = ["hours", "when", "what time", "schedule", "open", "close", "available"];
+  if (normalized.includes("live support") && !INFO_QUESTION_WORDS.some(w => normalized.includes(w))) {
     return { shouldEscalate: true, reason: "direct_agent_request" };
   }
 
-  // Alpemix ID + Parola algılama (hardcode — OBUS'un uzak bağlantı aracı)
-  const alpemixPattern = /alpemix/i;
-  const hasAlpemix = alpemixPattern.test(text);
-  if (hasAlpemix) {
-    const idPattern = /alpemix\s*(?:id|no|numara)?\s*[:=-]?\s*\d+/i;
-    const passPattern = /(?:parola|sifre|şifre|password|pass)\s*[:=-]?\s*\S+/i;
+  // Remote support tool credential detection (ID + password/access code)
+  const REMOTE_TOOL_NAMES = ["anydesk", "teamviewer", "remote desktop", "remote support"];
+  const detectedTool = REMOTE_TOOL_NAMES.find(name => normalized.includes(name));
+  if (detectedTool) {
+    const idPattern = /(?:id|code|number)\s*[:=-]?\s*\d+/i;
+    const passPattern = /(?:password|pass|access\s*code|pin)\s*[:=-]?\s*\S+/i;
     const hasToolId = idPattern.test(text);
     const hasToolPass = passPattern.test(text);
 
     if (hasToolId && hasToolPass) {
-      return { shouldEscalate: true, reason: "alpemix_credentials" };
+      return { shouldEscalate: true, reason: "remote_tool_credentials" };
     }
 
-    // İki ayrı sayı grubu + alpemix kelimesi = muhtemelen ID ve parola
+    // Two separate number groups + tool name = likely ID and password
     const bothInOneLine = /\d{3,}[\s,;.-]+\d{3,}/.test(text);
     if (bothInOneLine) {
-      return { shouldEscalate: true, reason: "alpemix_credentials" };
+      return { shouldEscalate: true, reason: "remote_tool_credentials" };
     }
   }
 
-  // Ek remote tool pattern (varsa)
+  // Additional remote tool pattern (configurable)
   const toolName = remoteToolName || "remote_tool";
   if (remoteToolName) {
     const toolPattern = new RegExp(remoteToolName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-    const idPattern = new RegExp(`(?:${toolPattern.source}\\s*(?:id|no|numara)?\\s*[:=-]?\\s*\\d+)`, "i");
-    const passPattern = /(?:(?:parola|sifre|şifre)\s*[:=-]?\s*\d+)/i;
+    const idPattern = new RegExp(`(?:${toolPattern.source}\\s*(?:id|code|number)?\\s*[:=-]?\\s*\\d+)`, "i");
+    const passPattern = /(?:(?:password|pass|access\s*code)\s*[:=-]?\s*\S+)/i;
     if (idPattern.test(text) && passPattern.test(text)) {
       return { shouldEscalate: true, reason: `${toolName}_credentials` };
     }

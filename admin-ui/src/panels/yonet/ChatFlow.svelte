@@ -14,7 +14,7 @@
       const res = await api.get("admin/chat-flow");
       config = res.config || res || {};
     } catch (e) {
-      showToast("Sohbet akisi yuklenemedi: " + e.message, "error");
+      showToast("Failed to load chat flow: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -23,40 +23,40 @@
   async function save() {
     try {
       await api.put("admin/chat-flow", { config });
-      showToast("Kaydedildi", "success");
+      showToast("Saved", "success");
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 </script>
 
 <div class="page-header">
   <div>
-    <h1>Sohbet Akisi</h1>
-    <p>Karsilama, zamanlama, algilama, kapanis ayarlari</p>
+    <h1>Chat Flow</h1>
+    <p>Greeting, timing, detection, closing settings</p>
   </div>
-  <Button onclick={save} variant="primary" size="sm">Kaydet</Button>
+  <Button onclick={save} variant="primary" size="sm">Save</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="flow-sections">
     <div class="card">
-      <h2>Karsilama</h2>
+      <h2>Greeting</h2>
       <div class="form-grid">
         <div class="form-row">
-          <label>Karsilama Aktif
+          <label>Greeting Enabled
             <Toggle bind:checked={config.greetingEnabled} />
           </label>
         </div>
         <div class="form-group">
-          <label>Karsilama Mesaji
+          <label>Greeting Message
             <textarea class="textarea" bind:value={config.greetingMessage} rows="3"></textarea>
           </label>
         </div>
         <div class="form-group">
-          <label>Karsilama Gecikmesi (ms)
+          <label>Greeting Delay (ms)
             <input class="input" type="number" bind:value={config.greetingDelay} />
           </label>
         </div>
@@ -64,35 +64,35 @@
     </div>
 
     <div class="card">
-      <h2>Zamanlama</h2>
+      <h2>Timing</h2>
       <div class="form-grid">
         <div class="form-group">
-          <label>Mesai Disi Mesaji
+          <label>Off-Hours Message
             <textarea class="textarea" bind:value={config.offHoursMessage} rows="2"></textarea>
           </label>
         </div>
         <div class="form-group">
-          <label>Otomatik Kapanis (dk)
+          <label>Auto Close (min)
             <input class="input" type="number" bind:value={config.autoCloseMinutes} />
           </label>
         </div>
         <div class="form-group">
-          <label>Inaktiflik Uyarisi (dk)
+          <label>Inactivity Warning (min)
             <input class="input" type="number" bind:value={config.inactivityWarningMinutes} />
           </label>
         </div>
         <div class="form-group">
-          <label>Mesaj Biriktirme Penceresi (ms)
+          <label>Message Aggregation Window (ms)
             <input class="input" type="number" bind:value={config.messageAggregationWindowMs} />
           </label>
         </div>
         <div class="form-group">
-          <label>Bot Yanit Gecikmesi (ms)
+          <label>Bot Response Delay (ms)
             <input class="input" type="number" bind:value={config.botResponseDelayMs} />
           </label>
         </div>
         <div class="form-row">
-          <label>Yazma Gostergesi
+          <label>Typing Indicator
             <Toggle bind:checked={config.typingIndicatorEnabled} />
           </label>
         </div>
@@ -100,30 +100,30 @@
     </div>
 
     <div class="card">
-      <h2>Algilama</h2>
+      <h2>Detection</h2>
       <div class="form-grid">
         <div class="form-row">
-          <label>Konu Algilama Aktif
+          <label>Topic Detection Enabled
             <Toggle bind:checked={config.topicDetectionEnabled} />
           </label>
         </div>
         <div class="form-row">
-          <label>Duygu Analizi
+          <label>Sentiment Analysis
             <Toggle bind:checked={config.sentimentEnabled} />
           </label>
         </div>
         <div class="form-group">
-          <label>Maks Klarifikasyon
+          <label>Max Clarifications
             <input class="input" type="number" bind:value={config.maxClarifications} />
           </label>
         </div>
         <div class="form-row">
-          <label>Gibberish Algilama
+          <label>Gibberish Detection
             <Toggle bind:checked={config.gibberishDetectionEnabled} />
           </label>
         </div>
         <div class="form-group">
-          <label>Gibberish Mesaji
+          <label>Gibberish Message
             <textarea class="textarea" bind:value={config.gibberishMessage} rows="2"></textarea>
           </label>
         </div>
@@ -131,35 +131,35 @@
     </div>
 
     <div class="card">
-      <h2>Kapanis</h2>
+      <h2>Closing</h2>
       <div class="form-grid">
         <div class="form-row">
-          <label>Kapanis Akisi Aktif
+          <label>Closing Flow Enabled
             <Toggle bind:checked={config.closingFlowEnabled} />
           </label>
         </div>
         <div class="form-group">
-          <label>Kapanis Mesaji
+          <label>Closing Message
             <textarea class="textarea" bind:value={config.closingMessage} rows="2"></textarea>
           </label>
         </div>
         <div class="form-group">
-          <label>Baska Bir Sey Var Mi? Mesaji
+          <label>Anything Else? Message
             <textarea class="textarea" bind:value={config.anythingElseMessage} rows="2"></textarea>
           </label>
         </div>
         <div class="form-group">
-          <label>Veda Mesaji
+          <label>Farewell Message
             <textarea class="textarea" bind:value={config.farewellMessage} rows="2"></textarea>
           </label>
         </div>
         <div class="form-row">
-          <label>CSAT Anketi
+          <label>CSAT Survey
             <Toggle bind:checked={config.csatEnabled} />
           </label>
         </div>
         <div class="form-group">
-          <label>CSAT Mesaji
+          <label>CSAT Message
             <textarea class="textarea" bind:value={config.csatMessage} rows="2"></textarea>
           </label>
         </div>
@@ -170,22 +170,22 @@
       <h2>Nudge</h2>
       <div class="form-grid">
         <div class="form-row">
-          <label>Nudge Aktif
+          <label>Nudge Enabled
             <Toggle bind:checked={config.nudgeEnabled} />
           </label>
         </div>
         <div class="form-group">
-          <label>%75 Nudge Mesaji
+          <label>75% Nudge Message
             <textarea class="textarea" bind:value={config.nudgeAt75Message} rows="2"></textarea>
           </label>
         </div>
         <div class="form-group">
-          <label>%90 Nudge Mesaji
+          <label>90% Nudge Message
             <textarea class="textarea" bind:value={config.nudgeAt90Message} rows="2"></textarea>
           </label>
         </div>
         <div class="form-group">
-          <label>Inaktiflik Kapanis Mesaji
+          <label>Inactivity Close Message
             <textarea class="textarea" bind:value={config.inactivityCloseMessage} rows="2"></textarea>
           </label>
         </div>

@@ -52,17 +52,17 @@ async function cohereRerank(query, results, cohereApiKey, _logger) {
 // ── Strategy 2: LLM-as-reranker ────────────────────────────────────────
 
 const LLM_RERANK_SYSTEM_PROMPT = [
-  "Sen bir bilgi bankasi sonuc puanlayicisisin.",
-  "Kullanici sorusu ve bilgi bankasi sonuclari verilecek.",
-  "Her sonucun soruyla ne kadar ilgili oldugunu 0 ile 1 arasinda puanla.",
-  "0 = hic ilgisiz, 1 = tam ilgili.",
-  "SADECE JSON array dondur, baska bir sey yazma.",
+  "You are a knowledge base result scorer.",
+  "You will be given a user question and knowledge base results.",
+  "Score each result from 0 to 1 based on relevance to the question.",
+  "0 = not relevant at all, 1 = perfectly relevant.",
+  "ONLY return a JSON array, do not write anything else.",
   'Format: [{"index": 0, "score": 0.95}, {"index": 1, "score": 0.3}]',
 ].join("\n");
 
 function buildLLMRerankPrompt(query, results) {
-  const items = results.map((r, i) => `[${i}] Soru: ${r.question || ""}\nCevap: ${r.answer || ""}`);
-  return `Kullanici sorusu: "${query}"\n\nSonuclar:\n${items.join("\n\n")}\n\nHer sonucu 0-1 arasi puanla. JSON array dondur.`;
+  const items = results.map((r, i) => `[${i}] Question: ${r.question || ""}\nAnswer: ${r.answer || ""}`);
+  return `User question: "${query}"\n\nResults:\n${items.join("\n\n")}\n\nScore each result from 0-1. Return JSON array.`;
 }
 
 function parseScoresFromLLMReply(reply) {
@@ -121,7 +121,7 @@ function createReranker(deps) {
       try {
         const reranked = await cohereRerank(query, results, cohereApiKey, logger);
         const sorted = reranked.sort((a, b) => b._rerankScore - a._rerankScore);
-        logger.info("reranker", "Cohere rerank basarili", {
+        logger.info("reranker", "Cohere rerank succeeded", {
           strategy: "cohere",
           inputCount: results.length,
           outputCount: sorted.length,
@@ -131,7 +131,7 @@ function createReranker(deps) {
         });
         return sorted;
       } catch (err) {
-        logger.warn("reranker", "Cohere basarisiz, LLM fallback", { error: err.message, status: err.status || "N/A" });
+        logger.warn("reranker", "Cohere failed, LLM fallback", { error: err.message, status: err.status || "N/A" });
       }
     }
 
@@ -139,7 +139,7 @@ function createReranker(deps) {
     try {
       const reranked = await llmRerank(query, results, callLLM, getProviderConfig, logger);
       const sorted = reranked.sort((a, b) => b._rerankScore - a._rerankScore);
-      logger.info("reranker", "LLM rerank basarili", {
+      logger.info("reranker", "LLM rerank succeeded", {
         strategy: "llm",
         inputCount: results.length,
         outputCount: sorted.length,
@@ -149,13 +149,13 @@ function createReranker(deps) {
       });
       return sorted;
     } catch (err) {
-      logger.warn("reranker", "LLM rerank basarisiz, RRF fallback", { error: err.message });
+      logger.warn("reranker", "LLM rerank failed, RRF fallback", { error: err.message });
     }
 
     // Strategy 3: RRF fallback
     const reranked = rrfFallback(results);
     const sorted = reranked.sort((a, b) => b._rerankScore - a._rerankScore);
-    logger.info("reranker", "RRF fallback kullanildi", {
+    logger.info("reranker", "RRF fallback used", {
       strategy: "rrf-fallback",
       count: sorted.length,
       topScore: sorted[0]?._rerankScore?.toFixed(3) || "N/A",

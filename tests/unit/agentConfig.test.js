@@ -41,7 +41,7 @@ describe("AgentConfig Service", () => {
     const { service, tmpDir: d } = makeService();
     tmpDir = d;
     const persona = service.getPersonaText();
-    expect(persona).toContain("Teknik Destek Persona");
+    expect(persona).toContain("Technical Support Persona");
   });
 
   it("replaces {{COMPANY_NAME}} with companyName in text files", () => {

@@ -150,7 +150,7 @@ function mount(app, deps) {
       loadChatFlowConfig();
       loadSiteConfig();
       loadSunshineConfig();
-      return res.json({ ok: true, message: "Agent config yeniden yuklendi." });
+      return res.json({ ok: true, message: "Agent config reloaded." });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });
     }
@@ -179,7 +179,7 @@ function mount(app, deps) {
   app.put("/api/admin/env", requireAdminAccess, (req, res) => {
     try {
       const { updates } = req.body || {};
-      if (!updates || typeof updates !== "object") return res.status(400).json({ error: "updates objesi zorunludur." });
+      if (!updates || typeof updates !== "object") return res.status(400).json({ error: "updates object is required." });
 
       const cleanUpdates = {};
       for (const [key, value] of Object.entries(updates)) {
@@ -194,7 +194,7 @@ function mount(app, deps) {
       if (keyChanged) {
         setTimeout(checkLLMHealth, 500);
       }
-      return res.json({ ok: true, message: "Env guncellendi ve aninda uyguland\u0131." });
+      return res.json({ ok: true, message: "Env updated and applied immediately." });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });
     }

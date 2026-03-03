@@ -249,7 +249,7 @@
 
     var frame = document.createElement("iframe");
     frame.src = config.aiUrl;
-    frame.title = "Qragy Teknik Destek AI";
+    frame.title = "Qragy Technical Support AI";
     frame.setAttribute("data-qragy-ai-frame", "1");
     frame.setAttribute("allow", "clipboard-read; clipboard-write");
 

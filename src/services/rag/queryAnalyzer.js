@@ -16,25 +16,25 @@ const VALID_INTENTS = new Set([
 
 const MAX_HISTORY_MESSAGES = 6;
 
-const ANALYSIS_SYSTEM_PROMPT = `Sen bir sorgu analiz asistanisin. Kullanicinin mesajini analiz edip JSON formatinda donus yap.
+const ANALYSIS_SYSTEM_PROMPT = `You are a query analysis assistant. Analyze the user's message and return a JSON response.
 
-Analiz kriterleri:
-- complexity: "simple" (tek satirlik selam, evet/hayir), "medium" (tek konulu soru), "complex" (cok katmanli, karsilastirma, birden fazla soru)
-- intent: "greeting" (merhaba, selam), "faq" (sikca sorulan sorular), "product_support" (urun/hizmet destegi), "complaint" (sikayet), "escalation" (yonetici/insan talep), "chitchat" (sohbet, konu disi)
-- subQueries: karmasik sorgularda alt sorulara ayir, basit sorgularda bos dizi
-- requiresMemory: kullanicinin onceki konusmalarindan bilgi gerekiyor mu (true/false)
-- requiresGraph: iliskisel/graf bilgisi gerekiyor mu (urun-kategori, musteri-siparis iliskileri) (true/false)
-- standaloneQuery: chat gecmisindeki zamirleri ("bunu", "ayni seyi", "o urun") cozerek bagimsiz bir soru olustur
+Analysis criteria:
+- complexity: "simple" (one-line greeting, yes/no), "medium" (single-topic question), "complex" (multi-layered, comparison, multiple questions)
+- intent: "greeting" (hello, hi), "faq" (frequently asked questions), "product_support" (product/service support), "complaint" (complaint), "escalation" (manager/human request), "chitchat" (chat, off-topic)
+- subQueries: break complex queries into sub-questions, empty array for simple queries
+- requiresMemory: does it need information from the user's previous conversations (true/false)
+- requiresGraph: does it need relational/graph information (product-category, customer-order relationships) (true/false)
+- standaloneQuery: resolve pronouns from chat history ("this", "the same thing", "that product") to create a standalone question
 
-Ornekler:
-Kullanici: "Merhaba" -> {"complexity":"simple","intent":"greeting","subQueries":[],"requiresMemory":false,"requiresGraph":false,"standaloneQuery":"Merhaba"}
-Kullanici: "Kargo nerede?" -> {"complexity":"medium","intent":"product_support","subQueries":[],"requiresMemory":true,"requiresGraph":false,"standaloneQuery":"Kargo nerede?"}
-Kullanici: "X urunuyle Y urununu karsilastir ve hangisi daha uygun fiyatli, ayrica iade kosullarini da acikla" -> {"complexity":"complex","intent":"product_support","subQueries":["X urunu ile Y urunu arasindaki farklar nelerdir?","Hangi urun daha uygun fiyatli?","Iade kosullari nelerdir?"],"requiresMemory":false,"requiresGraph":true,"standaloneQuery":"X urunuyle Y urununu karsilastir ve hangisi daha uygun fiyatli, ayrica iade kosullarini da acikla"}
+Examples:
+User: "Hello" -> {"complexity":"simple","intent":"greeting","subQueries":[],"requiresMemory":false,"requiresGraph":false,"standaloneQuery":"Hello"}
+User: "I can't log in" -> {"complexity":"medium","intent":"product_support","subQueries":[],"requiresMemory":true,"requiresGraph":false,"standaloneQuery":"I can't log in"}
+User: "Compare plan X with plan Y and which is cheaper, also explain the cancellation policy" -> {"complexity":"complex","intent":"product_support","subQueries":["What are the differences between plan X and plan Y?","Which plan is cheaper?","What is the cancellation policy?"],"requiresMemory":false,"requiresGraph":true,"standaloneQuery":"Compare plan X with plan Y and which is cheaper, also explain the cancellation policy"}
 
-Chat gecmisi varsa zamirleri coz:
-Gecmis: "Kullanici: iPhone 15 fiyati ne kadar? Bot: 45000 TL" Kullanici: "Bunu sepete ekle" -> standaloneQuery: "iPhone 15'i sepete ekle"
+If chat history exists, resolve pronouns:
+History: "User: How much is the Pro plan? Bot: $49/month" User: "I want to upgrade to that" -> standaloneQuery: "I want to upgrade to the Pro plan"
 
-SADECE JSON don, baska bir sey yazma. JSON disinda metin ekleme.`;
+Return ONLY JSON, do not write anything else. Do not add text outside of JSON.`;
 
 /**
  * Determines route based on complexity and intent.
@@ -142,7 +142,7 @@ function createQueryAnalyzer(deps) {
 
       const rawReply = (result && result.reply) || "";
       if (!rawReply) {
-        logger.warn("queryAnalyzer", "LLM bos yanit dondu, fallback kullaniliyor");
+        logger.warn("queryAnalyzer", "LLM returned empty reply, using fallback");
         return fallback;
       }
 
@@ -151,14 +151,14 @@ function createQueryAnalyzer(deps) {
       try {
         parsed = JSON.parse(cleaned);
       } catch (_parseErr) {
-        logger.warn("queryAnalyzer", "JSON parse hatasi, fallback kullaniliyor", { raw: rawReply });
+        logger.warn("queryAnalyzer", "JSON parse error, using fallback", { raw: rawReply });
         return fallback;
       }
 
       const analysis = validateAnalysis(parsed, userMessage);
       analysis.route = determineRoute(analysis.complexity, analysis.intent);
 
-      logger.info("queryAnalyzer", "Analiz tamamlandi", {
+      logger.info("queryAnalyzer", "Analysis completed", {
         complexity: analysis.complexity,
         intent: analysis.intent,
         route: analysis.route,
@@ -171,7 +171,7 @@ function createQueryAnalyzer(deps) {
 
       return analysis;
     } catch (err) {
-      logger.error("queryAnalyzer", "Analiz hatasi, fallback kullaniliyor", err);
+      logger.error("queryAnalyzer", "Analysis error, using fallback", err);
       return fallback;
     }
   }

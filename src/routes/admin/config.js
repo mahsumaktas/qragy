@@ -35,7 +35,7 @@ function mount(app, deps) {
     try {
       const updates = req.body?.config;
       if (!updates || typeof updates !== "object") {
-        return res.status(400).json({ error: "config objesi zorunludur." });
+        return res.status(400).json({ error: "config object is required." });
       }
       const allowed = Object.keys(DEFAULT_CHAT_FLOW_CONFIG);
       const clean = {};
@@ -60,7 +60,7 @@ function mount(app, deps) {
     try {
       const updates = req.body?.config;
       if (!updates || typeof updates !== "object") {
-        return res.status(400).json({ error: "config objesi zorunludur." });
+        return res.status(400).json({ error: "config object is required." });
       }
       const allowed = Object.keys(DEFAULT_SITE_CONFIG);
       const clean = {};
@@ -81,7 +81,7 @@ function mount(app, deps) {
     try {
       const contentType = req.headers["content-type"] || "";
       if (!LOGO_ALLOWED_TYPES.has(contentType)) {
-        return res.status(400).json({ error: "Desteklenmeyen dosya tipi. JPEG, PNG, SVG, WebP veya GIF kullanin." });
+        return res.status(400).json({ error: "Unsupported file type. Use JPEG, PNG, SVG, WebP, or GIF." });
       }
       const ext = contentType.split("/")[1] === "svg+xml" ? "svg" : contentType.split("/")[1];
       const logoPath = path.join(path.dirname(AGENT_DIR), "public", "custom-logo." + ext);
@@ -116,7 +116,7 @@ function mount(app, deps) {
     try {
       const updates = req.body?.config;
       if (!updates || typeof updates !== "object") {
-        return res.status(400).json({ error: "config objesi zorunludur." });
+        return res.status(400).json({ error: "config object is required." });
       }
       const allowed = Object.keys(DEFAULT_SUNSHINE_CONFIG);
       const clean = {};
@@ -169,36 +169,36 @@ function mount(app, deps) {
   app.post("/api/admin/sunshine-config/setup-switchboard", requireAdminAccess, async (_req, res) => {
     try {
       const creds = resolveSunshineCredentials();
-      if (!creds) return res.json({ ok: false, error: "Eksik ayarlar: once baglanti bilgilerini girin ve test edin." });
+      if (!creds) return res.json({ ok: false, error: "Missing settings: first enter and test the connection details." });
       const { appId, baseUrl, headers: hdrs } = creds;
 
       // 1. Switchboard listele
-      const swResult = await zdFetch(baseUrl + "/apps/" + appId + "/switchboards", { headers: hdrs }, "Switchboard listelenemedi");
+      const swResult = await zdFetch(baseUrl + "/apps/" + appId + "/switchboards", { headers: hdrs }, "Switchboard listing failed");
       if (!swResult.ok) return res.json(swResult);
       const switchboards = swResult.data.switchboards || [];
-      if (!switchboards.length) return res.json({ ok: false, error: "Switchboard bulunamadi. Zendesk'te Switchboard'u aktif edin." });
+      if (!switchboards.length) return res.json({ ok: false, error: "Switchboard not found. Please enable Switchboard in Zendesk." });
       const switchboardId = switchboards[0].id || switchboards[0]._id;
 
       // 2. Switchboard entegrasyonlarini listele
-      const siResult = await zdFetch(baseUrl + "/apps/" + appId + "/switchboards/" + switchboardId + "/switchboardIntegrations", { headers: hdrs }, "Switchboard entegrasyonlari listelenemedi");
+      const siResult = await zdFetch(baseUrl + "/apps/" + appId + "/switchboards/" + switchboardId + "/switchboardIntegrations", { headers: hdrs }, "Switchboard integrations listing failed");
       if (!siResult.ok) return res.json(siResult);
       const swIntegrations = siResult.data.switchboardIntegrations || [];
 
       // 3. App entegrasyonlarini listele
-      const intResult = await zdFetch(baseUrl + "/apps/" + appId + "/integrations", { headers: hdrs }, "Entegrasyonlar listelenemedi");
+      const intResult = await zdFetch(baseUrl + "/apps/" + appId + "/integrations", { headers: hdrs }, "Integrations listing failed");
       if (!intResult.ok) return res.json(intResult);
       const integrations = intResult.data.integrations || [];
 
       // answerBot ve agentWorkspace bul
       const agentWorkspace = swIntegrations.find(i => i.name === "zd-agentWorkspace" || i.integrationType === ZD_AGENT_WORKSPACE);
-      if (!agentWorkspace) return res.json({ ok: false, error: "agentWorkspace bulunamadi. Zendesk Switchboard'da Agent Workspace aktif olmali." });
+      if (!agentWorkspace) return res.json({ ok: false, error: "agentWorkspace not found. Agent Workspace must be active in Zendesk Switchboard." });
       const agentWorkspaceSwId = agentWorkspace.id || agentWorkspace._id;
 
       const answerBot = swIntegrations.find(i => i.name === "zd-answerBot" || i.integrationType === ZD_ANSWER_BOT);
 
       // Custom bot entegrasyonunu bul (Zendesk built-in olmayan)
       const customInt = integrations.find(i => !ZD_BUILTIN_TYPES.has(i.type) && i.status !== "inactive");
-      if (!customInt) return res.json({ ok: false, error: "Ozel bot entegrasyonu bulunamadi. Zendesk'te bir Custom/API entegrasyonu olusturun." });
+      if (!customInt) return res.json({ ok: false, error: "Custom bot integration not found. Create a Custom/API integration in Zendesk." });
       const customIntId = customInt.id || customInt._id;
 
       // Bot zaten switchboard'da mi?
@@ -211,7 +211,7 @@ function mount(app, deps) {
         const r = await zdFetch(swBase + "/" + botSwId, {
           method: "PATCH", headers: hdrs,
           body: JSON.stringify({ nextSwitchboardIntegrationId: agentWorkspaceSwId })
-        }, "Bot entegrasyonu guncellenemedi");
+        }, "Bot integration update failed");
         if (!r.ok) return res.json(r);
       } else {
         const r = await zdFetch(swBase, {
@@ -222,7 +222,7 @@ function mount(app, deps) {
             nextSwitchboardIntegrationId: agentWorkspaceSwId,
             deliverStandbyEvents: false
           })
-        }, "Bot switchboard'a eklenemedi");
+        }, "Bot could not be added to switchboard");
         if (!r.ok) return res.json(r);
         botSwId = (r.data.switchboardIntegration || {}).id || (r.data.switchboardIntegration || {})._id;
       }
@@ -233,12 +233,12 @@ function mount(app, deps) {
         const r = await zdFetch(swBase + "/" + answerBotSwId, {
           method: "PATCH", headers: hdrs,
           body: JSON.stringify({ nextSwitchboardIntegrationId: botSwId })
-        }, "answerBot yonlendirmesi guncellenemedi");
+        }, "answerBot routing update failed");
         if (!r.ok) return res.json(r);
       }
 
       const chain = answerBot ? "answerBot -> Qragy Bot -> agentWorkspace" : "Qragy Bot -> agentWorkspace";
-      res.json({ ok: true, message: "Switchboard yapilandirildi! Zincir: " + chain });
+      res.json({ ok: true, message: "Switchboard configured! Chain:" + chain });
     } catch (err) {
       res.json({ ok: false, error: safeError(err, "switchboard-setup") });
     }
@@ -247,7 +247,7 @@ function mount(app, deps) {
   app.post("/api/admin/sunshine-config/test", requireAdminAccess, async (_req, res) => {
     try {
       const creds = resolveSunshineCredentials();
-      if (!creds) return res.json({ ok: false, error: "Eksik ayarlar: appId, keyId, keySecret ve subdomain zorunludur." });
+      if (!creds) return res.json({ ok: false, error: "Missing settings: appId, keyId, keySecret, and subdomain are required." });
 
       const resp = await fetch(creds.baseUrl + "/apps/" + creds.appId, {
         method: "GET",
@@ -255,10 +255,10 @@ function mount(app, deps) {
       });
 
       if (resp.ok) {
-        res.json({ ok: true, message: "Baglanti basarili! Sunshine Conversations API erisimi dogrulandi." });
+        res.json({ ok: true, message: "Connection successful! Sunshine Conversations API access verified." });
       } else {
         const errText = await resp.text().catch(() => "");
-        res.json({ ok: false, error: "API hatasi: " + resp.status + " " + errText.slice(0, 200) });
+        res.json({ ok: false, error: "API error:" + resp.status + " " + errText.slice(0, 200) });
       }
     } catch (err) {
       res.json({ ok: false, error: safeError(err, "connection-test") });

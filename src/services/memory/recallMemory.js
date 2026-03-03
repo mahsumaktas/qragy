@@ -3,8 +3,8 @@
 /**
  * Recall Memory Service
  *
- * "Searched on demand" memory tier — FTS5 ile gecmis konusma ozetlerini
- * kaydeder ve arandiginda getirir. Prompt'a format edip ekleyebilir.
+ * "Searched on demand" memory tier — saves past conversation summaries
+ * with FTS5 and retrieves them when searched. Formats and injects into prompt.
  */
 
 const crypto = require("crypto");
@@ -15,7 +15,7 @@ function createRecallMemory(deps) {
   const { sqliteDb, logger } = deps;
 
   /**
-   * Konusma ozetini recall_memory tablosuna kaydeder.
+   * Save conversation summary to recall_memory table.
    * @param {string} userId
    * @param {string} sessionId
    * @param {string} content
@@ -31,11 +31,11 @@ function createRecallMemory(deps) {
   }
 
   /**
-   * FTS5 ile recall memory'de arama yapar.
+   * Search recall memory using FTS5.
    * @param {string} query
    * @param {string} userId
    * @param {number} [limit=5]
-   * @returns {Array} sonuc listesi
+   * @returns {Array} result list
    */
   function search(query, userId, limit = 5) {
     try {
@@ -47,11 +47,11 @@ function createRecallMemory(deps) {
   }
 
   /**
-   * Arama sonuclarini system prompt'a eklenecek formatta dondurur.
+   * Format search results for system prompt injection.
    * @param {string} query
    * @param {string} userId
    * @param {number} [maxTokens=1000]
-   * @returns {string} formatlanmis metin veya ""
+   * @returns {string} formatted text or ""
    */
   function formatForPrompt(query, userId, maxTokens = 1000) {
     const results = search(query, userId);
@@ -67,7 +67,7 @@ function createRecallMemory(deps) {
     }
 
     if (!body) return "";
-    return `--- GECMIS KONUSMALAR ---\n${body}---`;
+    return `--- CONVERSATION HISTORY ---\n${body}---`;
   }
 
   return { save, search, formatForPrompt };

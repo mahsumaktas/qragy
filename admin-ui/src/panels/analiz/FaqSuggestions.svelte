@@ -17,7 +17,7 @@
       const res = await api.get("admin/auto-faq");
       items = res.items || res.faqs || res || [];
     } catch (e) {
-      showToast("FAQ yuklenemedi: " + e.message, "error");
+      showToast("Failed to load FAQ: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -26,64 +26,64 @@
   async function approve(id) {
     try {
       await api.post("admin/auto-faq/" + id + "/approve");
-      showToast("Onaylandi", "success");
+      showToast("Approved", "success");
       await loadFAQ();
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 
   async function reject(id) {
     try {
       await api.post("admin/auto-faq/" + id + "/reject");
-      showToast("Reddedildi", "info");
+      showToast("Rejected", "info");
       await loadFAQ();
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 
   async function generate() {
     try {
       await api.post("admin/auto-faq/generate");
-      showToast("FAQ uretimi basladi", "info");
+      showToast("FAQ generation started", "info");
       setTimeout(loadFAQ, 3000);
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>FAQ Onerileri</h1><p>Otomatik uretilen SSS onerileri</p></div>
+  <div><h1>FAQ Suggestions</h1><p>Auto-generated FAQ suggestions</p></div>
   <div class="actions">
-    <Button onclick={generate} variant="secondary" size="sm">Yeni Uret</Button>
-    <Button onclick={loadFAQ} variant="ghost" size="sm">Yenile</Button>
+    <Button onclick={generate} variant="secondary" size="sm">Generate New</Button>
+    <Button onclick={loadFAQ} variant="ghost" size="sm">Refresh</Button>
   </div>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="faq-list">
     {#each items as item}
       <div class="faq-card">
-        <div class="faq-q"><strong>S:</strong> {item.question}</div>
-        <div class="faq-a"><strong>C:</strong> {item.answer}</div>
+        <div class="faq-q"><strong>Q:</strong> {item.question}</div>
+        <div class="faq-a"><strong>A:</strong> {item.answer}</div>
         <div class="faq-footer">
           <Badge variant={item.status === "approved" ? "green" : item.status === "rejected" ? "red" : "yellow"}>
-            {item.status || "bekliyor"}
+            {item.status || "pending"}
           </Badge>
           {#if !item.status || item.status === "pending"}
             <div class="faq-actions">
-              <Button onclick={() => approve(item.id || item._id)} variant="primary" size="sm">Onayla</Button>
-              <Button onclick={() => reject(item.id || item._id)} variant="ghost" size="sm">Reddet</Button>
+              <Button onclick={() => approve(item.id || item._id)} variant="primary" size="sm">Approve</Button>
+              <Button onclick={() => reject(item.id || item._id)} variant="ghost" size="sm">Reject</Button>
             </div>
           {/if}
         </div>
       </div>
     {:else}
-      <div class="empty">FAQ onerisi yok</div>
+      <div class="empty">No FAQ suggestions</div>
     {/each}
   </div>
 {/if}

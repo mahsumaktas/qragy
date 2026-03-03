@@ -4,7 +4,7 @@
  * Eval Routes — Senaryo CRUD + Test Runner + Gecmis
  *
  * scenarios.json tek kaynak dosyasi: hem CLI vitest hem admin panel kullanir.
- * Test runner sunucu tarafindan calistirilir (chat API'ye fetch + judge.js).
+ * Test runner is executed on the server (fetch to chat API + judge.js).
  * SSE ile canli ilerleme destegi.
  */
 
@@ -58,7 +58,7 @@ function mount(app, deps) {
   }
 
   /**
-   * Tek senaryo calistir (single run), sonuclari don.
+   * Run a single scenario (single run), return results.
    */
   async function runScenarioOnce(scenario, runIndex) {
     const sessionId = `eval-admin-${scenario.id}-${Date.now().toString(36)}-r${runIndex}`;
@@ -107,7 +107,7 @@ function mount(app, deps) {
   }
 
   /**
-   * Tek senaryo calistir (consensus: N run, en az 1 pass = flaky, hepsi fail = real bug).
+   * Run a single scenario (consensus: N runs, at least 1 pass = flaky, all fail = real bug).
    * runs=1 ise consensus yok, tek run sonucu doner.
    */
   async function runScenario(scenario, runs) {
@@ -144,8 +144,8 @@ function mount(app, deps) {
       const data = loadScenarios();
       res.json({ scenarios: data.scenarios || [] });
     } catch (err) {
-      logger.error("eval", "Senaryolar yuklenemedi", err);
-      res.status(500).json({ error: "Senaryolar yuklenemedi" });
+      logger.error("eval", "Scenarios failed to load", err);
+      res.status(500).json({ error: "Scenarios failed to load" });
     }
   });
 
@@ -154,10 +154,10 @@ function mount(app, deps) {
     try {
       const data = loadScenarios();
       const scenario = (data.scenarios || []).find(s => s.id === req.params.id);
-      if (!scenario) return res.status(404).json({ error: "Senaryo bulunamadi" });
+      if (!scenario) return res.status(404).json({ error: "Scenario not found" });
       res.json(scenario);
     } catch (_err) {
-      res.status(500).json({ error: "Senaryo okunamadi" });
+      res.status(500).json({ error: "Scenario read failed" });
     }
   });
 
@@ -169,17 +169,17 @@ function mount(app, deps) {
 
       // Validasyon
       if (!scenario.id || typeof scenario.id !== "string") {
-        return res.status(400).json({ error: "id zorunlu (string)" });
+        return res.status(400).json({ error: "id is required (string)" });
       }
       if ((data.scenarios || []).some(s => s.id === scenario.id)) {
-        return res.status(400).json({ error: "Bu id zaten mevcut: " + scenario.id });
+        return res.status(400).json({ error: "This ID already exists:" + scenario.id });
       }
       if (!Array.isArray(scenario.turns) || scenario.turns.length === 0) {
-        return res.status(400).json({ error: "En az bir turn gerekli" });
+        return res.status(400).json({ error: "At least one turn is required" });
       }
       for (const t of scenario.turns) {
         if (!t.user || typeof t.user !== "string") {
-          return res.status(400).json({ error: "Her turn'da user mesaji olmali" });
+          return res.status(400).json({ error: "Each turn must have a user message" });
         }
       }
 
@@ -195,11 +195,11 @@ function mount(app, deps) {
       saveScenarios(data);
 
       recordAuditEvent("eval_scenario_create", { scenarioId: newScenario.id });
-      logger.info("eval", `Senaryo eklendi: ${newScenario.id}`);
+      logger.info("eval", `Scenario added:${newScenario.id}`);
       res.status(201).json(newScenario);
     } catch (err) {
-      logger.error("eval", "Senaryo eklenemedi", err);
-      res.status(500).json({ error: "Senaryo eklenemedi" });
+      logger.error("eval", "Failed to add scenario", err);
+      res.status(500).json({ error: "Failed to add scenario" });
     }
   });
 
@@ -208,24 +208,24 @@ function mount(app, deps) {
     try {
       const data = loadScenarios();
       const idx = (data.scenarios || []).findIndex(s => s.id === req.params.id);
-      if (idx === -1) return res.status(404).json({ error: "Senaryo bulunamadi" });
+      if (idx === -1) return res.status(404).json({ error: "Scenario not found" });
 
       const update = req.body;
 
-      // ID degistirme kontrolu
+      // ID change check
       if (update.id && update.id !== req.params.id) {
         if (data.scenarios.some(s => s.id === update.id)) {
-          return res.status(400).json({ error: "Bu id zaten mevcut: " + update.id });
+          return res.status(400).json({ error: "This ID already exists:" + update.id });
         }
       }
 
       if (update.turns) {
         if (!Array.isArray(update.turns) || update.turns.length === 0) {
-          return res.status(400).json({ error: "En az bir turn gerekli" });
+          return res.status(400).json({ error: "At least one turn is required" });
         }
         for (const t of update.turns) {
           if (!t.user || typeof t.user !== "string") {
-            return res.status(400).json({ error: "Her turn'da user mesaji olmali" });
+            return res.status(400).json({ error: "Each turn must have a user message" });
           }
         }
       }
@@ -242,8 +242,8 @@ function mount(app, deps) {
       recordAuditEvent("eval_scenario_update", { scenarioId: data.scenarios[idx].id });
       res.json(data.scenarios[idx]);
     } catch (err) {
-      logger.error("eval", "Senaryo guncellenemedi", err);
-      res.status(500).json({ error: "Senaryo guncellenemedi" });
+      logger.error("eval", "Failed to update scenario", err);
+      res.status(500).json({ error: "Failed to update scenario" });
     }
   });
 
@@ -252,43 +252,43 @@ function mount(app, deps) {
     try {
       const data = loadScenarios();
       const idx = (data.scenarios || []).findIndex(s => s.id === req.params.id);
-      if (idx === -1) return res.status(404).json({ error: "Senaryo bulunamadi" });
+      if (idx === -1) return res.status(404).json({ error: "Scenario not found" });
 
       const removed = data.scenarios.splice(idx, 1)[0];
       saveScenarios(data);
 
       recordAuditEvent("eval_scenario_delete", { scenarioId: removed.id });
-      logger.info("eval", `Senaryo silindi: ${removed.id}`);
+      logger.info("eval", `Scenario deleted:${removed.id}`);
       res.json({ ok: true, id: removed.id });
     } catch (err) {
-      logger.error("eval", "Senaryo silinemedi", err);
-      res.status(500).json({ error: "Senaryo silinemedi" });
+      logger.error("eval", "Failed to delete scenario", err);
+      res.status(500).json({ error: "Failed to delete scenario" });
     }
   });
 
   // ── Test Runner ──────────────────────────────────────────────────────
 
-  // POST /api/admin/eval/run/:id — Tek senaryo calistir
+  // POST /api/admin/eval/run/:id — Run single scenario
   app.post("/api/admin/eval/run/:id", requireAdminAccess, async (req, res) => {
     try {
       const data = loadScenarios();
       const scenario = (data.scenarios || []).find(s => s.id === req.params.id);
-      if (!scenario) return res.status(404).json({ error: "Senaryo bulunamadi" });
+      if (!scenario) return res.status(404).json({ error: "Scenario not found" });
 
       const runs = Math.min(parseInt(req.query.runs) || 1, 5);
-      logger.info("eval", `Tek senaryo calistiriliyor: ${scenario.id} (runs=${runs})`);
+      logger.info("eval", `Running single scenario:${scenario.id} (runs=${runs})`);
       const result = await runScenario(scenario, runs);
       res.json(result);
     } catch (err) {
-      logger.error("eval", "Test calistirma hatasi", err);
-      res.status(500).json({ error: "Test calistirma hatasi: " + err.message });
+      logger.error("eval", "Test execution error", err);
+      res.status(500).json({ error: "Test execution error: " + err.message });
     }
   });
 
-  // GET /api/admin/eval/run-all — SSE ile tum senaryolari calistir
+  // GET /api/admin/eval/run-all — Run all scenarios via SSE
   // Query params: runs=3 (consensus run sayisi), threshold=95 (green threshold %)
   app.get("/api/admin/eval/run-all", requireAdminAccess, async (req, res) => {
-    // SSE icin timeout'lari kapat (uzun sureli baglanti)
+    // Disable SSE timeouts (long-lived connection)
     req.setTimeout(0);
     res.setTimeout(0);
     if (req.socket) req.socket.setTimeout(0);
@@ -312,7 +312,7 @@ function mount(app, deps) {
       }
     };
 
-    // Heartbeat: her 15 saniyede SSE comment gonder (baglanti canli kalmasi icin)
+    // Heartbeat: send SSE comment every 15 seconds (keep connection alive)
     const heartbeat = setInterval(() => {
       if (clientDisconnected) { clearInterval(heartbeat); return; }
       try { res.write(": heartbeat\n\n"); } catch (_) { clientDisconnected = true; }
@@ -331,11 +331,11 @@ function mount(app, deps) {
       const allResults = [];
       const startTime = Date.now();
 
-      logger.info("eval", `Toplu eval basliyor: ${total} senaryo, ${runs} run/senaryo, threshold=${threshold}%`);
+      logger.info("eval", `Starting bulk eval:${total} senaryo, ${runs} run/senaryo, threshold=${threshold}%`);
 
       for (const scenario of scenarios) {
         if (clientDisconnected) {
-          logger.info("eval", `Client baglantisi koptu, eval durduruluyor (${allResults.length}/${total} tamamlandi)`);
+          logger.info("eval", `Client disconnected, stopping eval(${allResults.length}/${total} completed)`);
           break;
         }
 
@@ -377,7 +377,7 @@ function mount(app, deps) {
       const passRate = total > 0 ? Math.round((passed / total) * 100 * 10) / 10 : 0;
       const green = passRate >= threshold;
 
-      // Gecmise kaydet (client kopsa bile sonuclari kaydet)
+      // Save to history (save results even if client disconnects)
       if (allResults.length > 0) {
         const historyEntry = {
           timestamp: new Date().toISOString(),
@@ -406,10 +406,10 @@ function mount(app, deps) {
         summary: { total, passed, failed, flaky, passRate, green, threshold, consensusRuns: runs, durationMs },
       });
 
-      logger.info("eval", `Toplu eval tamamlandi: ${passed}/${total} gecti (%${passRate}), ${flaky} flaky, ${green ? "GREEN" : "RED"} (${durationMs}ms)`);
+      logger.info("eval", `Bulk eval completed:${passed}/${total} gecti (%${passRate}), ${flaky} flaky, ${green ? "GREEN" : "RED"} (${durationMs}ms)`);
       recordAuditEvent("eval_run_all", { total, passed, failed, flaky, passRate, green, threshold, consensusRuns: runs, durationMs });
     } catch (err) {
-      logger.error("eval", "Toplu eval hatasi", err);
+      logger.error("eval", "Bulk eval error", err);
       sendSSE({ type: "error", message: err.message });
     }
 
@@ -419,14 +419,14 @@ function mount(app, deps) {
 
   // ── History ──────────────────────────────────────────────────────────
 
-  // GET /api/admin/eval/history — Son N calistirma
+  // GET /api/admin/eval/history — Last N runs
   app.get("/api/admin/eval/history", requireAdminAccess, (req, res) => {
     try {
       const limit = Math.min(parseInt(req.query.limit) || 20, 50);
       const history = loadHistory().slice(0, limit);
       res.json(history);
     } catch (_err) {
-      res.status(500).json({ error: "Gecmis yuklenemedi" });
+      res.status(500).json({ error: "History failed to load" });
     }
   });
 
@@ -437,7 +437,7 @@ function mount(app, deps) {
       recordAuditEvent("eval_history_clear", {});
       res.json({ ok: true });
     } catch (_err) {
-      res.status(500).json({ error: "Gecmis temizlenemedi" });
+      res.status(500).json({ error: "Failed to clear history" });
     }
   });
 }

@@ -9,11 +9,11 @@
 
 const DEFAULT_SUMMARY_THRESHOLD = 15;
 
-const SUMMARY_PROMPT = `Sen bir konusma ozeti cikarma asistanisin.
-Asagidaki musteri destek konusmasini 3-5 cumlede ozetle.
-Onemli bilgileri koru: musteri adi, sube kodu, sorun, yapilan islemler.
-Sadece ozeti yaz, baska bir sey ekleme.
-Turkce yaz.`;
+const SUMMARY_PROMPT = `You are a conversation summarization assistant.
+Summarize the following customer support conversation in 3-5 sentences.
+Preserve important information: customer name, branch code, issue, actions taken.
+Write only the summary, do not add anything else.
+Write in English.`;
 
 function createConversationSummarizer(deps) {
   const { callLLM, getProviderConfig, getChatFlowConfig, logger } = deps;
@@ -47,10 +47,10 @@ function createConversationSummarizer(deps) {
 
     // Build conversation text for summarization
     const convoText = oldMessages
-      .map(m => `${m.role === "user" ? "Musteri" : "Bot"}: ${m.content}`)
+      .map(m => `${m.role === "user" ? "Customer" : "Bot"}: ${m.content}`)
       .join("\n");
 
-    const prompt = `${SUMMARY_PROMPT}\n\nKonusma:\n${convoText}\n\nOzet:`;
+    const prompt = `${SUMMARY_PROMPT}\n\nConversation:\n${convoText}\n\nSummary:`;
 
     try {
       const providerConfig = getProviderConfig();
@@ -65,7 +65,7 @@ function createConversationSummarizer(deps) {
 
       const summary = (result || "").trim();
       if (summary && summary.length > 20) {
-        const summaryMessage = { role: "assistant", content: `[Konusma ozeti: ${summary}]` };
+        const summaryMessage = { role: "assistant", content: `[Conversation summary: ${summary}]` };
         return {
           summary,
           trimmedHistory: [summaryMessage, ...recentMessages],

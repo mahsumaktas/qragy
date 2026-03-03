@@ -49,7 +49,7 @@ function createChatProcessor(deps) {
   async function processChatMessage(messagesArray, source = "web") {
     const chatStartTime = Date.now();
     const rawMessages = Array.isArray(messagesArray) ? messagesArray : [];
-    if (!rawMessages.length) return { reply: "Mesaj bulunamadi.", source: "error" };
+    if (!rawMessages.length) return { reply: "No messages found.", source: "error" };
 
     const chatFlowConfig = getChatFlowConfig();
     const GOOGLE_MODEL = getGoogleModel();
@@ -87,7 +87,7 @@ function createChatProcessor(deps) {
 
     const conversationContext = await buildConversationContext(memory, activeUserMessages);
 
-    // Deterministic reply (sadece selamlama ve alan sorgulama için)
+    // Deterministic reply (only for greetings and field collection)
     const deterministicReply = buildDeterministicCollectionReply(memory, activeUserMessages, hasClosedTicketHistory);
     if (deterministicReply) {
       recordAnalyticsEvent({ source: "rule-engine", responseTimeMs: Date.now() - chatStartTime });
@@ -108,7 +108,7 @@ function createChatProcessor(deps) {
       .filter(item => item && typeof item.content === "string" && item.content.trim())
       .map(item => ({ role: item.role === "assistant" ? "model" : "user", parts: [{ text: item.content.trim() }] }));
 
-    if (!contents.length) return { reply: "Gecerli mesaj bulunamadi.", source: "error" };
+    if (!contents.length) return { reply: "No valid messages found.", source: "error" };
 
     // Required fields -> ticket
     if (hasRequiredFields(memory) && !conversationContext.currentTopic) {
@@ -138,7 +138,7 @@ function createChatProcessor(deps) {
         fireWebhook("ticket_created", { ticketId: ticketResult.ticket.id, memory: escalationMemory, source });
         fireWebhook("escalation", { ticketId: ticketResult.ticket.id, memory: escalationMemory, reason: conversationContext.escalationReason });
       }
-      return { reply: "Sizi canli destek temsilcimize aktariyorum. Kisa surede yardimci olacaktir.", source: "escalation-trigger", memory: escalationMemory };
+      return { reply: "I'm connecting you with a live support agent. They will assist you shortly.", source: "escalation-trigger", memory: escalationMemory };
     }
 
     // AI reply — extract standalone question for better RAG search

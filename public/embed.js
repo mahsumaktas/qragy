@@ -1,14 +1,14 @@
 /**
- * Qragy AI Destek Katmani - Embed Script v3
+ * Qragy AI Support Layer - Embed Script v3
  *
- * Herhangi bir sayfada console'dan veya <script> ile yuklenebilir.
- * Widget'i iframe icinde acar, tum ozellikler (dark mode, CSAT, vb.) calisir.
- * Handoff durumunda parent sayfadaki Zendesk'e (Zopim + zE + buton) aktarim yapar.
+ * Can be loaded on any page via console or <script> tag.
+ * Opens the widget inside an iframe, all features (dark mode, CSAT, etc.) work.
+ * On handoff, transfers to Zendesk on the parent page (Zopim + zE + button).
  *
- * Kullanim:
- *   <script src="https://SUNUCU/embed.js"></script>
- *   veya console'da:
- *   window.__QRAGY_API = "https://SUNUCU"; fetch(window.__QRAGY_API+"/embed.js").then(r=>r.text()).then(eval)
+ * Usage:
+ *   <script src="https://SERVER/embed.js"></script>
+ *   or in console:
+ *   window.__QRAGY_API = "https://SERVER"; fetch(window.__QRAGY_API+"/embed.js").then(r=>r.text()).then(eval)
  */
 (function () {
   "use strict";
@@ -16,7 +16,7 @@
   var WIDGET_ID = "qragy-ai-embed";
   var IFRAME_ID = "qragy-ai-iframe";
 
-  // API_BASE: script src'den otomatik tespit, yoksa __CORPCX_API
+  // API_BASE: auto-detect from script src, fallback to __CORPCX_API
   var API_BASE = (function () {
     try {
       var scripts = document.querySelectorAll("script[src*='embed.js']");
@@ -31,11 +31,11 @@
   })();
 
   if (!API_BASE) {
-    console.error("[Qragy] API_BASE belirlenemedi. Lutfen window.__QRAGY_API ayarlayin.");
+    console.error("[Qragy] API_BASE could not be determined. Please set window.__QRAGY_API.");
     return;
   }
 
-  // Zaten yukluyse tekrar yukleme
+  // If already loaded, remove and recreate
   if (document.getElementById(WIDGET_ID)) {
     var old = document.getElementById(WIDGET_ID);
     old.parentNode.removeChild(old);
@@ -65,7 +65,7 @@
   iframe.id = IFRAME_ID;
   iframe.src = API_BASE + "?embed=1";
   iframe.setAttribute("allow", "microphone; notifications");
-  iframe.setAttribute("title", "QRAGY Teknik Destek");
+  iframe.setAttribute("title", "QRAGY Technical Support");
   widget.appendChild(iframe);
   document.body.appendChild(widget);
 
@@ -73,7 +73,7 @@
   var toggleBtn = document.createElement("button");
   toggleBtn.id = WIDGET_ID + "-toggle";
   toggleBtn.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/></svg>';
-  toggleBtn.setAttribute("aria-label", "Sohbet ac");
+  toggleBtn.setAttribute("aria-label", "Open chat");
   document.body.appendChild(toggleBtn);
 
   // ---- SHOW / HIDE ----
@@ -89,22 +89,22 @@
 
   toggleBtn.addEventListener("click", showWidget);
 
-  // ESC ile kapat
+  // Close on ESC
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && widget.style.display !== "none") {
       hideWidget();
     }
   });
 
-  // ---- Zendesk / Zopim Acma ----
+  // ---- Zendesk / Zopim Open ----
   function openZendeskOnParent() {
     var opened = false;
 
-    // 1) Sayfadaki "Canli Destek" butonunu tikla (en guvenilir yontem)
+    // 1) Click the "Live Support" button on the page (most reliable method)
     try {
       var supportBtn = document.querySelector("button[class*='supportButton']");
       if (!supportBtn) {
-        // Metin icerigine gore ara
+        // Search by text content
         var allBtns = document.querySelectorAll("button, [role='button']");
         for (var i = 0; i < allBtns.length; i++) {
           var txt = (allBtns[i].textContent || "").toLowerCase().replace(/[\u015f\u015e]/g, "s").replace(/[\u0131\u0130]/g, "i");
@@ -117,7 +117,7 @@
       if (supportBtn) {
         supportBtn.click();
         opened = true;
-        console.log("[Qragy] Canli Destek butonu tiklandi.");
+        console.log("[Qragy] Live Support button clicked.");
       }
     } catch (_e) { /* ignore */ }
 
@@ -127,7 +127,7 @@
         if (window.$zopim && window.$zopim.livechat) {
           window.$zopim.livechat.window.show();
           opened = true;
-          console.log("[Qragy] $zopim.livechat acildi.");
+          console.log("[Qragy] $zopim.livechat opened.");
         }
       } catch (_e) { /* ignore */ }
     }
@@ -141,7 +141,7 @@
             try { window.zE("messenger", "open"); } catch (_e2) { /* ignore */ }
           }
           opened = true;
-          console.log("[Qragy] Zendesk zE widget acildi.");
+          console.log("[Qragy] Zendesk zE widget opened.");
         }
       } catch (_e) { /* ignore */ }
     }
@@ -154,9 +154,9 @@
     var data = event.data;
     if (!data || (data.source !== "qragy-ai-widget" && data.source !== "corpcx-ai-widget")) return;
 
-    // Handoff: Zendesk'e aktar + widget kapat
+    // Handoff: transfer to Zendesk + close widget
     if (data.type === "QRAGY_HANDOFF" || data.type === "CORPCX_HANDOFF") {
-      console.log("[Qragy] Handoff alindi, Zendesk aciliyor...", data);
+      console.log("[Qragy] Handoff received, opening Zendesk...", data);
 
       var summary = data.summary || "";
       var tags = Array.isArray(data.tags) ? data.tags : ["qragy", "ai_handoff"];
@@ -164,7 +164,7 @@
       var opened = openZendeskOnParent();
 
       if (opened) {
-        // Zendesk acildiysa ozet gondermeyi dene
+        // If Zendesk opened, try sending the summary
         setTimeout(function () {
           try {
             if (typeof window.zE === "function") {
@@ -172,24 +172,24 @@
               try { window.zE("webWidget", "chat:send", summary); } catch (_e) { /* ignore */ }
             }
           } catch (_e) { /* ignore */ }
-          console.log("[Qragy] Zendesk handoff tamamlandi.");
+          console.log("[Qragy] Zendesk handoff completed.");
         }, 1000);
       } else {
-        console.warn("[Qragy] Zendesk acilamadi. Talep kayda alindi, temsilci donecek.");
+        console.warn("[Qragy] Zendesk could not be opened. Request logged, an agent will follow up.");
       }
 
-      // Widget'i kapat
+      // Close widget
       setTimeout(hideWidget, 2000);
       return;
     }
 
-    // Widget kapat mesaji
+    // Widget close message
     if (data.type === "QRAGY_CLOSE" || data.type === "CORPCX_CLOSE") {
-      console.log("[Qragy] Widget kapatma mesaji alindi.");
+      console.log("[Qragy] Widget close message received.");
       setTimeout(hideWidget, 500);
       return;
     }
   });
 
-  console.log("[Qragy] AI Destek Katmani v3 yuklendi. API: " + API_BASE);
+  console.log("[Qragy] AI Support Layer v3 loaded. API: " + API_BASE);
 })();

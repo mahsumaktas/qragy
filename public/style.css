@@ -1,5 +1,5 @@
 /* ============================================================
-   QRAGY Chatbot – Profesyonel UI
+   QRAGY Chatbot – Professional UI
    v2 – 20 Feature Enhancement
    ============================================================ */
 
@@ -451,7 +451,7 @@ body {
 .msg-status.delivered::after { content: " ✓"; }
 .msg-status.read::after { content: " ✓✓"; }
 .msg-status.failed { color: #dc2626; }
-.msg-status.failed::after { content: " ✗ Gönderilemedi"; }
+.msg-status.failed::after { content: " ✗ Failed to send"; }
 
 /* ---- Markdown in assistant messages (3.1) ---- */
 

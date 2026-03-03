@@ -79,11 +79,11 @@ describe("reflexion", () => {
     const result = await reflexion.getWarnings("iade");
 
     expect(searchReflexionByTopic).toHaveBeenCalledWith("iade", 3);
-    expect(result).toContain("GECMIS HATALAR (Reflexion)");
-    expect(result).toContain("DIKKAT: Iade suresi 14 gun degil 30 gun");
-    expect(result).toContain("Dogru bilgi: Iade suresi 30 gundur");
-    expect(result).toContain("DIKKAT: Urun acilmamis olmali");
-    expect(result).toContain("Dogru bilgi: Ambalaj bozulmamis olmali");
+    expect(result).toContain("PAST ERRORS (Reflexion)");
+    expect(result).toContain("WARNING: Iade suresi 14 gun degil 30 gun");
+    expect(result).toContain("Correct info: Iade suresi 30 gundur");
+    expect(result).toContain("WARNING: Urun acilmamis olmali");
+    expect(result).toContain("Correct info: Ambalaj bozulmamis olmali");
   });
 
   it("getWarnings finds partial topic matches via LIKE", async () => {
@@ -98,7 +98,7 @@ describe("reflexion", () => {
     const result = await reflexion.getWarnings("kargo");
 
     expect(searchReflexionByTopic).toHaveBeenCalledWith("kargo", 3);
-    expect(result).toContain("DIKKAT: Yanlis bilgi");
+    expect(result).toContain("WARNING: Yanlis bilgi");
   });
 
   it("getWarnings searches both topic and standaloneQuery", async () => {
@@ -130,7 +130,7 @@ describe("reflexion", () => {
     const result = await reflexion.getWarnings("iade", { standaloneQuery: "iade islemi" });
 
     // Should only appear once despite being returned by both searches
-    const matches = result.match(/DIKKAT: Ayni/g);
+    const matches = result.match(/WARNING: Ayni/g);
     expect(matches).toHaveLength(1);
   });
 

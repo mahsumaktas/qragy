@@ -38,7 +38,7 @@ function mount(app, deps) {
       res.json({ ok: true, pending, active });
     } catch (err) {
       logger.warn("agentInbox", "list failed", err);
-      res.status(500).json({ error: "Kuyruk listelenemedi" });
+      res.status(500).json({ error: "Failed to list queue" });
     }
   });
 
@@ -51,7 +51,7 @@ function mount(app, deps) {
       broadcast("claimed", { id, agentName });
       return res.json({ ok: true });
     }
-    res.status(400).json({ error: "Gorusme alinamadi" });
+    res.status(400).json({ error: "Failed to claim conversation" });
   });
 
   // Send message to conversation
@@ -59,11 +59,11 @@ function mount(app, deps) {
     const id = Number(req.params.id);
     const { message } = req.body || {};
     if (!message || typeof message !== "string" || !message.trim()) {
-      return res.status(400).json({ error: "Mesaj gerekli" });
+      return res.status(400).json({ error: "Message is required" });
     }
     const queueItem = agentQueue.getById(id);
     if (!queueItem) {
-      return res.status(404).json({ error: "Gorusme bulunamadi" });
+      return res.status(404).json({ error: "Conversation not found" });
     }
     // Add agent message to conversation history
     try {
@@ -80,7 +80,7 @@ function mount(app, deps) {
       res.json({ ok: true });
     } catch (err) {
       logger.warn("agentInbox", "message failed", err);
-      res.status(500).json({ error: "Mesaj gonderilemedi" });
+      res.status(500).json({ error: "Failed to send message" });
     }
   });
 
@@ -92,7 +92,7 @@ function mount(app, deps) {
       broadcast("released", { id });
       return res.json({ ok: true });
     }
-    res.status(400).json({ error: "Gorusme birakilamadi" });
+    res.status(400).json({ error: "Failed to release conversation" });
   });
 
   // Expose broadcast for external use (escalation triggers)

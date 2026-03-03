@@ -34,7 +34,7 @@
       scenarios = s.scenarios || s || [];
       history = Array.isArray(h) ? h : (h.history || []);
     } catch (e) {
-      showToast("Eval yuklenemedi: " + e.message, "error");
+      showToast("Failed to load eval: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -42,34 +42,34 @@
 
   function runAll() {
     running = true;
-    progress = { completed: 0, total: scenarios.length, text: "Baslatiliyor..." };
+    progress = { completed: 0, total: scenarios.length, text: "Starting..." };
     results = {};
 
     sseHandle = createSSE("admin/eval/run-all?runs=3", {
       onMessage(data) {
         if (data.type === "progress") {
           progress.completed++;
-          progress.text = data.scenarioId + ": " + (data.pass ? "GECTI" : "KALDI");
+          progress.text = data.scenarioId + ": " + (data.pass ? "PASSED" : "FAILED");
           results[data.scenarioId] = data;
         }
         if (data.type === "done") {
           running = false;
           sseHandle?.close();
           const sum = data.summary || data;
-          progress.text = "Tamamlandi — " + sum.passed + "/" + sum.total + " gecti (%"+ sum.passRate +")";
-          showToast("Eval tamamlandi: " + sum.passed + "/" + sum.total, sum.passed === sum.total ? "success" : "warning");
+          progress.text = "Completed — " + sum.passed + "/" + sum.total + " passed ("+ sum.passRate +"%)";
+          showToast("Eval completed: " + sum.passed + "/" + sum.total, sum.passed === sum.total ? "success" : "warning");
           loadEval();
         }
         if (data.type === "error") {
           running = false;
           sseHandle?.close();
-          progress.text = "Hata: " + data.message;
-          showToast("Eval hatasi: " + data.message, "error");
+          progress.text = "Error: " + data.message;
+          showToast("Eval error: " + data.message, "error");
         }
       },
       onError() {
         running = false;
-        progress.text = "Baglanti hatasi";
+        progress.text = "Connection error";
       },
     });
   }
@@ -78,9 +78,9 @@
     try {
       const res = await api.post("admin/eval/run/" + id + "?runs=3", {});
       results[id] = res;
-      showToast(id + ": " + (res.pass ? "GECTI" : "KALDI"), res.pass ? "success" : "warning");
+      showToast(id + ": " + (res.pass ? "PASSED" : "FAILED"), res.pass ? "success" : "warning");
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 
@@ -109,45 +109,45 @@
       } else {
         await api.post("admin/eval/scenarios", editScenario);
       }
-      showToast("Kaydedildi", "success");
+      showToast("Saved", "success");
       editOpen = false;
       await loadEval();
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 
   async function deleteScenario(id) {
-    const ok = await showConfirm({ title: "Sil", message: "Senaryo silinecek.", confirmText: "Sil", danger: true });
+    const ok = await showConfirm({ title: "Delete", message: "This scenario will be deleted.", confirmText: "Delete", danger: true });
     if (!ok) return;
     try {
       await api.delete("admin/eval/scenarios/" + id);
-      showToast("Silindi", "success");
+      showToast("Deleted", "success");
       await loadEval();
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 
   async function clearHistory() {
-    const ok = await showConfirm({ title: "Gecmisi Temizle", message: "Tum eval gecmisi silinecek.", confirmText: "Temizle", danger: true });
+    const ok = await showConfirm({ title: "Clear History", message: "All eval history will be deleted.", confirmText: "Clear", danger: true });
     if (!ok) return;
     try {
       await api.delete("admin/eval/history");
       history = [];
-      showToast("Gecmis temizlendi", "success");
+      showToast("History cleared", "success");
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>Eval Yonetimi</h1><p>{scenarios.length} senaryo</p></div>
+  <div><h1>Eval Management</h1><p>{scenarios.length} scenarios</p></div>
   <div class="actions">
-    <Button onclick={clearHistory} variant="ghost" size="sm">Gecmisi Temizle</Button>
-    <Button onclick={openNew} variant="secondary" size="sm">+ Senaryo</Button>
-    <Button onclick={runAll} variant="primary" size="sm" disabled={running || !scenarios.length}>{running ? "Calisiyor..." : "Tumu Calistir"}</Button>
+    <Button onclick={clearHistory} variant="ghost" size="sm">Clear History</Button>
+    <Button onclick={openNew} variant="secondary" size="sm">+ Scenario</Button>
+    <Button onclick={runAll} variant="primary" size="sm" disabled={running || !scenarios.length}>{running ? "Running..." : "Run All"}</Button>
   </div>
 </div>
 
@@ -159,11 +159,11 @@
 {/if}
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="card">
     <table>
-      <thead><tr><th>ID</th><th>Baslik</th><th>Turn</th><th>Son Sonuc</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>Title</th><th>Turn</th><th>Last Result</th><th></th></tr></thead>
       <tbody>
         {#each scenarios as s}
           <tr>
@@ -172,19 +172,19 @@
             <td class="muted">{s.turns?.length || 0}</td>
             <td>
               {#if results[s.id]}
-                <Badge variant={results[s.id].pass ? "green" : "red"}>{results[s.id].pass ? "GECTI" : "KALDI"}</Badge>
+                <Badge variant={results[s.id].pass ? "green" : "red"}>{results[s.id].pass ? "PASSED" : "FAILED"}</Badge>
               {:else}
                 <span class="muted">-</span>
               {/if}
             </td>
             <td class="row-actions">
-              <Button onclick={() => runSingle(s.id)} variant="ghost" size="sm">Calistir</Button>
-              <Button onclick={() => openEdit(s)} variant="ghost" size="sm">Duzenle</Button>
-              <Button onclick={() => deleteScenario(s.id)} variant="ghost" size="sm">Sil</Button>
+              <Button onclick={() => runSingle(s.id)} variant="ghost" size="sm">Run</Button>
+              <Button onclick={() => openEdit(s)} variant="ghost" size="sm">Edit</Button>
+              <Button onclick={() => deleteScenario(s.id)} variant="ghost" size="sm">Delete</Button>
             </td>
           </tr>
         {:else}
-          <tr><td colspan="5" class="empty-row">Senaryo yok</td></tr>
+          <tr><td colspan="5" class="empty-row">No scenarios</td></tr>
         {/each}
       </tbody>
     </table>
@@ -192,14 +192,14 @@
 
   {#if history.length > 0}
     <div class="history-section">
-      <h2>Gecmis</h2>
+      <h2>History</h2>
       <div class="card">
         <table>
-          <thead><tr><th>Tarih</th><th>Toplam</th><th>Gecti</th><th>Kaldi</th><th>Oran</th><th>Sure</th></tr></thead>
+          <thead><tr><th>Date</th><th>Total</th><th>Passed</th><th>Failed</th><th>Rate</th><th>Duration</th></tr></thead>
           <tbody>
             {#each history as h}
               <tr>
-                <td>{new Date(h.timestamp).toLocaleString("tr-TR")}</td>
+                <td>{new Date(h.timestamp).toLocaleString("en-US")}</td>
                 <td>{h.total}</td>
                 <td class="pass-cell">{h.passed}</td>
                 <td class="fail-cell">{h.failed}</td>
@@ -214,14 +214,14 @@
   {/if}
 {/if}
 
-<Modal bind:open={editOpen} title={editId ? "Senaryo Duzenle" : "Yeni Senaryo"} width="640px">
+<Modal bind:open={editOpen} title={editId ? "Edit Scenario" : "New Scenario"} width="640px">
   <div class="form-group"><span class="lbl">ID</span><input class="input mono" bind:value={editScenario.id} placeholder="S01" disabled={!!editId} /></div>
-  <div class="form-group"><span class="lbl">Baslik</span><input class="input" bind:value={editScenario.title} placeholder="Senaryo aciklamasi..." /></div>
-  <div class="form-group"><span class="lbl">Etiketler (virgul ile)</span><input class="input" value={(editScenario.tags || []).join(", ")} oninput={(e) => { editScenario.tags = e.target.value.split(",").map(s => s.trim()).filter(Boolean); }} /></div>
+  <div class="form-group"><span class="lbl">Title</span><input class="input" bind:value={editScenario.title} placeholder="Scenario description..." /></div>
+  <div class="form-group"><span class="lbl">Tags (comma-separated)</span><input class="input" value={(editScenario.tags || []).join(", ")} oninput={(e) => { editScenario.tags = e.target.value.split(",").map(s => s.trim()).filter(Boolean); }} /></div>
 
   <div class="turns-section">
     <div class="turns-header">
-      <span class="lbl">Turn'lar ({editScenario.turns?.length || 0})</span>
+      <span class="lbl">Turns ({editScenario.turns?.length || 0})</span>
       <Button onclick={() => { editScenario.turns = [...(editScenario.turns || []), { user: "", expect: {} }]; }} variant="ghost" size="sm">+ Turn</Button>
     </div>
     {#each editScenario.turns || [] as turn, i}
@@ -229,18 +229,18 @@
         <div class="turn-top">
           <span class="turn-num">#{i + 1}</span>
           {#if (editScenario.turns || []).length > 1}
-            <Button onclick={() => { editScenario.turns = editScenario.turns.filter((_, idx) => idx !== i); }} variant="ghost" size="sm">Sil</Button>
+            <Button onclick={() => { editScenario.turns = editScenario.turns.filter((_, idx) => idx !== i); }} variant="ghost" size="sm">Delete</Button>
           {/if}
         </div>
-        <div class="form-group"><span class="lbl">Kullanici Mesaji</span><textarea class="textarea" bind:value={turn.user} rows="2" placeholder="Kullanicinin mesaji..."></textarea></div>
-        <div class="form-group"><span class="lbl">Beklenen (shouldContainAny, virgul ile)</span><input class="input" value={(turn.expect?.shouldContainAny || []).join(", ")} oninput={(e) => { turn.expect = { ...turn.expect, shouldContainAny: e.target.value.split(",").map(s => s.trim()).filter(Boolean) }; }} /></div>
+        <div class="form-group"><span class="lbl">User Message</span><textarea class="textarea" bind:value={turn.user} rows="2" placeholder="User's message..."></textarea></div>
+        <div class="form-group"><span class="lbl">Expected (shouldContainAny, comma-separated)</span><input class="input" value={(turn.expect?.shouldContainAny || []).join(", ")} oninput={(e) => { turn.expect = { ...turn.expect, shouldContainAny: e.target.value.split(",").map(s => s.trim()).filter(Boolean) }; }} /></div>
       </div>
     {/each}
   </div>
 
   <div class="modal-actions">
-    <Button onclick={() => (editOpen = false)} variant="secondary">Iptal</Button>
-    <Button onclick={saveScenario} variant="primary">Kaydet</Button>
+    <Button onclick={() => (editOpen = false)} variant="secondary">Cancel</Button>
+    <Button onclick={saveScenario} variant="primary">Save</Button>
   </div>
 </Modal>
 

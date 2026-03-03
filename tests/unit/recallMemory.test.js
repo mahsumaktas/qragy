@@ -57,10 +57,10 @@ describe("Recall Memory Service", () => {
 
     const prompt = recallMemory.formatForPrompt("kargo", "user1");
 
-    expect(prompt).toContain("GECMIS KONUSMALAR");
+    expect(prompt).toContain("CONVERSATION HISTORY");
     expect(prompt).toContain("[summary] Musteri kargo durumunu sordu");
     expect(prompt).toContain("[complaint] Geciken siparis hakkinda sikayet");
-    expect(prompt.startsWith("--- GECMIS KONUSMALAR ---")).toBe(true);
+    expect(prompt.startsWith("--- CONVERSATION HISTORY ---")).toBe(true);
     expect(prompt.endsWith("---")).toBe(true);
   });
 

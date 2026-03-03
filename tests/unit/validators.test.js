@@ -34,24 +34,24 @@ describe("validators", () => {
 
   describe("isGreetingOnly", () => {
     it("should detect greetings", () => {
-      expect(isGreetingOnly("merhaba")).toBe(true);
-      expect(isGreetingOnly("Selam")).toBe(true);
-      expect(isGreetingOnly("iyi gunler")).toBe(true);
+      expect(isGreetingOnly("hello")).toBe(true);
+      expect(isGreetingOnly("Hi")).toBe(true);
+      expect(isGreetingOnly("good morning")).toBe(true);
     });
     it("should not detect non-greetings", () => {
-      expect(isGreetingOnly("yazicim calismiyor")).toBe(false);
-      expect(isGreetingOnly("merhaba yazicim bozuldu")).toBe(false);
+      expect(isGreetingOnly("my printer is not working")).toBe(false);
+      expect(isGreetingOnly("hello my printer is broken")).toBe(false);
     });
   });
 
   describe("isFarewellMessage", () => {
     it("should detect farewell", () => {
-      expect(isFarewellMessage("tesekkurler")).toBe(true);
-      expect(isFarewellMessage("tamam sagolun")).toBe(true);
-      expect(isFarewellMessage("oldu tesekkur ederim")).toBe(true);
+      expect(isFarewellMessage("thanks")).toBe(true);
+      expect(isFarewellMessage("ok thank you")).toBe(true);
+      expect(isFarewellMessage("great, cheers")).toBe(true);
     });
     it("should not false positive", () => {
-      expect(isFarewellMessage("tamam ama hala calismiyor")).toBe(false);
+      expect(isFarewellMessage("ok but still not working")).toBe(false);
     });
   });
 });

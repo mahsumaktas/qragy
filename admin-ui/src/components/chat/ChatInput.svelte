@@ -1,5 +1,5 @@
 <script>
-  let { onsend, placeholder = "Mesaj yazin...", disabled = false } = $props();
+  let { onsend, placeholder = "Type a message...", disabled = false } = $props();
   let text = $state("");
 
   function handleSubmit() {
@@ -25,7 +25,7 @@
     rows="1"
     onkeydown={handleKeydown}
   ></textarea>
-  <button class="send-btn" onclick={handleSubmit} disabled={disabled || !text.trim()} aria-label="Gonder">
+  <button class="send-btn" onclick={handleSubmit} disabled={disabled || !text.trim()} aria-label="Send">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
   </button>
 </div>

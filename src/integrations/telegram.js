@@ -85,7 +85,7 @@ function createTelegramIntegration(deps) {
         clearTimeout(timeoutId);
       }
     } catch (err) {
-      logger.warn("telegram", "Telegram mesaj isleme hatasi", err);
+      logger.warn("telegram", "Telegram message processing error", err);
       saveTelegramSessions(sessions);
     }
   }
@@ -110,7 +110,7 @@ function createTelegramIntegration(deps) {
         }
       }
     } catch (err) {
-      logger.warn("telegram", "Telegram polling hatasi", err);
+      logger.warn("telegram", "Telegram polling error", err);
     } finally {
       clearTimeout(timeoutId);
     }
@@ -120,7 +120,7 @@ function createTelegramIntegration(deps) {
     const TELEGRAM_ENABLED = getTelegramEnabled();
     const TELEGRAM_BOT_TOKEN = getTelegramBotToken();
     if (!TELEGRAM_ENABLED || !TELEGRAM_BOT_TOKEN) return;
-    logger.info("telegram", "Telegram polling baslatildi");
+    logger.info("telegram", "Telegram polling started");
     const TELEGRAM_POLLING_INTERVAL_MS = getTelegramPollingIntervalMs();
     setInterval(pollTelegram, TELEGRAM_POLLING_INTERVAL_MS);
     pollTelegram();
@@ -142,19 +142,19 @@ function createTelegramIntegration(deps) {
       const elapsed = now - session.lastActivity;
 
       if (elapsed >= timeout * 0.75 && !session.nudge75Sent) {
-        const msg75 = chatFlowConfig.nudgeAt75Message || "Hala buradayım. Size nasıl yardımcı olabilirim?";
+        const msg75 = chatFlowConfig.nudgeAt75Message || "I'm still here. How can I help you?";
         sendTelegramMessage(chatId, msg75);
         session.nudge75Sent = true;
         changed = true;
       }
       if (elapsed >= timeout * 0.90 && !session.nudge90Sent) {
-        const msg90 = chatFlowConfig.nudgeAt90Message || "Son birkaç dakikadır mesaj almadım. Yardımcı olabilir miyim?";
+        const msg90 = chatFlowConfig.nudgeAt90Message || "I haven't received a message in a few minutes. Can I help you with anything?";
         sendTelegramMessage(chatId, msg90);
         session.nudge90Sent = true;
         changed = true;
       }
       if (elapsed >= timeout) {
-        const closeMsg = chatFlowConfig.inactivityCloseMessage || "Uzun süredir mesaj almadığım için sohbeti sonlandırıyorum.";
+        const closeMsg = chatFlowConfig.inactivityCloseMessage || "I'm closing this chat due to inactivity. Feel free to reach out again anytime.";
         sendTelegramMessage(chatId, closeMsg);
         session.closed = true;
         session.messages = [];

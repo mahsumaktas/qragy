@@ -40,7 +40,7 @@ function mount(app, deps) {
       const result = await mammoth.extractRawText({ path: filePath });
       return result.value || "";
     }
-    throw new Error("Desteklenmeyen dosya formati: " + ext);
+    throw new Error("Unsupported file format:" + ext);
   }
 
   /**
@@ -53,11 +53,11 @@ function mount(app, deps) {
     const XLSX = require("xlsx");
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
-    if (!sheetName) throw new Error("XLSX dosyasinda sayfa bulunamadi.");
+    if (!sheetName) throw new Error("No sheet found in XLSX file.");
 
     const sheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-    if (!rows.length) throw new Error("XLSX dosyasi bos.");
+    if (!rows.length) throw new Error("XLSX file is empty.");
 
     // Try to detect Q/A columns from headers
     const headers = Object.keys(rows[0]).map(h => h.toLowerCase().trim());
@@ -102,7 +102,7 @@ function mount(app, deps) {
   app.post("/api/admin/knowledge", requireAdminAccess, async (req, res) => {
     try {
       const { question, answer } = req.body || {};
-      if (!question || !answer) return res.status(400).json({ error: "question ve answer zorunludur." });
+      if (!question || !answer) return res.status(400).json({ error: "question and answer are required." });
 
       const rows = loadCSVData();
       rows.push({ question, answer });
@@ -133,11 +133,11 @@ function mount(app, deps) {
     try {
       const id = Number(req.params.id);
       const { question, answer } = req.body || {};
-      if (!question || !answer) return res.status(400).json({ error: "question ve answer zorunludur." });
+      if (!question || !answer) return res.status(400).json({ error: "question and answer are required." });
 
       const rows = loadCSVData();
       const idx = id - 1;
-      if (idx < 0 || idx >= rows.length) return res.status(404).json({ error: "Kayit bulunamadi." });
+      if (idx < 0 || idx >= rows.length) return res.status(404).json({ error: "Record not found." });
 
       rows[idx] = { question, answer };
       saveCSVData(rows);
@@ -156,7 +156,7 @@ function mount(app, deps) {
       const id = Number(req.params.id);
       const rows = loadCSVData();
       const idx = id - 1;
-      if (idx < 0 || idx >= rows.length) return res.status(404).json({ error: "Kayit bulunamadi." });
+      if (idx < 0 || idx >= rows.length) return res.status(404).json({ error: "Record not found." });
 
       rows.splice(idx, 1);
       saveCSVData(rows);
@@ -171,7 +171,7 @@ function mount(app, deps) {
 
   // ── KB: File Upload (PDF/DOCX/TXT/XLSX) ──────────────────────────────────
   app.post("/api/admin/knowledge/upload", requireAdminAccess, upload.single("file"), async (req, res) => {
-    if (!req.file) return res.status(400).json({ error: "Dosya gerekli." });
+    if (!req.file) return res.status(400).json({ error: "File is required." });
     try {
       const ext = path.extname(req.file.originalname).toLowerCase();
 
@@ -180,7 +180,7 @@ function mount(app, deps) {
         const pairs = extractQAFromXlsx(req.file.path);
         if (!pairs.length) {
           try { fs.unlinkSync(req.file.path); } catch (_) { /* cleanup */ }
-          return res.status(400).json({ error: "XLSX dosyasindan soru-cevap cifti cikarilamadi." });
+          return res.status(400).json({ error: "Could not extract Q&A pairs from XLSX file." });
         }
 
         const rows = loadCSVData();
@@ -202,10 +202,10 @@ function mount(app, deps) {
       }
 
       const text = await extractTextFromFile(req.file.path, req.file.mimetype, req.file.originalname);
-      if (!text.trim()) return res.status(400).json({ error: "Dosyadan metin cikarilamadi." });
+      if (!text.trim()) return res.status(400).json({ error: "Could not extract text from file." });
 
       let chunks = chunkText(text, { filename: req.file.originalname });
-      if (!chunks.length) return res.status(400).json({ error: "Yeterli icerik bulunamadi." });
+      if (!chunks.length) return res.status(400).json({ error: "Insufficient content found." });
 
       // Optional contextual enrichment (adds LLM-generated context prefix to each chunk)
       const contextualEnrich = req.body?.contextualEnrich === "true" || req.body?.contextualEnrich === true;
@@ -215,7 +215,7 @@ function mount(app, deps) {
           const enriched = await contextualChunker.enrichBatch(chunkObjs, req.file.originalname);
           chunks = enriched.map(e => e.contextualContent || e.originalContent || e.answer);
         } catch (err) {
-          logger.warn("fileUpload", "Contextual enrichment hatasi, orijinal chunk'lar kullaniliyor", err);
+          logger.warn("fileUpload", "Contextual enrichment error, using original chunks", err);
         }
       }
 
@@ -227,7 +227,7 @@ function mount(app, deps) {
         try {
           const qResult = await callLLM(
             [{ role: "user", parts: [{ text: chunk }] }],
-            "Bu metin parcasini ozetleyen tek bir soru yaz. Turkce yaz. Sadece soruyu yaz, baska bir sey yazma.",
+            "Write a single question summarizing this text snippet. Write only the question, nothing else.",
             64
           );
           question = (qResult.reply || "").trim();
@@ -256,23 +256,23 @@ function mount(app, deps) {
   app.post("/api/admin/knowledge/import-url", requireAdminAccess, async (req, res) => {
     const { url } = req.body || {};
     if (!url || typeof url !== "string") {
-      return res.status(400).json({ error: "url zorunludur." });
+      return res.status(400).json({ error: "url is required." });
     }
 
     // Basic URL validation
     try { new URL(url); } catch {
-      return res.status(400).json({ error: "Gecersiz URL." });
+      return res.status(400).json({ error: "Invalid URL." });
     }
 
     if (!urlExtractor) {
-      return res.status(500).json({ error: "URL import servisi yapilandirilmamis." });
+      return res.status(500).json({ error: "URL import service is not configured." });
     }
 
     try {
       const { title, text } = await urlExtractor.extract(url);
 
       const chunks = chunkText(text, { filename: title || url });
-      if (!chunks.length) return res.status(400).json({ error: "Sayfadan yeterli icerik cikarilamadi." });
+      if (!chunks.length) return res.status(400).json({ error: "Could not extract sufficient content from page." });
 
       const rows = loadCSVData();
       let added = 0;
@@ -282,7 +282,7 @@ function mount(app, deps) {
         try {
           const qResult = await callLLM(
             [{ role: "user", parts: [{ text: chunk }] }],
-            "Bu metin parcasini ozetleyen tek bir soru yaz. Turkce yaz. Sadece soruyu yaz, baska bir sey yazma.",
+            "Write a single question summarizing this text snippet. Write only the question, nothing else.",
             64
           );
           question = (qResult.reply || "").trim();
@@ -309,7 +309,7 @@ function mount(app, deps) {
   const uploadBatch = multer({ dest: UPLOADS_DIR, limits: { fileSize: 10 * 1024 * 1024 } });
   app.post("/api/admin/knowledge/upload-batch", requireAdminAccess, uploadBatch.array("files", 10), async (req, res) => {
     if (!req.files || !req.files.length) {
-      return res.status(400).json({ error: "En az bir dosya gerekli." });
+      return res.status(400).json({ error: "At least one file is required." });
     }
 
     const results = [];
@@ -338,7 +338,7 @@ function mount(app, deps) {
         } else {
           const text = await extractTextFromFile(file.path, file.mimetype, file.originalname);
           if (!text.trim()) {
-            results.push({ file: file.originalname, ok: false, error: "Metin cikarilamadi" });
+            results.push({ file: file.originalname, ok: false, error: "Text extraction failed" });
             continue;
           }
           const chunks = chunkText(text, { filename: file.originalname });
@@ -349,7 +349,7 @@ function mount(app, deps) {
             try {
               const qResult = await callLLM(
                 [{ role: "user", parts: [{ text: chunk }] }],
-                "Bu metin parcasini ozetleyen tek bir soru yaz. Turkce yaz. Sadece soruyu yaz, baska bir sey yazma.",
+                "Write a single question summarizing this text snippet. Write only the question, nothing else.",
                 64
               );
               question = (qResult.reply || "").trim();

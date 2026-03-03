@@ -24,7 +24,7 @@
         (c) => c.status === "active" || c.status === "ticketed"
       );
     } catch (e) {
-      showToast("Sohbetler yuklenemedi: " + e.message, "error");
+      showToast("Failed to load chats: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -32,38 +32,38 @@
 
   async function closeAll() {
     const ok = await showConfirm({
-      title: "Tum sohbetleri kapat",
-      message: "Tum aktif sohbetler kapatilacak. Emin misiniz?",
-      confirmText: "Kapat",
+      title: "Close All Chats",
+      message: "All active chats will be closed. Are you sure?",
+      confirmText: "Close",
       danger: true,
     });
     if (!ok) return;
     try {
       const res = await api.post("admin/conversations/close-all", {});
-      showToast(res.closedCount + " sohbet kapatildi", "success");
+      showToast(res.closedCount + " chats closed", "success");
       await loadConversations();
       selectedId = null;
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 </script>
 
 <div class="page-header">
   <div>
-    <h1>Canli Sohbetler <Badge variant="blue">{conversations.length}</Badge></h1>
-    <p>Aktif ve ticketed sohbetler</p>
+    <h1>Live Chats <Badge variant="blue">{conversations.length}</Badge></h1>
+    <p>Active and ticketed conversations</p>
   </div>
   <div class="header-actions">
-    <Button onclick={loadConversations} variant="ghost" size="sm">Yenile</Button>
+    <Button onclick={loadConversations} variant="ghost" size="sm">Refresh</Button>
     {#if conversations.length}
-      <Button onclick={closeAll} variant="danger" size="sm">Tumunu Kapat</Button>
+      <Button onclick={closeAll} variant="danger" size="sm">Close All</Button>
     {/if}
   </div>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="live-layout">
     <!-- Conversation List -->
@@ -82,12 +82,12 @@
           </div>
           <div class="conv-msg">{conv.lastUserMessage || "..."}</div>
           <div class="conv-meta">
-            <span>{conv.messageCount || 0} mesaj</span>
+            <span>{conv.messageCount || 0} messages</span>
             <span>{fmtRelative(conv.updatedAt)}</span>
           </div>
         </div>
       {:else}
-        <div class="empty-list">Aktif sohbet yok</div>
+        <div class="empty-list">No active chats</div>
       {/each}
     </div>
 
@@ -96,7 +96,7 @@
       {#if selected}
         <div class="chat-header">
           <strong>{selected.sessionId?.slice(-8)}</strong>
-          <span class="chat-meta">{selected.source || "web"} &middot; {selected.messageCount} mesaj</span>
+          <span class="chat-meta">{selected.source || "web"} &middot; {selected.messageCount} messages</span>
         </div>
         <div class="chat-body">
           {#each selected.chatHistory || [] as msg}
@@ -105,37 +105,37 @@
               message={msg.content || ""}
             />
           {:else}
-            <div class="empty-chat">Mesaj yok</div>
+            <div class="empty-chat">No messages</div>
           {/each}
         </div>
       {:else}
-        <div class="no-selection">Bir sohbet secin</div>
+        <div class="no-selection">Select a chat</div>
       {/if}
     </div>
 
     <!-- Context Panel -->
     <div class="context-panel">
       {#if selected}
-        <h3>Detaylar</h3>
+        <h3>Details</h3>
         <div class="detail-rows">
           <div class="detail-row">
-            <span class="detail-label">Oturum</span>
+            <span class="detail-label">Session</span>
             <span class="detail-val mono">{selected.sessionId?.slice(0, 16)}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Durum</span>
+            <span class="detail-label">Status</span>
             <span class="detail-val">{selected.status}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Kaynak</span>
+            <span class="detail-label">Source</span>
             <span class="detail-val">{selected.source || "web"}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Olusturma</span>
+            <span class="detail-label">Created</span>
             <span class="detail-val">{fmtRelative(selected.createdAt)}</span>
           </div>
           {#if selected.memory}
-            <h4>Hafiza</h4>
+            <h4>Memory</h4>
             {#each Object.entries(selected.memory) as [k, v]}
               {#if v}
                 <div class="detail-row">
@@ -147,7 +147,7 @@
           {/if}
         </div>
       {:else}
-        <div class="no-selection-ctx">Detay icin sohbet secin</div>
+        <div class="no-selection-ctx">Select a chat for details</div>
       {/if}
     </div>
   </div>

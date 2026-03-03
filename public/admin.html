@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -35,46 +35,46 @@
           <nav class="sidebar-nav">
             <!-- TALEPLER group -->
             <div class="nav-group">
-              <div class="nav-group-label">TALEPLER</div>
-              <a class="nav-item active" data-panel="panelSummary">Özet</a>
-              <a class="nav-item" data-panel="panelLiveChats">Canlı Sohbetler <span id="convCount" class="nav-badge">0</span></a>
-              <a class="nav-item" data-panel="panelClosedChats">Kapalı Sohbetler</a>
-              <a class="nav-item" data-panel="panelSearch">Arama</a>
+              <div class="nav-group-label">REQUESTS</div>
+              <a class="nav-item active" data-panel="panelSummary">Summary</a>
+              <a class="nav-item" data-panel="panelLiveChats">Live Chats <span id="convCount" class="nav-badge">0</span></a>
+              <a class="nav-item" data-panel="panelClosedChats">Closed Chats</a>
+              <a class="nav-item" data-panel="panelSearch">Search</a>
               <a class="nav-item" data-panel="panelInbox">Agent Inbox <span id="inboxCount" class="nav-badge">0</span></a>
             </div>
 
             <!-- DUZENLEMELER group -->
             <div class="nav-group">
-              <div class="nav-group-label">DÜZENLEMELER</div>
-              <a class="nav-item" data-panel="panelBotSetup">Bot Ayarları</a>
+              <div class="nav-group-label">SETTINGS</div>
+              <a class="nav-item" data-panel="panelBotSetup">Bot Settings</a>
               <a class="nav-item" data-panel="panelBotTest">Bot Test</a>
-              <a class="nav-item" data-panel="panelKB">Bilgi Tabanı</a>
-              <a class="nav-item" data-panel="panelTopics">Konular</a>
-              <a class="nav-item" data-panel="panelChatFlow">Sohbet Akışı</a>
-              <a class="nav-item" data-panel="panelEval">Eval Yönetimi</a>
-              <a class="nav-item" data-panel="panelSiteConfig">Site Ayarları</a>
+              <a class="nav-item" data-panel="panelKB">Knowledge Base</a>
+              <a class="nav-item" data-panel="panelTopics">Topics</a>
+              <a class="nav-item" data-panel="panelChatFlow">Chat Flow</a>
+              <a class="nav-item" data-panel="panelEval">Eval Management</a>
+              <a class="nav-item" data-panel="panelSiteConfig">Site Settings</a>
             </div>
 
             <!-- ENTEGRASYONLAR group -->
             <div class="nav-group">
-              <div class="nav-group-label">ENTEGRASYONLAR</div>
-              <a class="nav-item" data-panel="panelSunshine">CRM Entegrasyonu</a>
+              <div class="nav-group-label">INTEGRATIONS</div>
+              <a class="nav-item" data-panel="panelSunshine">CRM Integration</a>
               <a class="nav-item" data-panel="panelWhatsApp">WhatsApp</a>
             </div>
 
             <!-- SISTEM group (toggle ile gizlenebilir) -->
             <div class="nav-group">
-              <div id="advancedToggle" class="nav-advanced-toggle">Sistem &#9662;</div>
+              <div id="advancedToggle" class="nav-advanced-toggle">System &#9662;</div>
               <a class="nav-item advanced" data-panel="panelAnalytics">Dashboard</a>
-              <a class="nav-item advanced" data-panel="panelEnv">Ortam Değişkenleri</a>
+              <a class="nav-item advanced" data-panel="panelEnv">Environment Variables</a>
               <a class="nav-item advanced" data-panel="panelWebhooks">Webhooks</a>
-              <a class="nav-item advanced" data-panel="panelAutoFAQ">FAQ Önerileri</a>
-              <a class="nav-item advanced" data-panel="panelPromptVersions">Prompt Geçmişi</a>
-              <a class="nav-item advanced" data-panel="panelFeedbackReport">Feedback Raporu</a>
+              <a class="nav-item advanced" data-panel="panelAutoFAQ">FAQ Suggestions</a>
+              <a class="nav-item advanced" data-panel="panelPromptVersions">Prompt History</a>
+              <a class="nav-item advanced" data-panel="panelFeedbackReport">Feedback Report</a>
               <a class="nav-item advanced" data-panel="panelContentGaps">Content Gaps</a>
-              <a class="nav-item advanced" data-panel="panelSystem">Sistem Durumu</a>
-              <a class="nav-item advanced" data-panel="panelAgentFiles">Agent Dosyaları</a>
-              <a class="nav-item advanced" data-panel="panelMemory">Bellek Şablonları</a>
+              <a class="nav-item advanced" data-panel="panelSystem">System Health</a>
+              <a class="nav-item advanced" data-panel="panelAgentFiles">Agent Files</a>
+              <a class="nav-item advanced" data-panel="panelMemory">Memory Templates</a>
             </div>
           </nav>
         </aside>
@@ -87,12 +87,12 @@
             <!-- Onboarding Checklist -->
             <div id="onboardingChecklist" class="onboarding-checklist" style="display:none;">
               <div class="checklist-header">
-                <h3>Başlangıç Rehberi</h3>
-                <button id="onboardingDismiss" class="btn btn-sm" title="Kapat">&times;</button>
+                <h3>Getting Started</h3>
+                <button id="onboardingDismiss" class="btn btn-sm" title="Close">&times;</button>
               </div>
               <ul id="onboardingItems"></ul>
               <div id="onboardingComplete" style="display:none;" class="checklist-complete">
-                Tebrikler! Tüm adımları tamamladınız.
+                Congratulations! You have completed all steps.
               </div>
             </div>
             <section class="summary-grid" id="summaryGrid"></section>
@@ -104,19 +104,19 @@
                     <thead>
                       <tr>
                         <th>Ticket</th>
-                        <th>Durum</th>
-                        <th>Öncelik</th>
-                        <th>Şube</th>
-                        <th>Sorun</th>
-                        <th>Atanan</th>
-                        <th>Kaynak</th>
-                        <th>Oluşturma</th>
-                        <th>Detay</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Account</th>
+                        <th>Issue</th>
+                        <th>Assigned</th>
+                        <th>Source</th>
+                        <th>Created</th>
+                        <th>Detail</th>
                       </tr>
                     </thead>
                     <tbody id="ticketsTableBody">
                       <tr>
-                        <td colspan="9" class="empty">Yükleniyor...</td>
+                        <td colspan="9" class="empty">Loading...</td>
                       </tr>
                     </tbody>
                   </table>
@@ -125,88 +125,88 @@
 
               <div class="panel-split-right">
                 <section class="detail-section">
-                  <h2>Ticket Detayı</h2>
-                  <div id="ticketDetail" class="detail-box">Bir ticket seçiniz.</div>
+                  <h2>Ticket Detail</h2>
+                  <div id="ticketDetail" class="detail-box">Select a ticket.</div>
 
                   <!-- Team features: assign, priority, notes -->
                   <div id="ticketActions" class="ticket-actions" style="display:none">
                     <div class="action-row">
-                      <label>Atama: <input id="ticketAssignInput" type="text" placeholder="Kullanıcı adı" /></label>
-                      <button id="ticketAssignBtn" class="btn btn-sm btn-primary">Ata</button>
-                      <label>Öncelik:
+                      <label>Assign: <input id="ticketAssignInput" type="text" placeholder="Username" /></label>
+                      <button id="ticketAssignBtn" class="btn btn-sm btn-primary">Assign</button>
+                      <label>Priority:
                         <select id="ticketPrioritySelect">
-                          <option value="low">Düşük</option>
+                          <option value="low">Low</option>
                           <option value="normal" selected>Normal</option>
-                          <option value="high">Yüksek</option>
+                          <option value="high">High</option>
                         </select>
                       </label>
-                      <button id="ticketPriorityBtn" class="btn btn-sm btn-primary">Değiştir</button>
+                      <button id="ticketPriorityBtn" class="btn btn-sm btn-primary">Change</button>
                     </div>
                     <div class="action-row">
-                      <textarea id="ticketNoteInput" rows="2" placeholder="Dahili not ekle..."></textarea>
-                      <button id="ticketNoteBtn" class="btn btn-sm btn-primary">Not Ekle</button>
+                      <textarea id="ticketNoteInput" rows="2" placeholder="Add internal note..."></textarea>
+                      <button id="ticketNoteBtn" class="btn btn-sm btn-primary">Add Note</button>
                     </div>
                     <div id="ticketNotesList" class="notes-list"></div>
                   </div>
 
-                  <h3 style="margin-top:14px">Sohbet Geçmişi</h3>
-                  <div id="chatHistory" class="chat-history-container">Ticket seçiniz.</div>
+                  <h3 style="margin-top:14px">Chat History</h3>
+                  <div id="chatHistory" class="chat-history-container">Select a ticket.</div>
                 </section>
               </div>
             </div>
           </div>
 
-          <!-- PANEL: Canlı Sohbetler -->
+          <!-- PANEL: Live Chats -->
           <div id="panelLiveChats" class="panel">
             <div class="section-header" style="margin-bottom:8px;display:flex;align-items:center;gap:12px">
-              <h3>Canlı Sohbetler <span class="badge">0</span></h3>
-              <button type="button" id="closeAllConvsBtn" class="open-button" style="font-size:12px;padding:4px 10px">Tümünü Kapat</button>
+              <h3>Live Chats <span class="badge">0</span></h3>
+              <button type="button" id="closeAllConvsBtn" class="open-button" style="font-size:12px;padding:4px 10px">Close All</button>
             </div>
             <div class="table-section">
               <table>
                 <thead>
                   <tr>
-                    <th>Oturum</th>
-                    <th>Durum</th>
-                    <th>Mesaj</th>
-                    <th>Son Mesaj</th>
-                    <th>Şube</th>
-                    <th>Kaynak</th>
-                    <th>Başlangıç</th>
-                    <th>Güncelleme</th>
-                    <th>Detay</th>
+                    <th>Session</th>
+                    <th>Status</th>
+                    <th>Messages</th>
+                    <th>Last Message</th>
+                    <th>Account</th>
+                    <th>Source</th>
+                    <th>Started</th>
+                    <th>Updated</th>
+                    <th>Detail</th>
                   </tr>
                 </thead>
                 <tbody id="liveConvsTableBody">
-                  <tr><td colspan="9" class="empty">Yükleniyor...</td></tr>
+                  <tr><td colspan="9" class="empty">Loading...</td></tr>
                 </tbody>
               </table>
             </div>
             <div id="liveChatDetail" class="chat-detail-inline"></div>
           </div>
 
-          <!-- PANEL: Kapalı Sohbetler -->
+          <!-- PANEL: Closed Chats -->
           <div id="panelClosedChats" class="panel">
             <div class="section-header" style="margin-bottom:8px;display:flex;align-items:center;gap:12px">
-              <h3>Kapalı Sohbetler <span id="closedConvCount" class="badge">0</span></h3>
+              <h3>Closed Chats <span id="closedConvCount" class="badge">0</span></h3>
             </div>
             <div class="table-section">
               <table>
                 <thead>
                   <tr>
-                    <th>Oturum</th>
-                    <th>Durum</th>
-                    <th>Mesaj</th>
-                    <th>Son Mesaj</th>
-                    <th>Şube</th>
-                    <th>Kaynak</th>
-                    <th>Başlangıç</th>
-                    <th>Güncelleme</th>
-                    <th>Detay</th>
+                    <th>Session</th>
+                    <th>Status</th>
+                    <th>Messages</th>
+                    <th>Last Message</th>
+                    <th>Account</th>
+                    <th>Source</th>
+                    <th>Started</th>
+                    <th>Updated</th>
+                    <th>Detail</th>
                   </tr>
                 </thead>
                 <tbody id="closedConvsTableBody">
-                  <tr><td colspan="9" class="empty">Yükleniyor...</td></tr>
+                  <tr><td colspan="9" class="empty">Loading...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -217,14 +217,14 @@
           <div id="panelSearch" class="panel">
             <section class="admin-controls">
               <label class="control">
-                <span>Arama</span>
-                <input id="searchFilter" type="text" placeholder="Ticket, şube, sorun ara..." />
+                <span>Search</span>
+                <input id="searchFilter" type="text" placeholder="Search tickets, accounts, issues..." />
               </label>
 
               <label class="control">
-                <span>Durum</span>
+                <span>Status</span>
                 <select id="statusFilter">
-                  <option value="">Tüm durumlar</option>
+                  <option value="">All statuses</option>
                   <option value="handoff_pending">handoff_pending</option>
                   <option value="queued_after_hours">queued_after_hours</option>
                   <option value="handoff_success">handoff_success</option>
@@ -235,9 +235,9 @@
               </label>
 
               <label class="control">
-                <span>Kaynak</span>
+                <span>Source</span>
                 <select id="sourceFilter">
-                  <option value="">Tümü</option>
+                  <option value="">All</option>
                   <option value="web">Web</option>
                   <option value="telegram">Telegram</option>
                   <option value="sunshine">Sunshine</option>
@@ -246,7 +246,7 @@
               </label>
 
               <label class="control">
-                <span>Kayıt limiti</span>
+                <span>Record limit</span>
                 <select id="limitFilter">
                   <option value="50">50</option>
                   <option value="100" selected>100</option>
@@ -255,20 +255,20 @@
               </label>
 
               <div class="control-buttons">
-                <button id="refreshButton" type="button">Yenile</button>
-                <button id="autoButton" type="button" data-active="1">Oto Yenile: Açık</button>
-                <button id="exportTicketsBtn" type="button">Dışarı Aktar (CSV)</button>
+                <button id="refreshButton" type="button">Refresh</button>
+                <button id="autoButton" type="button" data-active="1">Auto Refresh: On</button>
+                <button id="exportTicketsBtn" type="button">Export (CSV)</button>
               </div>
             </section>
 
             <!-- Bulk Actions Toolbar -->
             <section id="bulkToolbar" class="bulk-toolbar" hidden>
-              <span id="bulkSelectedCount">0 seçili</span>
-              <button id="bulkCloseBtn" type="button" class="btn btn-secondary">Kapat</button>
-              <select id="bulkPrioritySelect"><option value="">Öncelik Seç</option><option value="low">Düşük</option><option value="normal">Normal</option><option value="high">Yüksek</option></select>
-              <button id="bulkPriorityBtn" type="button" class="btn btn-secondary">Öncelik Değiştir</button>
-              <input id="bulkAssignInput" type="text" placeholder="Atama..." style="width:120px" />
-              <button id="bulkAssignBtn" type="button" class="btn btn-secondary">Ata</button>
+              <span id="bulkSelectedCount">0 selected</span>
+              <button id="bulkCloseBtn" type="button" class="btn btn-secondary">Close</button>
+              <select id="bulkPrioritySelect"><option value="">Select Priority</option><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select>
+              <button id="bulkPriorityBtn" type="button" class="btn btn-secondary">Change Priority</button>
+              <input id="bulkAssignInput" type="text" placeholder="Assign to..." style="width:120px" />
+              <button id="bulkAssignBtn" type="button" class="btn btn-secondary">Assign</button>
             </section>
 
             <section class="table-section">
@@ -276,19 +276,19 @@
                 <thead>
                   <tr>
                     <th>Ticket</th>
-                    <th>Durum</th>
-                    <th>Öncelik</th>
-                    <th>Şube</th>
-                    <th>Sorun</th>
-                    <th>Atanan</th>
-                    <th>Kaynak</th>
-                    <th>Oluşturma</th>
-                    <th>Detay</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Account</th>
+                    <th>Issue</th>
+                    <th>Assigned</th>
+                    <th>Source</th>
+                    <th>Created</th>
+                    <th>Detail</th>
                   </tr>
                 </thead>
                 <tbody id="searchTicketsTableBody">
                   <tr>
-                    <td colspan="9" class="empty">Yükleniyor...</td>
+                    <td colspan="9" class="empty">Loading...</td>
                   </tr>
                 </tbody>
               </table>
@@ -301,32 +301,32 @@
           <div id="panelInbox" class="panel">
             <div class="section-header" style="margin-bottom:12px;display:flex;align-items:center;gap:12px">
               <h3>Agent Inbox</h3>
-              <button type="button" id="inboxRefreshBtn" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">Yenile</button>
+              <button type="button" id="inboxRefreshBtn" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">Refresh</button>
             </div>
             <div class="inbox-layout">
               <!-- Left: Queue list -->
               <div class="inbox-queue-panel">
-                <h4 style="margin:0 0 8px">Bekleyenler <span id="inboxPendingCount" class="badge">0</span></h4>
+                <h4 style="margin:0 0 8px">Pending <span id="inboxPendingCount" class="badge">0</span></h4>
                 <div id="inboxPendingList" class="inbox-list">
-                  <p class="empty">Kuyrukta kimse yok.</p>
+                  <p class="empty">No one in queue.</p>
                 </div>
-                <h4 style="margin:16px 0 8px">Aktif Görüşmeler <span id="inboxActiveCount" class="badge">0</span></h4>
+                <h4 style="margin:16px 0 8px">Active Conversations <span id="inboxActiveCount" class="badge">0</span></h4>
                 <div id="inboxActiveList" class="inbox-list">
-                  <p class="empty">Aktif görüşme yok.</p>
+                  <p class="empty">No active conversations.</p>
                 </div>
               </div>
               <!-- Right: Chat view -->
               <div class="inbox-chat-panel">
                 <div id="inboxChatHeader" class="inbox-chat-header">
-                  <span>Bir görüşme seçin</span>
+                  <span>Select a conversation</span>
                 </div>
                 <div id="inboxChatMessages" class="inbox-chat-messages">
-                  <p class="empty">Görüşme seçilmedi.</p>
+                  <p class="empty">No conversation selected.</p>
                 </div>
                 <div id="inboxChatActions" class="inbox-chat-actions" style="display:none">
-                  <input id="inboxMessageInput" type="text" placeholder="Mesaj yazın..." class="inbox-message-input" />
-                  <button id="inboxSendBtn" class="btn btn-primary">Gönder</button>
-                  <button id="inboxReleaseBtn" class="btn btn-secondary">Bırak</button>
+                  <input id="inboxMessageInput" type="text" placeholder="Type a message..." class="inbox-message-input" />
+                  <button id="inboxSendBtn" class="btn btn-primary">Send</button>
+                  <button id="inboxReleaseBtn" class="btn btn-secondary">Release</button>
                 </div>
               </div>
             </div>
@@ -335,15 +335,15 @@
           <!-- PANEL: Bilgi Tabani Kayitlar -->
           <div id="panelKB" class="panel">
             <div class="section-header">
-              <h2>Bilgi Tabanı <span id="kbRecordCount" class="badge">0</span></h2>
+              <h2>Knowledge Base <span id="kbRecordCount" class="badge">0</span></h2>
               <div class="section-actions">
-                <button id="kbAddBtn" class="btn btn-primary">+ Yeni Kayıt</button>
+                <button id="kbAddBtn" class="btn btn-primary">+ New Record</button>
                 <label class="btn btn-secondary file-upload-label">
-                  Dosya Yükle
+                  Upload File
                   <input id="kbFileUpload" type="file" accept=".pdf,.docx,.txt,.xlsx,.xls" multiple style="display:none" />
                 </label>
-                <button id="kbUrlImportBtn" class="btn btn-secondary">URL Aktar</button>
-                <button id="kbReingestBtn" class="btn btn-secondary">Yeniden Yükle</button>
+                <button id="kbUrlImportBtn" class="btn btn-secondary">Import URL</button>
+                <button id="kbReingestBtn" class="btn btn-secondary">Reingest</button>
                 <span id="kbReingestStatus" class="status-text"></span>
                 <span id="kbUploadStatus" class="status-text"></span>
               </div>
@@ -353,14 +353,14 @@
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Soru</th>
-                    <th>Cevap</th>
-                    <th>İşlemler</th>
+                    <th>Question</th>
+                    <th>Answer</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="kbTableBody">
                   <tr>
-                    <td colspan="4" class="empty">Yükleniyor...</td>
+                    <td colspan="4" class="empty">Loading...</td>
                   </tr>
                 </tbody>
               </table>
@@ -370,40 +370,40 @@
           <!-- PANEL: FAQ Onerileri -->
           <div id="panelAutoFAQ" class="panel">
             <div class="section-header">
-              <h3>Önerilen FAQ'lar (Otomatik)</h3>
-              <button id="autoFaqGenerateBtn" class="btn btn-secondary">FAQ Oluştur</button>
+              <h3>Suggested FAQs (Auto)</h3>
+              <button id="autoFaqGenerateBtn" class="btn btn-secondary">Generate FAQ</button>
             </div>
             <div id="autoFaqSection" class="table-section">
-              <p class="empty">Henüz öneri yok.</p>
+              <p class="empty">No suggestions yet.</p>
             </div>
           </div>
 
           <!-- PANEL: Agent Dosyalari -->
           <div id="panelAgentFiles" class="panel">
             <div style="padding:8px 12px;margin-bottom:12px;background:rgba(12,93,102,0.06);border:1px solid rgba(12,93,102,0.15);border-radius:6px;font-size:0.82rem;color:var(--primary)">
-              Bu dosyalar <a href="#" onclick="switchPanel('panelBotSetup');return false" style="font-weight:600;color:var(--primary)">Düzenlemeler &gt; Bot Ayarları</a> bölümünden form olarak da düzenlenebilir.
+              These files can also be edited via forms in <a href="#" onclick="switchPanel('panelBotSetup');return false" style="font-weight:600;color:var(--primary)">Settings &gt; Bot Settings</a>.
             </div>
             <div class="agent-tabs">
-              <button class="agent-tab active" data-agent-tab="editor">Dosyalar</button>
-              <button class="agent-tab" data-agent-tab="easyEdit">Kolay Düzenle</button>
+              <button class="agent-tab active" data-agent-tab="editor">Files</button>
+              <button class="agent-tab" data-agent-tab="easyEdit">Easy Edit</button>
             </div>
 
             <!-- Tab: File Editor -->
             <div id="agentTabEditor" class="agent-tab-content">
               <div class="editor-layout">
                 <div class="file-list-panel">
-                  <h3>Dosyalar</h3>
+                  <h3>Files</h3>
                   <ul id="agentFileList"></ul>
                 </div>
                 <div class="editor-panel">
                   <div class="editor-header">
-                    <span id="agentEditorFilename" class="editor-filename">Dosya seçiniz</span>
+                    <span id="agentEditorFilename" class="editor-filename">Select a file</span>
                     <div class="editor-actions">
-                      <button id="agentEditorRevertBtn" class="btn btn-secondary" disabled>Geri Al</button>
-                      <button id="agentEditorSaveBtn" class="btn btn-primary" disabled>Kaydet</button>
+                      <button id="agentEditorRevertBtn" class="btn btn-secondary" disabled>Revert</button>
+                      <button id="agentEditorSaveBtn" class="btn btn-primary" disabled>Save</button>
                     </div>
                   </div>
-                  <textarea id="agentEditorTextarea" class="code-editor" placeholder="Dosya seçiniz..." disabled></textarea>
+                  <textarea id="agentEditorTextarea" class="code-editor" placeholder="Select a file..." disabled></textarea>
                 </div>
               </div>
             </div>
@@ -411,140 +411,140 @@
             <!-- Tab: Easy Persona Editor -->
             <div id="agentTabEasyEdit" class="agent-tab-content" style="display:none">
               <div class="easy-persona-form">
-                <h3>Bot Kişiliğini Özelleştiriniz</h3>
-                <p class="field-hint" style="margin-bottom:16px">Aşağıdaki formu doldurarak bot kişiliğini hızlıca ayarlayın. Kaydet'e bastığınızda persona.md otomatik oluşturulur.</p>
+                <h3>Customize Bot Personality</h3>
+                <p class="field-hint" style="margin-bottom:16px">Fill in the form below to quickly set up the bot personality. When you click Save, persona.md will be automatically generated.</p>
                 <div class="form-grid">
-                  <label>Bot Adı<input id="easyPersonaName" type="text" placeholder="Örnek: Asistan" /></label>
-                  <label>Konuşma Tonu
+                  <label>Bot Name<input id="easyPersonaName" type="text" placeholder="Example: Assistant" /></label>
+                  <label>Conversation Tone
                     <select id="easyPersonaTone">
-                      <option value="profesyonel">Profesyonel</option>
-                      <option value="samimi">Samimi</option>
-                      <option value="resmi">Resmi</option>
+                      <option value="professional">Professional</option>
+                      <option value="friendly">Friendly</option>
+                      <option value="formal">Formal</option>
                     </select>
                   </label>
                 </div>
-                <label>Selamlama Örneği<input id="easyPersonaGreeting" type="text" placeholder="Örnek: Merhaba! Size nasıl yardımcı olabilirim?" /></label>
-                <label>Kısa Tanıtım<textarea id="easyPersonaDescription" rows="4" placeholder="Örnek: Ben XYZ firmasının müşteri destek asistanıyım. Ürünler, siparişler ve teknik konularda yardımcı olabilirim."></textarea></label>
-                <button id="easyPersonaSaveBtn" class="btn btn-primary" style="margin-top:12px">Kaydet</button>
+                <label>Greeting Example<input id="easyPersonaGreeting" type="text" placeholder="Example: Hello! How can I help you?" /></label>
+                <label>Short Description<textarea id="easyPersonaDescription" rows="4" placeholder="Example: I am XYZ company's customer support assistant. I can help with products, orders and technical issues."></textarea></label>
+                <button id="easyPersonaSaveBtn" class="btn btn-primary" style="margin-top:12px">Save</button>
               </div>
             </div>
           </div>
 
-          <!-- PANEL: Bot Ayarları (Düzenlemeler) -->
+          <!-- PANEL: Bot Setup (Settings) -->
           <div id="panelBotSetup" class="panel">
             <div class="bot-setup-layout">
               <div class="bot-setup-nav">
-                <a class="bot-setup-nav-item active" data-setup-tab="company"><span class="status-dot inactive"></span>Firma Bilgileri</a>
-                <a class="bot-setup-nav-item" data-setup-tab="persona"><span class="status-dot inactive"></span>Bot Kişiliği</a>
-                <a class="bot-setup-nav-item" data-setup-tab="skills"><span class="status-dot inactive"></span>Yetenekler</a>
-                <a class="bot-setup-nav-item" data-setup-tab="bans"><span class="status-dot inactive"></span>Yasaklar</a>
-                <a class="bot-setup-nav-item" data-setup-tab="escalation"><span class="status-dot inactive"></span>Eskalasyon Kuralları</a>
-                <a class="bot-setup-nav-item" data-setup-tab="chatflow"><span class="status-dot inactive"></span>Sohbet Akışı</a>
-                <a class="bot-setup-nav-item" data-setup-tab="appearance"><span class="status-dot inactive"></span>Görünüm</a>
-                <a class="bot-setup-nav-item" data-setup-tab="ticket"><span class="status-dot inactive"></span>Talep Bilgileri</a>
+                <a class="bot-setup-nav-item active" data-setup-tab="company"><span class="status-dot inactive"></span>Organization Info</a>
+                <a class="bot-setup-nav-item" data-setup-tab="persona"><span class="status-dot inactive"></span>Bot Personality</a>
+                <a class="bot-setup-nav-item" data-setup-tab="skills"><span class="status-dot inactive"></span>Skills</a>
+                <a class="bot-setup-nav-item" data-setup-tab="bans"><span class="status-dot inactive"></span>Restrictions</a>
+                <a class="bot-setup-nav-item" data-setup-tab="escalation"><span class="status-dot inactive"></span>Escalation Rules</a>
+                <a class="bot-setup-nav-item" data-setup-tab="chatflow"><span class="status-dot inactive"></span>Chat Flow</a>
+                <a class="bot-setup-nav-item" data-setup-tab="appearance"><span class="status-dot inactive"></span>Appearance</a>
+                <a class="bot-setup-nav-item" data-setup-tab="ticket"><span class="status-dot inactive"></span>Ticket Info</a>
               </div>
               <div class="bot-setup-content">
                 <!-- Tab: Firma Bilgileri -->
                 <div id="botSetupTab-company" class="bot-setup-tab active">
                   <div class="bot-setup-form">
-                    <h3>Firma Bilgileri</h3>
-                    <p class="section-desc">Botun kullanacağı temel firma ve platform bilgilerini tanıtın.</p>
+                    <h3>Organization Info</h3>
+                    <p class="section-desc">Define the basic organization and platform information the bot will use.</p>
 
-                    <label for="bsCompanyName">Firma Adı</label>
-                    <span class="field-hint">Botun kullanacağı firma adı</span>
-                    <input id="bsCompanyName" type="text" placeholder="Örnek: ABC Teknoloji" />
+                    <label for="bsCompanyName">Organization Name</label>
+                    <span class="field-hint">The organization name the bot will use</span>
+                    <input id="bsCompanyName" type="text" placeholder="Example: ABC Technology" />
 
-                    <label for="bsSector">Sektör</label>
-                    <span class="field-hint">Sektörünüz</span>
+                    <label for="bsSector">Sector</label>
+                    <span class="field-hint">Your sector</span>
                     <select id="bsSector">
-                      <option value="teknik-destek">Teknik Destek</option>
-                      <option value="e-ticaret">E-Ticaret</option>
-                      <option value="restoran">Restoran / Yemek</option>
-                      <option value="saglik">Sağlık</option>
-                      <option value="egitim">Eğitim</option>
-                      <option value="diger">Diğer</option>
+                      <option value="tech-support">Technical Support</option>
+                      <option value="e-commerce">E-Commerce</option>
+                      <option value="restaurant">Restaurant / Food</option>
+                      <option value="healthcare">Healthcare</option>
+                      <option value="education">Education</option>
+                      <option value="other">Other</option>
                     </select>
 
-                    <label for="bsMission">Misyon</label>
-                    <span class="field-hint">Botun temel görevi. Örnek: Kullanıcının sorununu mümkünse kendi başına çözmek</span>
-                    <textarea id="bsMission" rows="2" placeholder="Botun temel görevi nedir?"></textarea>
+                    <label for="bsMission">Mission</label>
+                    <span class="field-hint">The bot's primary purpose. Example: Resolve the user's issue independently when possible</span>
+                    <textarea id="bsMission" rows="2" placeholder="What is the bot's primary purpose?"></textarea>
 
-                    <label for="bsValues">Değerler</label>
-                    <span class="field-hint">Virgül ile. Örnek: Çözüm odaklılık, doğruluk, sabır</span>
-                    <input id="bsValues" type="text" placeholder="Çözüm odaklılık, doğruluk, sabır" />
+                    <label for="bsValues">Values</label>
+                    <span class="field-hint">Comma separated. Example: Solution-oriented, accuracy, patience</span>
+                    <input id="bsValues" type="text" placeholder="Solution-oriented, accuracy, patience" />
 
-                    <label for="bsPlatformDesc">Platform Açıklaması</label>
-                    <span class="field-hint">Firmanız ne yapar? Bot bu bilgiyi kullanır</span>
-                    <textarea id="bsPlatformDesc" rows="4" placeholder="Örnek: ABC Platform, B2B SaaS operasyon yönetim sistemidir."></textarea>
+                    <label for="bsPlatformDesc">Platform Description</label>
+                    <span class="field-hint">What does your organization do? The bot uses this information</span>
+                    <textarea id="bsPlatformDesc" rows="4" placeholder="Example: ABC Platform is a B2B SaaS operations management system."></textarea>
 
-                    <label for="bsProducts">Ürünler / Hizmetler</label>
-                    <span class="field-hint">Sunduğunuz ürünler veya hizmetler</span>
-                    <textarea id="bsProducts" rows="3" placeholder="Her satıra bir ürün/hizmet yazın"></textarea>
+                    <label for="bsProducts">Products / Services</label>
+                    <span class="field-hint">Products or services you offer</span>
+                    <textarea id="bsProducts" rows="3" placeholder="One product/service per line"></textarea>
 
-                    <label>Özel Terimler</label>
-                    <span class="field-hint">Sektöre özel terimler ve açıklamaları</span>
+                    <label>Custom Terms</label>
+                    <span class="field-hint">Industry-specific terms and their descriptions</span>
                     <div id="bsTermsContainer" class="repeating-group"></div>
-                    <button type="button" id="bsAddTermBtn" class="btn btn-sm btn-secondary">+ Terim Ekle</button>
+                    <button type="button" id="bsAddTermBtn" class="btn btn-sm btn-secondary">+ Add Term</button>
 
                     <div class="form-actions">
-                      <button type="button" id="bsCompanySaveBtn" class="btn btn-primary">Kaydet</button>
+                      <button type="button" id="bsCompanySaveBtn" class="btn btn-primary">Save</button>
                       <span id="bsCompanySaveStatus" class="status-text"></span>
                     </div>
 
-                    <a class="shortcut-link" data-shortcut-panel="panelKB">Bilgi Tabanını Yönet &rarr;</a>
+                    <a class="shortcut-link" data-shortcut-panel="panelKB">Manage Knowledge Base &rarr;</a>
                   </div>
                 </div>
                 <!-- Tab: Bot Kisiligi -->
                 <div id="botSetupTab-persona" class="bot-setup-tab">
                   <div class="bot-setup-form">
-                    <h3>Bot Kişiliği</h3>
-                    <p class="section-desc">Botun konuşma tarzı, tonu ve örnek diyalogları. Kaydet'e bastığınızda persona.md otomatik güncellenir.</p>
+                    <h3>Bot Personality</h3>
+                    <p class="section-desc">The bot's conversation style, tone and example dialogs. When you click Save, persona.md will be automatically updated.</p>
 
-                    <label for="bsPersonaName">Bot Adı</label>
-                    <span class="field-hint">Botun kendini tanıttığı isim</span>
-                    <input id="bsPersonaName" type="text" placeholder="Örnek: Asistan" />
+                    <label for="bsPersonaName">Bot Name</label>
+                    <span class="field-hint">The name the bot introduces itself with</span>
+                    <input id="bsPersonaName" type="text" placeholder="Example: Assistant" />
 
                     <div class="form-grid">
                       <div>
-                        <label for="bsPersonaTone">Konuşma Tonu</label>
+                        <label for="bsPersonaTone">Conversation Tone</label>
                         <select id="bsPersonaTone">
-                          <option value="profesyonel">Profesyonel</option>
-                          <option value="samimi">Samimi</option>
-                          <option value="resmi">Resmi</option>
+                          <option value="professional">Professional</option>
+                          <option value="friendly">Friendly</option>
+                          <option value="formal">Formal</option>
                         </select>
                       </div>
                       <div>
-                        <label for="bsPersonaEmpathy">Empati Seviyesi</label>
-                        <span class="field-hint">Bot ne kadar duygusal katılım göstersin</span>
+                        <label for="bsPersonaEmpathy">Empathy Level</label>
+                        <span class="field-hint">How much emotional engagement the bot should show</span>
                         <select id="bsPersonaEmpathy">
-                          <option value="dusuk">Düşük</option>
-                          <option value="orta" selected>Orta</option>
-                          <option value="yuksek">Yüksek</option>
+                          <option value="low">Low</option>
+                          <option value="medium" selected>Medium</option>
+                          <option value="high">High</option>
                         </select>
                       </div>
                     </div>
 
-                    <label for="bsPersonaLength">Yanıt Uzunluğu</label>
-                    <span class="field-hint">Kısa: 1-2 cümle, Orta: 3-4 cümle, Uzun: detaylı paragraf</span>
+                    <label for="bsPersonaLength">Response Length</label>
+                    <span class="field-hint">Short: 1-2 sentences, Medium: 3-4 sentences, Long: detailed paragraph</span>
                     <select id="bsPersonaLength">
-                      <option value="kisa">Kısa (1-2 cümle)</option>
-                      <option value="orta" selected>Orta (3-4 cümle)</option>
-                      <option value="uzun">Uzun (detaylı paragraf)</option>
+                      <option value="short">Short (1-2 sentences)</option>
+                      <option value="medium" selected>Medium (3-4 sentences)</option>
+                      <option value="long">Long (detailed paragraph)</option>
                     </select>
 
-                    <label for="bsPersonaGreeting">Selamlama Mesajı</label>
-                    <input id="bsPersonaGreeting" type="text" placeholder="Örnek: Merhaba! Size nasıl yardımcı olabilirim?" />
+                    <label for="bsPersonaGreeting">Greeting Message</label>
+                    <input id="bsPersonaGreeting" type="text" placeholder="Example: Hello! How can I help you?" />
 
-                    <label for="bsPersonaDesc">Kısa Tanıtım</label>
-                    <textarea id="bsPersonaDesc" rows="3" placeholder="Örnek: Ben XYZ firmasının müşteri destek asistanıyım."></textarea>
+                    <label for="bsPersonaDesc">Short Description</label>
+                    <textarea id="bsPersonaDesc" rows="3" placeholder="Example: I am XYZ company's customer support assistant."></textarea>
 
-                    <label>Örnek Diyaloglar</label>
-                    <span class="field-hint">Tipik kullanıcı sorusu ve ideal bot yanıtı çiftleri (max 5)</span>
+                    <label>Example Dialogs</label>
+                    <span class="field-hint">Typical user question and ideal bot response pairs (max 5)</span>
                     <div id="bsDialogsContainer" class="repeating-group"></div>
-                    <button type="button" id="bsAddDialogBtn" class="btn btn-sm btn-secondary">+ Örnek Ekle</button>
+                    <button type="button" id="bsAddDialogBtn" class="btn btn-sm btn-secondary">+ Add Example</button>
 
                     <div class="form-actions">
-                      <button type="button" id="bsPersonaSaveBtn" class="btn btn-primary">Kaydet</button>
+                      <button type="button" id="bsPersonaSaveBtn" class="btn btn-primary">Save</button>
                       <span id="bsPersonaSaveStatus" class="status-text"></span>
                     </div>
                   </div>
@@ -552,74 +552,74 @@
                 <!-- Tab: Yetenekler -->
                 <div id="botSetupTab-skills" class="bot-setup-tab">
                   <div class="bot-setup-form">
-                    <h3>Yetenekler</h3>
-                    <p class="section-desc">Botun yapabileceği ve toplayabileceği bilgileri seçin.</p>
+                    <h3>Skills</h3>
+                    <p class="section-desc">Select what the bot can do and what information it can collect.</p>
 
                     <div class="checkbox-list">
-                      <h4>Bot Yapabilir</h4>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill="troubleshoot" checked /> Adım adım sorun giderme rehberliği</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill="kb-answer" checked /> Bilgi tabanından cevap bulma</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill="topic-guide" checked /> Konu bazlı troubleshooting</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill="escalation" checked /> Canlı destek temsilcisine aktarım</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill="status-query" /> Randevu/işlem durumu sorgulama</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill="faq" checked /> Sık sorulan soruları cevaplama</label>
+                      <h4>Bot Can Do</h4>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill="troubleshoot" checked /> Step-by-step troubleshooting guidance</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill="kb-answer" checked /> Find answers from knowledge base</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill="topic-guide" checked /> Topic-based troubleshooting</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill="escalation" checked /> Transfer to live support agent</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill="status-query" /> Appointment/transaction status query</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill="faq" checked /> Answer frequently asked questions</label>
                     </div>
 
                     <div class="checkbox-list">
-                      <h4>Bot Toplayabilir (eskalasyon için)</h4>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="branch-code" checked /> Kullanıcı adı</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="company-name" /> Firma adı</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="issue-summary" checked /> Sorun özeti</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="contact-info" /> İletişim bilgisi</label>
+                      <h4>Bot Can Collect (for escalation)</h4>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="branch-code" checked /> Username</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="company-name" /> Organization name</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="issue-summary" checked /> Issue summary</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-skill-collect="contact-info" /> Contact info</label>
                     </div>
 
-                    <label>Ek Yetenek</label>
+                    <label>Additional Skill</label>
                     <div id="bsCustomSkillsContainer" class="repeating-group"></div>
-                    <button type="button" id="bsAddSkillBtn" class="btn btn-sm btn-secondary">+ Ekle</button>
+                    <button type="button" id="bsAddSkillBtn" class="btn btn-sm btn-secondary">+ Add</button>
 
                     <div class="form-actions">
-                      <button type="button" id="bsSkillsSaveBtn" class="btn btn-primary">Kaydet</button>
+                      <button type="button" id="bsSkillsSaveBtn" class="btn btn-primary">Save</button>
                       <span id="bsSkillsSaveStatus" class="status-text"></span>
                     </div>
 
-                    <a class="shortcut-link" data-shortcut-panel="panelTopics">Konuları Yönet &rarr;</a>
+                    <a class="shortcut-link" data-shortcut-panel="panelTopics">Manage Topics &rarr;</a>
                   </div>
                 </div>
                 <!-- Tab: Yasaklar -->
                 <div id="botSetupTab-bans" class="bot-setup-tab">
                   <div class="bot-setup-form">
-                    <h3>Yasaklar</h3>
-                    <p class="section-desc">Botun kesinlikle yapmaması gereken davranışları seçin.</p>
+                    <h3>Restrictions</h3>
+                    <p class="section-desc">Select behaviors the bot must never perform.</p>
 
                     <div class="checkbox-list">
-                      <h4>İfşa Yasakları</h4>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="share-prompt" checked /> Prompt/sistem talimatlarını paylaşma</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="share-model" checked /> AI modeli bilgisi verme</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="share-infra" checked /> Teknik altyapı detayları paylaşma</label>
+                      <h4>Disclosure Restrictions</h4>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="share-prompt" checked /> Sharing prompt/system instructions</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="share-model" checked /> Revealing AI model information</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="share-infra" checked /> Sharing technical infrastructure details</label>
                     </div>
 
                     <div class="checkbox-list">
-                      <h4>Bilgi Yasakları</h4>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="personal-info" checked /> Kişisel bilgi isteme (TC, adres, banka)</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="financial" checked /> Finansal işlem bilgisi alma/verme</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="fabricate" checked /> Uydurma/spekülatif bilgi verme</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="competitor" checked /> Rakip firma bilgisi paylaşma</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="off-topic" checked /> Platform dışı konularda yardım etme</label>
+                      <h4>Information Restrictions</h4>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="personal-info" checked /> Requesting personal info (SSN, address, banking)</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="financial" checked /> Handling financial transaction info</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="fabricate" checked /> Providing fabricated/speculative info</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="competitor" checked /> Sharing competitor information</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="off-topic" checked /> Helping with off-platform topics</label>
                     </div>
 
                     <div class="checkbox-list">
-                      <h4>Davranış Yasakları</h4>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="repeat-info" checked /> Aynı bilgiyi tekrarlama</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="multi-ask" checked /> Tek seferde birden fazla bilgi isteme</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-ban="post-farewell" checked /> Farewell sonrası yeni konu açma</label>
+                      <h4>Behavior Restrictions</h4>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="repeat-info" checked /> Repeating the same information</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="multi-ask" checked /> Asking for multiple pieces of info at once</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-ban="post-farewell" checked /> Opening new topic after farewell</label>
                     </div>
 
-                    <label>Özel Yasak</label>
+                    <label>Custom Restriction</label>
                     <div id="bsCustomBansContainer" class="repeating-group"></div>
-                    <button type="button" id="bsAddBanBtn" class="btn btn-sm btn-secondary">+ Ekle</button>
+                    <button type="button" id="bsAddBanBtn" class="btn btn-sm btn-secondary">+ Add</button>
 
                     <div class="form-actions">
-                      <button type="button" id="bsBansSaveBtn" class="btn btn-primary">Kaydet</button>
+                      <button type="button" id="bsBansSaveBtn" class="btn btn-primary">Save</button>
                       <span id="bsBansSaveStatus" class="status-text"></span>
                     </div>
                   </div>
@@ -627,64 +627,64 @@
                 <!-- Tab: Eskalasyon Kurallari -->
                 <div id="botSetupTab-escalation" class="bot-setup-tab">
                   <div class="bot-setup-form">
-                    <h3>Eskalasyon Kuralları</h3>
-                    <p class="section-desc">Canlı temsilciye aktarım koşullarını ve öncesinde toplanacak bilgileri belirleyin.</p>
+                    <h3>Escalation Rules</h3>
+                    <p class="section-desc">Define conditions for transferring to a live agent and what information to collect beforehand.</p>
 
-                    <label>Otomatik Aktarım Koşulları</label>
-                    <span class="field-hint">Koşul gerçekleşince bot ne yapmalı?</span>
+                    <label>Auto Transfer Conditions</label>
+                    <span class="field-hint">What should the bot do when the condition is met?</span>
                     <div id="bsEscRulesContainer"></div>
-                    <button type="button" id="bsAddEscRuleBtn" class="btn btn-sm btn-secondary" style="margin-bottom:16px">+ Kural Ekle</button>
+                    <button type="button" id="bsAddEscRuleBtn" class="btn btn-sm btn-secondary" style="margin-bottom:16px">+ Add Rule</button>
 
-                    <label>Eskalasyon Öncesi Toplanacak Bilgiler</label>
-                    <span class="field-hint">Aktarım öncesi kullanıcıdan hangi bilgiler toplansın?</span>
+                    <label>Pre-Escalation Information to Collect</label>
+                    <span class="field-hint">What information should be collected from the user before transfer?</span>
                     <div class="checkbox-list">
-                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="branch-code" checked /> Kullanıcı adı (zorunlu)</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="issue-summary" checked /> Sorun özeti (zorunlu)</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="company-name" /> Firma adı (opsiyonel)</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="phone" /> Telefon</label>
-                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="tried-steps" /> Denenen adımlar</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="branch-code" checked /> Username (required)</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="issue-summary" checked /> Issue summary (required)</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="company-name" /> Organization name (optional)</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="phone" /> Phone</label>
+                      <label class="checkbox-list-item"><input type="checkbox" data-esc-field="tried-steps" /> Steps tried</label>
                     </div>
                     <div id="bsEscCustomFieldsContainer" class="repeating-group"></div>
-                    <button type="button" id="bsAddEscFieldBtn" class="btn btn-sm btn-secondary">+ Alan Ekle</button>
+                    <button type="button" id="bsAddEscFieldBtn" class="btn btn-sm btn-secondary">+ Add Field</button>
 
                     <div class="form-actions">
-                      <button type="button" id="bsEscalationSaveBtn" class="btn btn-primary">Kaydet</button>
+                      <button type="button" id="bsEscalationSaveBtn" class="btn btn-primary">Save</button>
                       <span id="bsEscalationSaveStatus" class="status-text"></span>
                     </div>
                   </div>
                 </div>
-                <!-- Tab: Sohbet Akışı -->
+                <!-- Tab: Chat Flow -->
                 <div id="botSetupTab-chatflow" class="bot-setup-tab">
                   <div id="bsChatFlowContent">
-                    <p class="empty">Yükleniyor...</p>
+                    <p class="empty">Loading...</p>
                   </div>
                 </div>
-                <!-- Tab: Görünüm -->
+                <!-- Tab: Appearance -->
                 <div id="botSetupTab-appearance" class="bot-setup-tab">
                   <div id="bsAppearanceContent">
-                    <p class="empty">Yükleniyor...</p>
+                    <p class="empty">Loading...</p>
                   </div>
                 </div>
-                <!-- Tab: Talep Bilgileri -->
+                <!-- Tab: Ticket Info -->
                 <div id="botSetupTab-ticket" class="bot-setup-tab">
                   <div class="bot-setup-form">
-                    <h3>Talep Bilgileri</h3>
-                    <p class="section-desc">Ticket oluşturulurken toplanacak alan şablonunu düzenleyin.</p>
+                    <h3>Ticket Info</h3>
+                    <p class="section-desc">Edit the field template to be collected when creating a ticket.</p>
 
-                    <label>Zorunlu Alanlar</label>
+                    <label>Required Fields</label>
                     <div id="bsTicketRequiredContainer" class="repeating-group"></div>
-                    <button type="button" id="bsAddTicketReqBtn" class="btn btn-sm btn-secondary">+ Zorunlu Alan Ekle</button>
+                    <button type="button" id="bsAddTicketReqBtn" class="btn btn-sm btn-secondary">+ Add Required Field</button>
 
-                    <label style="margin-top:16px">Opsiyonel Alanlar</label>
+                    <label style="margin-top:16px">Optional Fields</label>
                     <div id="bsTicketOptionalContainer" class="repeating-group"></div>
-                    <button type="button" id="bsAddTicketOptBtn" class="btn btn-sm btn-secondary">+ Opsiyonel Alan Ekle</button>
+                    <button type="button" id="bsAddTicketOptBtn" class="btn btn-sm btn-secondary">+ Add Optional Field</button>
 
-                    <label for="bsTicketConfirmMsg" style="margin-top:16px">Onay Mesajı Şablonu</label>
-                    <span class="field-hint">Ticket oluşturulduktan sonra kullanıcıya gösterilecek mesaj</span>
-                    <textarea id="bsTicketConfirmMsg" rows="3" placeholder="Talebiniz başarıyla oluşturuldu. Ticket numaranız: {{ticket_id}}"></textarea>
+                    <label for="bsTicketConfirmMsg" style="margin-top:16px">Confirmation Message Template</label>
+                    <span class="field-hint">Message shown to the user after the ticket is created</span>
+                    <textarea id="bsTicketConfirmMsg" rows="3" placeholder="Your request has been successfully created. Your ticket number: {{ticket_id}}"></textarea>
 
                     <div class="form-actions">
-                      <button type="button" id="bsTicketSaveBtn" class="btn btn-primary">Kaydet</button>
+                      <button type="button" id="bsTicketSaveBtn" class="btn btn-primary">Save</button>
                       <span id="bsTicketSaveStatus" class="status-text"></span>
                     </div>
                   </div>
@@ -693,34 +693,34 @@
             </div>
           </div>
 
-          <!-- PANEL: Konular -->
+          <!-- PANEL: Topics -->
           <div id="panelTopics" class="panel">
             <div class="section-header">
-              <h3>Konular</h3>
-              <button id="topicAddBtn" class="btn btn-primary">+ Yeni Konu</button>
+              <h3>Topics</h3>
+              <button id="topicAddBtn" class="btn btn-primary">+ New Topic</button>
             </div>
             <div class="table-section">
               <table>
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Başlık</th>
-                    <th>Anahtar Kelimeler</th>
-                    <th>Eskalasyon</th>
-                    <th>Doğrudan Çözüm</th>
-                    <th>İşlemler</th>
+                    <th>Title</th>
+                    <th>Keywords</th>
+                    <th>Escalation</th>
+                    <th>Direct Resolution</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="topicsTableBody">
                   <tr>
-                    <td colspan="6" class="empty">Yükleniyor...</td>
+                    <td colspan="6" class="empty">Loading...</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <!-- PANEL: Bellek Sablonlari -->
+          <!-- PANEL: Memory Templates -->
           <div id="panelMemory" class="panel">
             <div class="memory-grid" style="grid-template-columns:1fr">
               <div class="memory-card">
@@ -728,18 +728,18 @@
                   <h3>ticket-template.json</h3>
                   <div>
                     <span id="memoryTicketValidation" class="validation-badge"></span>
-                    <button id="memoryTicketSaveBtn" class="btn btn-primary btn-sm">Kaydet</button>
+                    <button id="memoryTicketSaveBtn" class="btn btn-primary btn-sm">Save</button>
                   </div>
                 </div>
                 <textarea id="memoryTicketTemplate" class="code-editor json-editor"></textarea>
               </div>
-              <!-- conversation-schema.json: sistem icin, gizli -->
+              <!-- conversation-schema.json: system internal, hidden -->
               <div class="memory-card" style="display:none">
                 <div class="memory-card-header">
                   <h3>conversation-schema.json</h3>
                   <div>
                     <span id="memorySchemaValidation" class="validation-badge"></span>
-                    <button id="memorySchemaSaveBtn" class="btn btn-primary btn-sm">Kaydet</button>
+                    <button id="memorySchemaSaveBtn" class="btn btn-primary btn-sm">Save</button>
                   </div>
                 </div>
                 <textarea id="memoryConversationSchema" class="code-editor json-editor"></textarea>
@@ -747,141 +747,141 @@
             </div>
           </div>
 
-          <!-- PANEL: Ortam Degiskenleri -->
+          <!-- PANEL: Environment Variables -->
           <div id="panelEnv" class="panel">
             <form id="envForm">
               <!-- Groups will be built by JS -->
             </form>
             <div class="env-actions">
-              <button id="envSaveBtn" class="btn btn-primary">Kaydet</button>
+              <button id="envSaveBtn" class="btn btn-primary">Save</button>
               <span id="envSaveStatus" class="status-text"></span>
             </div>
           </div>
 
-          <!-- PANEL: Sohbet Akisi -->
+          <!-- PANEL: Chat Flow -->
           <div id="panelChatFlow" class="panel">
             <div class="chat-flow-config">
-              <h3>Sohbet Akış Ayarları</h3>
-              <p class="section-desc">Chatbot davranış ve zamanlama ayarlarını buradan yapılandırabilirsiniz.</p>
+              <h3>Chat Flow Settings</h3>
+              <p class="section-desc">Configure chatbot behavior and timing settings here.</p>
 
               <div class="cf-group">
-                <h4>Karşılama</h4>
+                <h4>Greeting</h4>
                 <div class="cf-field">
-                  <label for="cfWelcomeMessage">Karşılama Mesajı</label>
+                  <label for="cfWelcomeMessage">Welcome Message</label>
                   <textarea id="cfWelcomeMessage" rows="2" class="cf-textarea"></textarea>
                 </div>
               </div>
 
               <div class="cf-group">
-                <h4>Zamanlama</h4>
+                <h4>Timing</h4>
                 <div class="cf-field">
-                  <label for="cfAggregationMs">Mesaj Birleştirme Penceresi (ms)</label>
+                  <label for="cfAggregationMs">Message Aggregation Window (ms)</label>
                   <div class="cf-range-row">
                     <input id="cfAggregationMs" type="range" min="1000" max="10000" step="500" />
                     <span id="cfAggregationMsVal" class="cf-range-val"></span>
                   </div>
-                  <small>Kullanıcı art arda mesaj yazarken birleştirme bekleme süresi</small>
+                  <small>Wait time for combining consecutive user messages</small>
                 </div>
                 <div class="cf-field">
-                  <label for="cfBotDelayMs">Bot Yanıt Gecikmesi (ms)</label>
+                  <label for="cfBotDelayMs">Bot Response Delay (ms)</label>
                   <div class="cf-range-row">
                     <input id="cfBotDelayMs" type="range" min="0" max="5000" step="250" />
                     <span id="cfBotDelayMsVal" class="cf-range-val"></span>
                   </div>
-                  <small>Yazıyor animasyonu süresi (doğal hissettirmek için)</small>
+                  <small>Typing animation duration (to feel natural)</small>
                 </div>
                 <div class="cf-field cf-toggle-field">
-                  <label for="cfTypingEnabled">Yazıyor Göstergesi</label>
+                  <label for="cfTypingEnabled">Typing Indicator</label>
                   <input id="cfTypingEnabled" type="checkbox" class="cf-toggle" />
                 </div>
               </div>
 
               <div class="cf-group">
-                <h4>Hareketsizlik ve Uyarı</h4>
+                <h4>Inactivity & Nudge</h4>
                 <div class="cf-field">
-                  <label for="cfInactivityMs">Hareketsizlik Zamanlayıcı (dakika)</label>
+                  <label for="cfInactivityMs">Inactivity Timer (minutes)</label>
                   <div class="cf-range-row">
                     <input id="cfInactivityMs" type="range" min="1" max="30" step="1" />
                     <span id="cfInactivityMsVal" class="cf-range-val"></span>
                   </div>
                 </div>
                 <div class="cf-field cf-toggle-field">
-                  <label for="cfNudgeEnabled">Uyarı Mesajları Aktif</label>
+                  <label for="cfNudgeEnabled">Nudge Messages Enabled</label>
                   <input id="cfNudgeEnabled" type="checkbox" class="cf-toggle" />
                 </div>
                 <div class="cf-field">
-                  <label for="cfNudge75">%75 Uyarı Mesajı</label>
+                  <label for="cfNudge75">75% Nudge Message</label>
                   <textarea id="cfNudge75" rows="2" class="cf-textarea"></textarea>
                 </div>
                 <div class="cf-field">
-                  <label for="cfNudge90">%90 Uyarı Mesajı</label>
+                  <label for="cfNudge90">90% Nudge Message</label>
                   <textarea id="cfNudge90" rows="2" class="cf-textarea"></textarea>
                 </div>
                 <div class="cf-field">
-                  <label for="cfInactivityClose">Zaman Aşımı Mesajı</label>
+                  <label for="cfInactivityClose">Timeout Message</label>
                   <textarea id="cfInactivityClose" rows="2" class="cf-textarea"></textarea>
                 </div>
               </div>
 
               <div class="cf-group">
-                <h4>Akıllı Algılama</h4>
+                <h4>Smart Detection</h4>
                 <div class="cf-field cf-toggle-field">
-                  <label for="cfGibberishEnabled">Anlamsız Mesaj Algılama</label>
+                  <label for="cfGibberishEnabled">Gibberish Detection</label>
                   <input id="cfGibberishEnabled" type="checkbox" class="cf-toggle" />
                 </div>
                 <div class="cf-field">
-                  <label for="cfGibberishMsg">Anlamsız Mesaj Yanıtı</label>
+                  <label for="cfGibberishMsg">Gibberish Response</label>
                   <textarea id="cfGibberishMsg" rows="2" class="cf-textarea"></textarea>
                 </div>
                 <div class="cf-field">
-                  <label for="cfMaxRetries">Maks. Aydınlatma Tekrarı</label>
+                  <label for="cfMaxRetries">Max Clarification Retries</label>
                   <div class="cf-range-row">
                     <input id="cfMaxRetries" type="range" min="1" max="10" step="1" />
                     <span id="cfMaxRetriesVal" class="cf-range-val"></span>
                   </div>
-                  <small>Bu sayıda tekrardan sonra canlı destek'e aktarılır</small>
+                  <small>After this many retries, user is transferred to live support</small>
                 </div>
               </div>
 
               <div class="cf-group">
-                <h4>Kapanış Akışı</h4>
+                <h4>Closing Flow</h4>
                 <div class="cf-field cf-toggle-field">
-                  <label for="cfClosingEnabled">Kapanış Akışı Aktif</label>
+                  <label for="cfClosingEnabled">Closing Flow Enabled</label>
                   <input id="cfClosingEnabled" type="checkbox" class="cf-toggle" />
                 </div>
                 <div class="cf-field">
-                  <label for="cfAnythingElse">Başka Bir Şey Var Mı Mesajı</label>
+                  <label for="cfAnythingElse">Anything Else Message</label>
                   <textarea id="cfAnythingElse" rows="2" class="cf-textarea"></textarea>
                 </div>
                 <div class="cf-field">
-                  <label for="cfFarewell">Veda Mesajı</label>
+                  <label for="cfFarewell">Farewell Message</label>
                   <textarea id="cfFarewell" rows="2" class="cf-textarea"></textarea>
                 </div>
                 <div class="cf-field cf-toggle-field">
-                  <label for="cfCsatEnabled">CSAT Değerlendirme</label>
+                  <label for="cfCsatEnabled">CSAT Rating</label>
                   <input id="cfCsatEnabled" type="checkbox" class="cf-toggle" />
                 </div>
                 <div class="cf-field">
-                  <label for="cfCsatMsg">CSAT Mesajı</label>
+                  <label for="cfCsatMsg">CSAT Message</label>
                   <textarea id="cfCsatMsg" rows="2" class="cf-textarea"></textarea>
                 </div>
               </div>
 
               <div class="cf-actions">
-                <button id="cfSaveBtn" class="btn btn-primary">Kaydet</button>
-                <button id="cfResetBtn" class="btn btn-secondary">Varsayılana Dön</button>
+                <button id="cfSaveBtn" class="btn btn-primary">Save</button>
+                <button id="cfResetBtn" class="btn btn-secondary">Reset to Defaults</button>
                 <span id="cfSaveStatus" class="status-text"></span>
               </div>
             </div>
           </div>
 
-          <!-- PANEL: Eval Yonetimi -->
+          <!-- PANEL: Eval Management -->
           <section id="panelEval" class="panel">
             <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-              <h2>Eval Yönetimi</h2>
+              <h2>Eval Management</h2>
               <div style="display:flex;gap:8px">
-                <button id="evalRunAllBtn" class="btn btn-primary btn-sm">Tümünü Çalıştır</button>
-                <button id="evalAddBtn" class="btn btn-sm">+ Senaryo Ekle</button>
+                <button id="evalRunAllBtn" class="btn btn-primary btn-sm">Run All</button>
+                <button id="evalAddBtn" class="btn btn-sm">+ Add Scenario</button>
               </div>
             </div>
 
@@ -891,38 +891,38 @@
               <p id="evalProgressText" style="font-size:12px;color:var(--muted);margin-top:4px"></p>
             </div>
 
-            <!-- Senaryo tablosu -->
+            <!-- Scenario table -->
             <div class="table-section">
               <table>
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Başlık</th>
+                    <th>Title</th>
                     <th>Turn</th>
-                    <th>Etiketler</th>
-                    <th>Son Sonuç</th>
-                    <th>İşlem</th>
+                    <th>Tags</th>
+                    <th>Last Result</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody id="evalTableBody">
-                  <tr><td colspan="6" class="empty">Yükleniyor...</td></tr>
+                  <tr><td colspan="6" class="empty">Loading...</td></tr>
                 </tbody>
               </table>
             </div>
 
-            <!-- Gecmis -->
+            <!-- History -->
             <div style="margin-top:24px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <h3>Çalıştırma Geçmişi</h3>
-                <button id="evalClearHistoryBtn" class="btn btn-sm">Geçmişi Temizle</button>
+                <h3>Run History</h3>
+                <button id="evalClearHistoryBtn" class="btn btn-sm">Clear History</button>
               </div>
               <div class="table-section">
                 <table>
                   <thead>
-                    <tr><th>Tarih</th><th>Toplam</th><th>Geçti</th><th>Kaldı</th><th>Flaky</th><th>Oran</th><th>Durum</th><th>Süre</th></tr>
+                    <tr><th>Date</th><th>Total</th><th>Passed</th><th>Failed</th><th>Flaky</th><th>Rate</th><th>Status</th><th>Duration</th></tr>
                   </thead>
                   <tbody id="evalHistoryBody">
-                    <tr><td colspan="8" class="empty">Henüz geçmiş yok</td></tr>
+                    <tr><td colspan="8" class="empty">No history yet</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -933,44 +933,44 @@
           <div id="evalModal" class="modal-overlay" style="display:none">
             <div class="modal" style="max-width:700px">
               <div class="modal-header">
-                <h3 id="evalModalTitle">Senaryo Ekle</h3>
+                <h3 id="evalModalTitle">Add Scenario</h3>
                 <button id="evalModalCancelBtn" class="modal-close">&times;</button>
               </div>
               <div class="modal-body">
-                <label>ID <input id="evalModalId" type="text" placeholder="S16-konu-adi" /></label>
-                <label>Başlık <input id="evalModalTitleInput" type="text" placeholder="Senaryo başlığı" /></label>
-                <label>Etiketler (virgül ile) <input id="evalModalTags" type="text" placeholder="escalation, multi-turn" /></label>
+                <label>ID <input id="evalModalId" type="text" placeholder="S16-topic-name" /></label>
+                <label>Title <input id="evalModalTitleInput" type="text" placeholder="Scenario title" /></label>
+                <label>Tags (comma separated) <input id="evalModalTags" type="text" placeholder="escalation, multi-turn" /></label>
 
                 <div style="margin-top:12px">
                   <div style="display:flex;justify-content:space-between;align-items:center">
-                    <strong>Turn'lar</strong>
-                    <button id="evalModalAddTurn" class="btn btn-sm">+ Turn Ekle</button>
+                    <strong>Turns</strong>
+                    <button id="evalModalAddTurn" class="btn btn-sm">+ Add Turn</button>
                   </div>
                   <div id="evalModalTurns"></div>
                 </div>
               </div>
               <div class="modal-footer">
-                <button id="evalModalSaveBtn" class="btn btn-primary">Kaydet</button>
+                <button id="evalModalSaveBtn" class="btn btn-primary">Save</button>
               </div>
             </div>
           </div>
 
-          <!-- PANEL: Site Ayarları -->
+          <!-- PANEL: Site Settings -->
           <div id="panelSiteConfig" class="panel">
             <div class="chat-flow-config">
-              <h3>Site Ayarları</h3>
-              <p class="section-desc">Chatbot sayfasının görünümünü ve markasını buradan özelleştirin. Değişiklikler sunucuda saklanır, GitHub reposunu etkilemez.</p>
+              <h3>Site Settings</h3>
+              <p class="section-desc">Customize the chatbot page appearance and branding here. Changes are stored on the server and do not affect the GitHub repo.</p>
 
               <div class="cf-group">
                 <h4>Logo</h4>
                 <div class="cf-field">
-                  <label>Mevcut Logo</label>
+                  <label>Current Logo</label>
                   <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
                     <img id="scLogoPreview" src="qragy_logo.jpg" alt="Logo" style="width:48px;height:48px;object-fit:contain;border-radius:8px;border:1px solid var(--line)" />
-                    <span id="scLogoName" style="color:var(--muted);font-size:0.85rem">Varsayılan logo</span>
+                    <span id="scLogoName" style="color:var(--muted);font-size:0.85rem">Default logo</span>
                   </div>
                   <label class="btn btn-secondary file-upload-label" style="display:inline-block">
-                    Logo Yükle (max 2MB)
+                    Upload Logo (max 2MB)
                     <input type="file" id="scLogoInput" accept="image/jpeg,image/png,image/svg+xml,image/webp,image/gif" hidden />
                   </label>
                   <span id="scLogoStatus" class="status-text" style="margin-left:8px"></span>
@@ -978,83 +978,83 @@
               </div>
 
               <div class="cf-group">
-                <h4>Sayfa Metinleri</h4>
+                <h4>Page Text</h4>
                 <div class="cf-field">
-                  <label for="scPageTitle">Sayfa Başlığı (browser tab)</label>
+                  <label for="scPageTitle">Page Title (browser tab)</label>
                   <input id="scPageTitle" type="text" class="cf-textarea" style="height:auto" />
                 </div>
                 <div class="cf-field">
-                  <label for="scHeroTitle">Ana Başlık</label>
+                  <label for="scHeroTitle">Main Title</label>
                   <input id="scHeroTitle" type="text" class="cf-textarea" style="height:auto" />
                 </div>
                 <div class="cf-field">
-                  <label for="scHeroDescription">Açıklama Metni</label>
+                  <label for="scHeroDescription">Description</label>
                   <textarea id="scHeroDescription" rows="2" class="cf-textarea"></textarea>
                 </div>
                 <div class="cf-field">
-                  <label for="scHeroButtonText">Başlat Butonu Metni</label>
+                  <label for="scHeroButtonText">Start Button Text</label>
                   <input id="scHeroButtonText" type="text" class="cf-textarea" style="height:auto" />
                 </div>
                 <div class="cf-field">
-                  <label for="scHeroHint">Alt Açıklama</label>
+                  <label for="scHeroHint">Sub Description</label>
                   <textarea id="scHeroHint" rows="2" class="cf-textarea"></textarea>
                 </div>
               </div>
 
               <div class="cf-group">
-                <h4>Sohbet Penceresi</h4>
+                <h4>Chat Window</h4>
                 <div class="cf-field">
-                  <label for="scHeaderTitle">Header Başlığı</label>
+                  <label for="scHeaderTitle">Header Title</label>
                   <input id="scHeaderTitle" type="text" class="cf-textarea" style="height:auto" />
                 </div>
                 <div class="cf-field">
-                  <label for="scInputPlaceholder">Mesaj Alanı Placeholder</label>
+                  <label for="scInputPlaceholder">Message Input Placeholder</label>
                   <input id="scInputPlaceholder" type="text" class="cf-textarea" style="height:auto" />
                 </div>
                 <div class="cf-field">
-                  <label for="scSendButtonText">Gönder Butonu Metni</label>
+                  <label for="scSendButtonText">Send Button Text</label>
                   <input id="scSendButtonText" type="text" class="cf-textarea" style="height:auto" />
                 </div>
               </div>
 
               <div class="cf-group">
-                <h4>Renkler</h4>
+                <h4>Colors</h4>
                 <div class="cf-field">
-                  <label for="scThemeColor">Tema Rengi (browser)</label>
+                  <label for="scThemeColor">Theme Color (browser)</label>
                   <div style="display:flex;align-items:center;gap:8px">
                     <input id="scThemeColor" type="color" style="width:40px;height:32px;border:1px solid var(--line);border-radius:4px;cursor:pointer" />
                     <span id="scThemeColorHex" style="font-size:0.85rem;color:var(--muted)"></span>
                   </div>
                 </div>
                 <div class="cf-field">
-                  <label for="scPrimaryColor">Ana Renk (butonlar, vurgular)</label>
+                  <label for="scPrimaryColor">Primary Color (buttons, accents)</label>
                   <div style="display:flex;align-items:center;gap:8px">
                     <input id="scPrimaryColor" type="color" style="width:40px;height:32px;border:1px solid var(--line);border-radius:4px;cursor:pointer" />
                     <span id="scPrimaryColorHex" style="font-size:0.85rem;color:var(--muted)"></span>
                   </div>
-                  <small>Boş bırakırsanız varsayılan tema rengi kullanılır</small>
+                  <small>Leave empty to use default theme color</small>
                 </div>
                 <div class="cf-field">
-                  <label for="scHeaderBg">Header Arka Plan Rengi</label>
+                  <label for="scHeaderBg">Header Background Color</label>
                   <div style="display:flex;align-items:center;gap:8px">
                     <input id="scHeaderBg" type="color" value="#2563EB" style="width:40px;height:32px;border:1px solid var(--line);border-radius:4px;cursor:pointer" />
                     <span id="scHeaderBgHex" style="font-size:0.85rem;color:var(--muted)"></span>
                   </div>
-                  <small>Boş bırakırsanız varsayılan gradient kullanılır</small>
+                  <small>Leave empty to use default gradient</small>
                 </div>
                 <div class="cf-field">
-                  <label for="scChatBubbleColor">Sohbet Balonu Rengi</label>
+                  <label for="scChatBubbleColor">Chat Bubble Color</label>
                   <div style="display:flex;align-items:center;gap:8px">
                     <input id="scChatBubbleColor" type="color" value="#2563EB" style="width:40px;height:32px;border:1px solid var(--line);border-radius:4px;cursor:pointer" />
                     <span id="scChatBubbleColorHex" style="font-size:0.85rem;color:var(--muted)"></span>
                   </div>
-                  <small>Bot mesaj balonlarının arka plan rengi</small>
+                  <small>Background color of bot message bubbles</small>
                 </div>
               </div>
 
               <div class="cf-actions">
-                <button id="scSaveBtn" class="btn btn-primary">Kaydet</button>
-                <button id="scResetBtn" class="btn btn-secondary">Varsayılana Dön</button>
+                <button id="scSaveBtn" class="btn btn-primary">Save</button>
+                <button id="scResetBtn" class="btn btn-secondary">Reset to Defaults</button>
                 <span id="scSaveStatus" class="status-text"></span>
               </div>
             </div>
@@ -1063,66 +1063,66 @@
           <!-- PANEL: Webhooks -->
           <div id="panelWebhooks" class="panel">
             <div class="section-header">
-              <h3>Webhook Bildirimleri</h3>
-              <button id="webhookAddBtn" class="btn btn-primary">+ Yeni Webhook</button>
+              <h3>Webhook Notifications</h3>
+              <button id="webhookAddBtn" class="btn btn-primary">+ New Webhook</button>
             </div>
             <div class="table-section">
               <table>
                 <thead>
                   <tr>
                     <th>URL</th>
-                    <th>Olaylar</th>
-                    <th>Durum</th>
-                    <th>İşlemler</th>
+                    <th>Events</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="webhooksTableBody">
-                  <tr><td colspan="4" class="empty">Yükleniyor...</td></tr>
+                  <tr><td colspan="4" class="empty">Loading...</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <!-- PANEL: Prompt Gecmisi -->
+          <!-- PANEL: Prompt History -->
           <div id="panelPromptVersions" class="panel">
             <div class="section-header">
-              <h3>Prompt Versiyon Geçmişi</h3>
+              <h3>Prompt Version History</h3>
             </div>
             <div class="table-section">
               <table>
                 <thead>
                   <tr>
-                    <th>Dosya</th>
-                    <th>Tarih</th>
-                    <th>Boyut</th>
-                    <th>İşlemler</th>
+                    <th>File</th>
+                    <th>Date</th>
+                    <th>Size</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="promptVersionsTableBody">
-                  <tr><td colspan="4" class="empty">Yükleniyor...</td></tr>
+                  <tr><td colspan="4" class="empty">Loading...</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <!-- PANEL: CRM Entegrasyonu -->
+          <!-- PANEL: CRM Integration -->
           <div id="panelSunshine" class="panel">
             <div class="chat-flow-config">
-              <h3>CRM Entegrasyonu (Zendesk Sunshine Conversations)</h3>
-              <p class="section-desc">Zendesk Sunshine Conversations entegrasyonu ile Zendesk chat widget üzerinden gelen mesajları Qragy ile karşılayın. Eskalasyonda canlı temsilciye otomatik aktarım yapılır.</p>
+              <h3>CRM Integration (Zendesk Sunshine Conversations)</h3>
+              <p class="section-desc">Integrate with Zendesk Sunshine Conversations to handle messages from the Zendesk chat widget through Qragy. Automatic transfer to live agents on escalation.</p>
 
               <div class="cf-group">
-                <h4>Bağlantı Ayarları</h4>
+                <h4>Connection Settings</h4>
                 <div class="cf-field">
-                  <label for="sunEnabled">Entegrasyon Durumu</label>
+                  <label for="sunEnabled">Integration Status</label>
                   <select id="sunEnabled" class="cf-textarea" style="height:auto">
-                    <option value="false">Kapalı</option>
-                    <option value="true">Açık</option>
+                    <option value="false">Disabled</option>
+                    <option value="true">Enabled</option>
                   </select>
                 </div>
                 <div class="cf-field">
                   <label for="sunSubdomain">Zendesk Subdomain</label>
-                  <input id="sunSubdomain" type="text" class="cf-textarea" style="height:auto" placeholder="firmaadiniz (firmaadiniz.zendesk.com)" />
+                  <input id="sunSubdomain" type="text" class="cf-textarea" style="height:auto" placeholder="yourcompany (yourcompany.zendesk.com)" />
                 </div>
                 <div class="cf-field">
                   <label for="sunAppId">App ID</label>
@@ -1138,52 +1138,52 @@
                 </div>
                 <div class="cf-field">
                   <label for="sunWebhookSecret">Webhook Secret (X-API-Key)</label>
-                  <input id="sunWebhookSecret" type="password" class="cf-textarea" style="height:auto" placeholder="Webhook doğrulama anahtarı" />
+                  <input id="sunWebhookSecret" type="password" class="cf-textarea" style="height:auto" placeholder="Webhook verification key" />
                 </div>
                 <div class="cf-field">
-                  <label for="sunFarewellMessage">Eskalasyon Veda Mesajı</label>
-                  <textarea id="sunFarewellMessage" rows="2" class="cf-textarea" placeholder="Canlı temsilciye aktarılırken gönderilecek mesaj"></textarea>
+                  <label for="sunFarewellMessage">Escalation Farewell Message</label>
+                  <textarea id="sunFarewellMessage" rows="2" class="cf-textarea" placeholder="Message to send when transferring to a live agent"></textarea>
                 </div>
               </div>
 
               <div class="cf-group">
                 <h4>Webhook URL</h4>
-                <p class="section-desc">Zendesk Sunshine Conversations ayarlarından aşağıdaki URL'yi webhook olarak ekleyin. Trigger: <code>conversation:message</code></p>
+                <p class="section-desc">Add the URL below as a webhook in Zendesk Sunshine Conversations settings. Trigger: <code>conversation:message</code></p>
                 <div class="cf-field">
                   <label>Webhook Endpoint</label>
                   <div style="display:flex;align-items:center;gap:8px">
                     <code id="sunWebhookUrl" style="background:var(--bg);padding:8px 12px;border-radius:6px;border:1px solid var(--line);flex:1;word-break:break-all;font-size:0.85rem"></code>
-                    <button id="sunCopyUrlBtn" class="btn btn-secondary" style="white-space:nowrap">Kopyala</button>
+                    <button id="sunCopyUrlBtn" class="btn btn-secondary" style="white-space:nowrap">Copy</button>
                   </div>
                 </div>
               </div>
 
               <div class="cf-group">
-                <h4>Bağlantı Durumu</h4>
+                <h4>Connection Status</h4>
                 <div id="sunTestResult" style="padding:8px 12px;border-radius:6px;font-size:0.9rem;display:none"></div>
               </div>
 
               <div class="cf-actions">
-                <button id="sunSaveBtn" class="btn btn-primary">Kaydet</button>
-                <button id="sunTestBtn" class="btn btn-secondary">Bağlantıyı Test Et</button>
+                <button id="sunSaveBtn" class="btn btn-primary">Save</button>
+                <button id="sunTestBtn" class="btn btn-secondary">Test Connection</button>
                 <span id="sunSaveStatus" class="status-text"></span>
               </div>
             </div>
           </div>
 
-          <!-- PANEL: WhatsApp Entegrasyonu -->
+          <!-- PANEL: WhatsApp Integration -->
           <div id="panelWhatsApp" class="panel">
             <div class="chat-flow-config">
-              <h3>WhatsApp Entegrasyonu (Cloud API)</h3>
-              <p class="section-desc">WhatsApp Business Cloud API entegrasyonu ile WhatsApp üzerinden gelen mesajları Qragy ile karşılayın.</p>
+              <h3>WhatsApp Integration (Cloud API)</h3>
+              <p class="section-desc">Integrate with WhatsApp Business Cloud API to handle WhatsApp messages through Qragy.</p>
 
               <div class="cf-group">
-                <h4>Bağlantı Ayarları</h4>
+                <h4>Connection Settings</h4>
                 <div class="cf-field">
-                  <label for="waEnabled">Entegrasyon Durumu</label>
+                  <label for="waEnabled">Integration Status</label>
                   <select id="waEnabled" class="cf-textarea" style="height:auto">
-                    <option value="false">Kapalı</option>
-                    <option value="true">Açık</option>
+                    <option value="false">Disabled</option>
+                    <option value="true">Enabled</option>
                   </select>
                 </div>
                 <div class="cf-field">
@@ -1196,24 +1196,24 @@
                 </div>
                 <div class="cf-field">
                   <label for="waVerifyToken">Verify Token</label>
-                  <input id="waVerifyToken" type="text" class="cf-textarea" style="height:auto" placeholder="Webhook doğrulama tokeni (sizin belirlediğiniz)" />
+                  <input id="waVerifyToken" type="text" class="cf-textarea" style="height:auto" placeholder="Webhook verification token (you define this)" />
                 </div>
               </div>
 
               <div class="cf-group">
                 <h4>Webhook URL</h4>
-                <p class="section-desc">Meta Developer Portal'dan aşağıdaki URL'yi webhook olarak ekleyin. Subscriptions: <code>messages</code></p>
+                <p class="section-desc">Add the URL below as a webhook in the Meta Developer Portal. Subscriptions: <code>messages</code></p>
                 <div class="cf-field">
                   <label>Webhook Endpoint</label>
                   <div style="display:flex;align-items:center;gap:8px">
                     <code id="waWebhookUrl" style="background:var(--bg);padding:8px 12px;border-radius:6px;border:1px solid var(--line);flex:1;word-break:break-all;font-size:0.85rem"></code>
-                    <button id="waCopyUrlBtn" class="btn btn-secondary" style="white-space:nowrap">Kopyala</button>
+                    <button id="waCopyUrlBtn" class="btn btn-secondary" style="white-space:nowrap">Copy</button>
                   </div>
                 </div>
               </div>
 
               <div class="cf-actions">
-                <button id="waSaveBtn" class="btn btn-primary">Kaydet</button>
+                <button id="waSaveBtn" class="btn btn-primary">Save</button>
                 <span id="waSaveStatus" class="status-text"></span>
               </div>
             </div>
@@ -1222,9 +1222,9 @@
           <!-- PANEL: Bot Test (Multi-chat) -->
           <div id="panelBotTest" class="panel">
             <div class="bot-test-toolbar">
-              <button id="botTestNewChat" class="btn btn-primary btn-sm">+ Yeni Chat</button>
-              <button id="botTestCloseAll" class="btn btn-sm">Tümünü Kapat</button>
-              <span class="bot-test-hint">Aynı anda birden fazla chat açarak botu test edin</span>
+              <button id="botTestNewChat" class="btn btn-primary btn-sm">+ New Chat</button>
+              <button id="botTestCloseAll" class="btn btn-sm">Close All</button>
+              <span class="bot-test-hint">Test the bot by opening multiple chats simultaneously</span>
             </div>
             <div id="botTestGrid" class="bot-test-grid"></div>
           </div>
@@ -1232,12 +1232,12 @@
           <!-- PANEL: Analitik Dashboard -->
           <div id="panelAnalytics" class="panel">
             <div class="section-header">
-              <h2>Analitik</h2>
+              <h2>Analytics</h2>
               <div class="section-actions">
                 <select id="analyticsRange">
-                  <option value="7d" selected>Son 7 Gün</option>
-                  <option value="30d">Son 30 Gün</option>
-                  <option value="90d">Son 90 Gün</option>
+                  <option value="7d" selected>Last 7 Days</option>
+                  <option value="30d">Last 30 Days</option>
+                  <option value="90d">Last 90 Days</option>
                 </select>
               </div>
             </div>
@@ -1245,22 +1245,22 @@
             <!-- KPI Dashboard Cards -->
             <div id="dashboardKpi" class="kpi-grid">
               <div class="kpi-card">
-                <div class="kpi-label">Bugün Sohbet</div>
+                <div class="kpi-label">Today's Chats</div>
                 <div class="kpi-value" id="kpiTodayChats">-</div>
                 <div class="kpi-sub" id="kpiTodayResolution"></div>
               </div>
               <div class="kpi-card">
-                <div class="kpi-label">Haftalık Sohbet</div>
+                <div class="kpi-label">Weekly Chats</div>
                 <div class="kpi-value" id="kpiWeeklyChats">-</div>
                 <div class="kpi-trend" id="kpiWeeklyTrend"></div>
               </div>
               <div class="kpi-card">
-                <div class="kpi-label">Haftalık CSAT</div>
+                <div class="kpi-label">Weekly CSAT</div>
                 <div class="kpi-value" id="kpiWeeklyCsat">-</div>
                 <div class="kpi-trend" id="kpiCsatTrend"></div>
               </div>
               <div class="kpi-card">
-                <div class="kpi-label">Aylık Çözüm Oranı</div>
+                <div class="kpi-label">Monthly Resolution Rate</div>
                 <div class="kpi-value" id="kpiMonthlyResolution">-</div>
                 <div class="kpi-trend" id="kpiMonthlyTrend"></div>
               </div>
@@ -1268,80 +1268,80 @@
 
             <!-- Top Topics (from dashboard-stats) -->
             <div id="dashboardTopTopics" class="kpi-topics" style="display:none">
-              <h4>Bu Haftanın En Çok Konuşulan 5 Konusu</h4>
+              <h4>Top 5 Topics This Week</h4>
               <div id="kpiTopTopicsList" class="kpi-topics-list"></div>
             </div>
 
             <div id="analyticsSummary" class="summary-grid"></div>
 
             <div class="analytics-chart-section">
-              <h3>Günlük Sohbet Sayısı</h3>
+              <h3>Daily Chat Count</h3>
               <div id="analyticsChart" class="analytics-chart"></div>
             </div>
 
             <div class="analytics-topics-section">
-              <h3>En Çok Konuşulan Konular</h3>
+              <h3>Most Discussed Topics</h3>
               <div class="table-section">
                 <table>
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>Konu</th>
-                      <th>Sayı</th>
+                      <th>Topic</th>
+                      <th>Count</th>
                     </tr>
                   </thead>
                   <tbody id="topTopicsTableBody">
-                    <tr><td colspan="3" class="empty">Yükleniyor...</td></tr>
+                    <tr><td colspan="3" class="empty">Loading...</td></tr>
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
 
-          <!-- PANEL: Feedback Raporu -->
+          <!-- PANEL: Feedback Report -->
           <div id="panelFeedbackReport" class="panel">
             <div class="section-header">
-              <h2>Feedback Raporu</h2>
+              <h2>Feedback Report</h2>
               <div class="section-actions">
                 <select id="feedbackDaysRange">
-                  <option value="7" selected>Son 7 Gün</option>
-                  <option value="30">Son 30 Gün</option>
-                  <option value="90">Son 90 Gün</option>
+                  <option value="7" selected>Last 7 Days</option>
+                  <option value="30">Last 30 Days</option>
+                  <option value="90">Last 90 Days</option>
                 </select>
               </div>
             </div>
             <div id="feedbackSummary" class="summary-grid"></div>
             <div class="analytics-topics-section" style="margin-top:16px">
-              <h3>En Çok Tekrarlanan Sorunlar</h3>
+              <h3>Most Recurring Issues</h3>
               <div class="table-section">
                 <table>
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>Konu (Anahtar Kelimeler)</th>
-                      <th>Tekrar</th>
-                      <th>Örnek Mesajlar</th>
+                      <th>Topic (Keywords)</th>
+                      <th>Occurrences</th>
+                      <th>Sample Messages</th>
                     </tr>
                   </thead>
                   <tbody id="feedbackTopIssuesBody">
-                    <tr><td colspan="4" class="empty">Yükleniyor...</td></tr>
+                    <tr><td colspan="4" class="empty">Loading...</td></tr>
                   </tbody>
                 </table>
               </div>
             </div>
             <div class="analytics-topics-section" style="margin-top:16px">
-              <h3>Negatif Feedback Detayları</h3>
+              <h3>Negative Feedback Details</h3>
               <div class="table-section">
                 <table>
                   <thead>
                     <tr>
-                      <th>Kullanıcı Mesajı</th>
-                      <th>Bot Yanıtı</th>
-                      <th>Tarih</th>
+                      <th>User Message</th>
+                      <th>Bot Response</th>
+                      <th>Date</th>
                     </tr>
                   </thead>
                   <tbody id="feedbackNegativeBody">
-                    <tr><td colspan="3" class="empty">Yükleniyor...</td></tr>
+                    <tr><td colspan="3" class="empty">Loading...</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1351,21 +1351,21 @@
           <!-- PANEL: Content Gaps -->
           <div id="panelContentGaps" class="panel">
             <div class="section-header">
-              <h2>Cevaplanamayan Sorular (Content Gaps)</h2>
+              <h2>Unanswered Questions (Content Gaps)</h2>
 
             </div>
             <div id="contentGapsSection" class="table-section">
-              <p class="empty">Yükleniyor...</p>
+              <p class="empty">Loading...</p>
             </div>
           </div>
 
-          <!-- PANEL: Sistem Durumu -->
+          <!-- PANEL: System Status -->
           <div id="panelSystem" class="panel">
             <div class="section-header">
-              <h2>Sistem Durumu</h2>
+              <h2>System Status</h2>
               <div class="section-actions">
-                <button id="sysRefreshBtn" class="btn btn-secondary">Yenile</button>
-                <button id="sysReloadBtn" class="btn btn-primary">Agent Config Yeniden Yükle</button>
+                <button id="sysRefreshBtn" class="btn btn-secondary">Refresh</button>
+                <button id="sysReloadBtn" class="btn btn-primary">Reload Agent Config</button>
               </div>
             </div>
 
@@ -1375,24 +1375,24 @@
 
             <!-- SLA Summary -->
             <div class="analytics-topics-section" style="margin-bottom:20px">
-              <h3>SLA Durumu</h3>
+              <h3>SLA Status</h3>
               <div id="slaSummary" class="summary-grid"></div>
               <div id="slaBreaches" class="table-section" style="margin-top:8px"></div>
             </div>
 
             <!-- Audit Log -->
             <div class="analytics-topics-section" style="margin-bottom:20px">
-              <h3>Değişiklik Geçmişi (Audit Log)</h3>
+              <h3>Change History (Audit Log)</h3>
               <div id="auditLogSection" class="table-section"></div>
             </div>
 
             <div class="status-sections">
               <div class="status-section">
-                <h3>Agent Dosyaları</h3>
+                <h3>Agent Files</h3>
                 <div id="sysAgentStatus"></div>
               </div>
               <div class="status-section">
-                <h3>Bilgi Tabanı</h3>
+                <h3>Knowledge Base</h3>
                 <div id="sysKBStatus"></div>
               </div>
             </div>
@@ -1405,15 +1405,15 @@
       <div id="kbModal" class="modal-overlay" style="display:none">
         <div class="modal">
           <div class="modal-header">
-            <h3 id="kbModalTitle">Yeni Kayıt</h3>
+            <h3 id="kbModalTitle">New Entry</h3>
             <button id="kbModalCancelBtn" class="modal-close">&times;</button>
           </div>
           <div class="modal-body">
-            <label>Soru<textarea id="kbModalQuestion" rows="3"></textarea></label>
-            <label>Cevap<textarea id="kbModalAnswer" rows="5"></textarea></label>
+            <label>Question<textarea id="kbModalQuestion" rows="3"></textarea></label>
+            <label>Answer<textarea id="kbModalAnswer" rows="5"></textarea></label>
           </div>
           <div class="modal-footer">
-            <button id="kbModalSaveBtn" class="btn btn-primary">Kaydet</button>
+            <button id="kbModalSaveBtn" class="btn btn-primary">Save</button>
           </div>
         </div>
       </div>
@@ -1422,60 +1422,60 @@
       <div id="topicModal" class="modal-overlay" style="display:none">
         <div class="modal modal-lg">
           <div class="modal-header">
-            <h3 id="topicModalHeader">Konu Düzenle</h3>
+            <h3 id="topicModalHeader">Edit Topic</h3>
             <button id="topicModalCancelBtn" class="modal-close">&times;</button>
           </div>
           <div class="modal-body">
             <!-- Wizard Steps Indicator -->
             <div id="topicWizardSteps" class="wizard-steps">
-              <span class="wizard-step active" data-step="1">1. Konu Adı</span>
-              <span class="wizard-step" data-step="2">2. Anahtar Kelimeler</span>
-              <span class="wizard-step" data-step="3">3. Bot Yanıtı</span>
-              <span class="wizard-step" data-step="4">4. Eskalasyon</span>
+              <span class="wizard-step active" data-step="1">1. Topic Name</span>
+              <span class="wizard-step" data-step="2">2. Keywords</span>
+              <span class="wizard-step" data-step="3">3. Bot Response</span>
+              <span class="wizard-step" data-step="4">4. Escalation</span>
             </div>
 
             <!-- Step 1: Name & ID -->
             <div class="wizard-panel" data-wizard="1">
               <div class="form-grid">
-                <label>Başlık<span class="field-hint">Admin için konu adı. Örnek: Bilet Yazdıramıyorum</span><input id="topicModalTitle" type="text" placeholder="Konu başlığı" /></label>
-                <label>ID (Slug)<span class="field-hint">Otomatik oluşturulur, isterseniz değiştirebilirsiniz.</span><input id="topicModalId" type="text" placeholder="konu-slug" /></label>
+                <label>Title<span class="field-hint">Topic name for admin. Example: Cannot Print Ticket</span><input id="topicModalTitle" type="text" placeholder="Topic title" /></label>
+                <label>ID (Slug)<span class="field-hint">Auto-generated, you can change it if needed.</span><input id="topicModalId" type="text" placeholder="topic-slug" /></label>
               </div>
             </div>
 
             <!-- Step 2: Keywords -->
             <div class="wizard-panel" data-wizard="2" style="display:none">
-              <label>Kullanıcı bu konuyu nasıl sorar?<span class="field-hint">Virgül ile ayrılmış anahtar kelimeler. Ne kadar çok varyasyon eklerseniz tespit o kadar iyi olur.</span></label>
-              <input id="topicModalKeywords" type="text" placeholder="bilet yazdıramıyorum, bilet çıkmıyor, yazıcı basmıyor" />
-              <button id="topicSuggestKeywordsBtn" class="btn btn-sm" style="margin-top:8px">AI ile Oner</button>
+              <label>How do users ask about this topic?<span class="field-hint">Comma-separated keywords. The more variations you add, the better the detection.</span></label>
+              <input id="topicModalKeywords" type="text" placeholder="can't print ticket, ticket not printing, printer not working" />
+              <button id="topicSuggestKeywordsBtn" class="btn btn-sm" style="margin-top:8px">Suggest with AI</button>
               <div id="topicKeywordSuggestion" style="display:none;margin-top:8px;padding:8px;background:var(--bg-secondary);border-radius:6px;font-size:13px"></div>
             </div>
 
             <!-- Step 3: Content -->
             <div class="wizard-panel" data-wizard="3" style="display:none">
-              <label>Bot ne yanıt vermeli?<span class="field-hint">AI'a bu konuda nasıl davranacağını anlatan talimat. Troubleshoot adımları, bilgilendirme metni yazabilirsiniz.</span></label>
-              <textarea id="topicModalContent" rows="10" class="code-editor" placeholder="Bu konuda şu adımları izle:&#10;1. ...&#10;2. ..."></textarea>
+              <label>What should the bot respond?<span class="field-hint">Instructions telling the AI how to handle this topic. You can write troubleshooting steps or informational text.</span></label>
+              <textarea id="topicModalContent" rows="10" class="code-editor" placeholder="For this topic, follow these steps:&#10;1. ...&#10;2. ..."></textarea>
             </div>
 
             <!-- Step 4: Escalation -->
             <div class="wizard-panel" data-wizard="4" style="display:none">
               <div class="form-row">
                 <div class="checkbox-group">
-                  <label class="checkbox-label"><input id="topicModalRequiresEscalation" type="checkbox" /> Canlı desteğe aktarılsın mı?</label>
-                  <span class="field-hint">İşaretlenirse bu konu sonunda canlı temsilciye aktarım yapılır.</span>
+                  <label class="checkbox-label"><input id="topicModalRequiresEscalation" type="checkbox" /> Transfer to live support?</label>
+                  <span class="field-hint">If checked, this topic will eventually be transferred to a live agent.</span>
                 </div>
                 <div class="checkbox-group">
-                  <label class="checkbox-label"><input id="topicModalCanResolveDirectly" type="checkbox" /> AI doğrudan çözebilir mi?</label>
-                  <span class="field-hint">İşaretlenirse AI bilgilendirme yapıp konuyu kapatabilir.</span>
+                  <label class="checkbox-label"><input id="topicModalCanResolveDirectly" type="checkbox" /> Can AI resolve directly?</label>
+                  <span class="field-hint">If checked, AI can provide information and close the topic.</span>
                 </div>
               </div>
-              <label>Gerekli Bilgiler (virgül ile)<span class="field-hint">Eskalasyon öncesi kullanıcıdan toplanması gereken alanlar.</span><input id="topicModalRequiredInfo" type="text" placeholder="firma_adi, sefer_guzergah, sefer_tarih_saat" /></label>
+              <label>Required Info (comma separated)<span class="field-hint">Fields to collect from the user before escalation.</span><input id="topicModalRequiredInfo" type="text" placeholder="company_name, route, date_time" /></label>
             </div>
           </div>
           <div class="modal-footer" style="justify-content:space-between">
-            <button id="topicWizardPrevBtn" class="btn" style="display:none">Geri</button>
+            <button id="topicWizardPrevBtn" class="btn" style="display:none">Back</button>
             <div>
-              <button id="topicWizardNextBtn" class="btn btn-primary">İleri</button>
-              <button id="topicModalSaveBtn" class="btn btn-primary" style="display:none">Kaydet</button>
+              <button id="topicWizardNextBtn" class="btn btn-primary">Next</button>
+              <button id="topicModalSaveBtn" class="btn btn-primary" style="display:none">Save</button>
             </div>
           </div>
         </div>
@@ -1485,16 +1485,16 @@
       <div id="webhookModal" class="modal-overlay" style="display:none">
         <div class="modal">
           <div class="modal-header">
-            <h3 id="webhookModalTitle">Yeni Webhook</h3>
+            <h3 id="webhookModalTitle">New Webhook</h3>
             <button id="webhookModalCancelBtn" class="modal-close">&times;</button>
           </div>
           <div class="modal-body">
             <label>URL<input id="webhookModalUrl" type="url" placeholder="https://example.com/webhook" /></label>
-            <label>Olaylar (virgul ile)<span class="field-hint">ticket_created, escalation, csat_rating, handoff_result veya * (tümü)</span><input id="webhookModalEvents" type="text" placeholder="*" value="*" /></label>
-            <label>Secret (opsiyonel)<input id="webhookModalSecret" type="text" placeholder="HMAC secret" /></label>
+            <label>Events (comma separated)<span class="field-hint">ticket_created, escalation, csat_rating, handoff_result or * (all)</span><input id="webhookModalEvents" type="text" placeholder="*" value="*" /></label>
+            <label>Secret (optional)<input id="webhookModalSecret" type="text" placeholder="HMAC secret" /></label>
           </div>
           <div class="modal-footer">
-            <button id="webhookModalSaveBtn" class="btn btn-primary">Kaydet</button>
+            <button id="webhookModalSaveBtn" class="btn btn-primary">Save</button>
           </div>
         </div>
       </div>
@@ -1503,21 +1503,21 @@
       <div id="confirmModal" class="modal-overlay" style="display:none">
         <div class="modal modal-sm">
           <div class="modal-body">
-            <p id="confirmModalText">Emin misiniz?</p>
+            <p id="confirmModalText">Are you sure?</p>
           </div>
           <div class="modal-footer">
-            <button id="confirmModalNo" class="btn btn-secondary">İptal</button>
-            <button id="confirmModalYes" class="btn btn-danger">Onayla</button>
+            <button id="confirmModalNo" class="btn btn-secondary">Cancel</button>
+            <button id="confirmModalYes" class="btn btn-danger">Confirm</button>
           </div>
         </div>
       </div>
 
       <!-- Admin Assistant Chatbot -->
       <div id="adminAssistant" class="admin-assistant">
-        <button id="adminAssistantToggle" class="assistant-toggle" title="Qragy Asistan">?</button>
+        <button id="adminAssistantToggle" class="assistant-toggle" title="Qragy Assistant">?</button>
         <div id="adminAssistantPanel" class="assistant-panel" style="display:none">
           <div class="assistant-header">
-            <span>Qragy Asistan</span>
+            <span>Qragy Assistant</span>
             <button id="adminAssistantClose" class="assistant-close-btn">&times;</button>
           </div>
           <div id="adminAssistantMessages" class="assistant-messages"></div>
@@ -1526,12 +1526,12 @@
             <button id="assistantFileClear" class="btn-remove">&times;</button>
           </div>
           <div class="assistant-input-row">
-            <label class="assistant-file-btn" title="Dosya ekle">
+            <label class="assistant-file-btn" title="Attach file">
               <input id="adminAssistantFileInput" type="file" accept=".txt,.pdf,.docx,.xlsx,.xls" hidden />
               +
             </label>
-            <input id="adminAssistantInput" type="text" placeholder="Derdini anlat veya dosya at..." />
-            <button id="adminAssistantSend" class="btn btn-primary btn-sm">Gönder</button>
+            <input id="adminAssistantInput" type="text" placeholder="Ask a question or drop a file..." />
+            <button id="adminAssistantSend" class="btn btn-primary btn-sm">Send</button>
           </div>
         </div>
       </div>

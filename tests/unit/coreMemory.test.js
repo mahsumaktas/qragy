@@ -96,7 +96,7 @@ describe("Core Memory Service", () => {
 
     const result = coreMem.formatForPrompt("user1");
 
-    expect(result).toContain("--- KULLANICI PROFILI ---");
+    expect(result).toContain("--- USER PROFILE ---");
     expect(result).toContain("name: Ahmet");
     expect(result).toContain("branch: IST-001");
 

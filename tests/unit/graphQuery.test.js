@@ -34,7 +34,7 @@ describe("graphQuery", () => {
 
     const prompt = await gq.formatForPrompt("ZT-400");
 
-    expect(prompt).toContain("BILGI GRAFI");
+    expect(prompt).toContain("KNOWLEDGE GRAPH");
     expect(prompt).toContain("ZT-400");
     expect(prompt).toContain("Kagit Sikismasi");
     expect(prompt).toContain("has_issue");

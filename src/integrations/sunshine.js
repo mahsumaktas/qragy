@@ -59,7 +59,7 @@ function createSunshineIntegration(deps) {
     }).finally(() => clearTimeout(timeoutId));
     if (!resp.ok) {
       const errText = await resp.text().catch(() => "");
-      logger.warn("sunshine", `Mesaj gonderilemedi: ${resp.status} ${errText}`);
+      logger.warn("sunshine", `Failed to send message: ${resp.status} ${errText}`);
     }
     return resp.ok;
   }
@@ -68,9 +68,9 @@ function createSunshineIntegration(deps) {
     const baseUrl = getSunshineBaseUrl();
     const url = baseUrl + "/apps/" + appId + "/conversations/" + conversationId + "/passControl";
     const metadata = { reason: "escalation" };
-    // Tags: Zendesk ticket'a etiket olarak eklenir, agent gorebilir
+    // Tags: added as labels to Zendesk ticket, visible to agents
     const tags = ["bot-escalation"];
-    if (meta?.branchCode) tags.push("sube-" + meta.branchCode);
+    if (meta?.branchCode) tags.push("branch-" + meta.branchCode);
     metadata["dataCapture.systemField.tags"] = tags.join(",");
 
     const controller = new AbortController();
@@ -86,7 +86,7 @@ function createSunshineIntegration(deps) {
     }).finally(() => clearTimeout(timeoutId));
     if (!resp.ok) {
       const errText = await resp.text().catch(() => "");
-      logger.warn("sunshine", `passControl hatasi: ${resp.status} ${errText}`);
+      logger.warn("sunshine", `passControl error: ${resp.status} ${errText}`);
     }
     return resp.ok;
   }
@@ -125,8 +125,8 @@ function createSunshineIntegration(deps) {
             const sessionKey = "zd-" + conversationId;
             const sessions = loadSunshineSessions();
             if (!sessions[sessionKey]) {
-              // Zendesk widget karsilama mesajini gosteriyor — ayni mesaji
-              // history'ye inject et ki LLM tekrar karsilama yapmasin
+              // Zendesk widget shows greeting message — inject the same message
+              // into history so LLM doesn't greet again
               const greeting = sunshineConfig.greetingMessage || "";
               sessions[sessionKey] = {
                 messages: greeting ? [{ role: "assistant", content: greeting }] : [],
@@ -138,9 +138,9 @@ function createSunshineIntegration(deps) {
 
             const session = sessions[sessionKey];
 
-            // Escalation sonrasi bot cevap vermemeli — kontrolu agent'a birakmis
+            // Bot should not respond after escalation — control handed to agent
             if (session.escalated) {
-              logger.info("Sunshine", "Escalated session, bot atlandi", { conversationId });
+              logger.info("Sunshine", "Escalated session, bot skipped", { conversationId });
               saveSunshineSessions(sessions);
               return;
             }
@@ -166,19 +166,19 @@ function createSunshineIntegration(deps) {
             const isEscalation = ESCALATION_MESSAGE_REGEX.test(result.reply);
             if (isEscalation) {
               const farewell = sunshineConfig.farewellMessage || (DEFAULT_SUNSHINE_CONFIG && DEFAULT_SUNSHINE_CONFIG.farewellMessage) || "";
-              // Ozet sadece passControl metadata'sinda gider, kullaniciya mesaj olarak gonderilmez
+              // Summary only goes in passControl metadata, not sent as a message to user
               await sunshineSendMessage(appId, conversationId, farewell);
               const passed = await sunshinePassControl(appId, conversationId, memory);
-              // Escalation basarili — session'i isaretleyip bot'u durdur
+              // Escalation successful — mark session and stop bot
               session.escalated = true;
               session.escalatedAt = Date.now();
               saveSunshineSessions(sessions);
-              logger.info("Sunshine", `Escalation ${passed ? "basarili" : "basarisiz"}`, { conversationId, memory: { branchCode: memory.branchCode, issueSummary: memory.issueSummary } });
+              logger.info("Sunshine", `Escalation ${passed ? "successful" : "failed"}`, { conversationId, memory: { branchCode: memory.branchCode, issueSummary: memory.issueSummary } });
             } else {
               await sunshineSendMessage(appId, conversationId, result.reply);
             }
           } catch (err) {
-            logger.warn("Sunshine", "Webhook isleme hatasi", err);
+            logger.warn("Sunshine", "Webhook processing error", err);
           }
         })();
       }
@@ -200,19 +200,19 @@ function createSunshineIntegration(deps) {
       const conversationId = sessionKey.startsWith("zd-") ? sessionKey.slice(3) : sessionKey;
 
       if (elapsed >= timeout * 0.75 && !session.nudge75Sent) {
-        const msg75 = chatFlowConfig.nudgeAt75Message || "Hala buradayım. Size nasıl yardımcı olabilirim?";
+        const msg75 = chatFlowConfig.nudgeAt75Message || "I'm still here. How can I help you?";
         sunshineSendMessage(session.appId, conversationId, msg75).catch(() => {});
         session.nudge75Sent = true;
         changed = true;
       }
       if (elapsed >= timeout * 0.90 && !session.nudge90Sent) {
-        const msg90 = chatFlowConfig.nudgeAt90Message || "Son birkaç dakikadır mesaj almadım. Yardımcı olabilir miyim?";
+        const msg90 = chatFlowConfig.nudgeAt90Message || "I haven't received a message in a few minutes. Can I help you with anything?";
         sunshineSendMessage(session.appId, conversationId, msg90).catch(() => {});
         session.nudge90Sent = true;
         changed = true;
       }
       if (elapsed >= timeout) {
-        const closeMsg = chatFlowConfig.inactivityCloseMessage || "Uzun süredir mesaj almadığım için sohbeti sonlandırıyorum.";
+        const closeMsg = chatFlowConfig.inactivityCloseMessage || "I'm closing this chat due to inactivity. Feel free to reach out again anytime.";
         sunshineSendMessage(session.appId, conversationId, closeMsg).catch(() => {});
         session.closed = true;
         session.messages = [];

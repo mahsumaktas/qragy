@@ -6,7 +6,7 @@ describe("Sanitizer", () => {
     it("should mask phone", () => { expect(maskPII("tel: 05551234567")).toContain("***"); });
     it("should mask email", () => { expect(maskPII("mail: user@example.com")).toContain("***"); });
     it("should mask IBAN", () => { expect(maskPII("TR330006100519786457841326")).toContain("***"); });
-    it("should leave normal text", () => { expect(maskPII("yazicim calismiyor")).toBe("yazicim calismiyor"); });
+    it("should leave normal text", () => { expect(maskPII("my printer is not working")).toBe("my printer is not working"); });
   });
   describe("sanitizeReply", () => {
     it("should remove markdown headers", () => { expect(sanitizeReply("## Baslik\nIcerik")).toBe("Baslik\nIcerik"); });
@@ -19,11 +19,11 @@ describe("Sanitizer", () => {
     it("should collapse whitespace", () => { expect(normalizeForMatching("  cok   bosluk  ")).toBe("cok bosluk"); });
   });
   describe("maskCredentials", () => {
-    it("should mask 'sifre' values", () => {
-      expect(maskCredentials("sifre: abc123")).toBe("[MASKED-CREDENTIAL]");
+    it("should mask 'secret' values", () => {
+      expect(maskCredentials("secret: abc123")).toBe("[MASKED-CREDENTIAL]");
     });
-    it("should mask 'parola' values", () => {
-      expect(maskCredentials("parola=mypass")).toBe("[MASKED-CREDENTIAL]");
+    it("should mask 'passwd' values", () => {
+      expect(maskCredentials("passwd=mypass")).toBe("[MASKED-CREDENTIAL]");
     });
     it("should mask 'password' values", () => {
       expect(maskCredentials("password: secret")).toBe("[MASKED-CREDENTIAL]");
@@ -32,7 +32,7 @@ describe("Sanitizer", () => {
       expect(maskCredentials("pin 1234")).toBe("[MASKED-CREDENTIAL]");
     });
     it("should leave normal text unchanged", () => {
-      expect(maskCredentials("yazicim calismiyor")).toBe("yazicim calismiyor");
+      expect(maskCredentials("my printer is not working")).toBe("my printer is not working");
     });
   });
 });

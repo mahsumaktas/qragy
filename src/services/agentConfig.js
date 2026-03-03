@@ -19,28 +19,28 @@ function createAgentConfigService(deps) {
   } = deps;
 
   const DEFAULT_PERSONA_TEXT = [
-    `# ${getBotName()} Teknik Destek Persona`,
-    `- Rol: ${getBotName()}, ${getCompanyName() || "sirket"} teknik destek yapay zeka asistani.`,
-    "- Kanal: Canli destek oncesi AI karsilama ve yonlendirme katmani.",
-    "- Hedef: Konu bazli teknik destek saglamak, mumkunse sorunu cozmek, gerektiginde canli temsilciye aktarmak.",
-    "- Dil/Ton: Turkce, resmi, net, kisa.",
-    "- Sinir: Teknik cozum anlatma, yalnizca talep topla."
+    `# ${getBotName()} Technical Support Persona`,
+    `- Role: ${getBotName()}, ${getCompanyName() || "company"} technical support AI assistant.`,
+    "- Channel: AI greeting and routing layer before live support.",
+    "- Goal: Provide topic-based technical support, resolve issues when possible, escalate to a live agent when necessary.",
+    "- Language/Tone: English, professional, clear, concise.",
+    "- Boundary: Do not explain technical solutions in depth, only collect requests."
   ].join("\n");
 
   const DEFAULT_POLICY_TEXT = [
     "# Response Policy",
-    "1. Eksik zorunlu alanları tek tek sor.",
-    "2. Şube kodu ve sorun özeti zorunludur.",
-    "3. Zorunlu alanlar tamamlanınca standart onay metni ver.",
-    "4. Teknik adım anlatma.",
-    "5. Yanıtları 1-3 cümlede tut ve düz metin kullan."
+    "1. Ask for missing required fields one at a time.",
+    "2. Branch code and issue summary are required.",
+    "3. Once required fields are complete, provide the standard confirmation message.",
+    "4. Do not explain technical steps.",
+    "5. Keep responses to 1-3 sentences and use plain text."
   ].join("\n");
 
   const DEFAULT_MEMORY_TEMPLATE = {
     requiredFields: ["branchCode", "issueSummary"],
     optionalFields: ["companyName", "fullName", "phone"],
     confirmationTemplate:
-      "Talebinizi aldım. Şube kodu: {{branchCode}}. Kısa açıklama: {{issueSummary}}. Destek ekibi en kısa sürede dönüş yapacaktır."
+      "I've received your request. Branch code: {{branchCode}}. Brief description: {{issueSummary}}. The support team will follow up shortly."
   };
 
   function readTextFileSafe(filePath, fallback = "") {
@@ -103,7 +103,7 @@ function createAgentConfigService(deps) {
     TOPIC_INDEX = readJsonFileSafe(path.join(topicsDir, "_index.json"), { topics: [] });
     TOPIC_INDEX_SUMMARY = TOPIC_INDEX.topics.map((t) => `[${t.id}] ${t.title}: ${t.keywords.join(", ")}`).join("\n");
     topicFileCache.clear();
-    logger.info("agent", "Agent config yeniden yuklendi");
+    logger.info("agent", "Agent config reloaded");
   }
 
   // ── Topic file cache ───────────────────────────────────────────────────

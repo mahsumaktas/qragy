@@ -57,73 +57,73 @@ function createPromptBuilder(deps) {
       if (OUTPUT_FILTER_TEXT) parts.push(OUTPUT_FILTER_TEXT);
     }
 
-    // Konu listesini HER ZAMAN ekle
-    parts.push(`## Destek Konuları Listesi\nKullanıcının talebini aşağıdaki konulardan en uygun olanıyla eşleştir. Keyword'lere değil anlama bak.\n${TOPIC_INDEX_SUMMARY}`);
+    // Always include topic list
+    parts.push(`## Support Topics List\nMatch the user's request with the most relevant topic below. Focus on meaning, not keywords.\n${TOPIC_INDEX_SUMMARY}`);
 
-    // Keyword ile on-eslesme yapildiysa detayli konu dosyasini da ekle
+    // If keyword pre-match found, also include detailed topic file
     if (conversationContext?.currentTopic) {
       const topicContent = loadTopicFile(conversationContext.currentTopic);
       const topicMeta = getTopicMeta(conversationContext.currentTopic);
       if (topicContent) {
-        parts.push(`## Tespit Edilen Konu Detayı\nKonu: ${topicMeta?.title || conversationContext.currentTopic}\n${topicContent}`);
+        parts.push(`## Detected Topic Details\nTopic: ${topicMeta?.title || conversationContext.currentTopic}\n${topicContent}`);
         if (topicMeta?.requiredInfo?.length) {
-          parts.push(`## Escalation Gerekirse Toplanacak Bilgiler\nBu bilgiler SADECE escalation (canlı temsilciye aktarım) gerektiğinde toplanır. Bilgilendirme YAPILMADAN bu bilgileri SORMA.\n${topicMeta.requiredInfo.join(", ")}`);
+          parts.push(`## Information to Collect If Escalation Is Needed\nThis information is ONLY collected when escalation (transfer to live agent) is required. Do NOT ask for this information before providing help.\n${topicMeta.requiredInfo.join(", ")}`);
         }
         if (topicMeta?.requiresEscalation) {
-          parts.push("## Not: Bu konu sonunda canlı temsilciye aktarım gerektirir.");
+          parts.push("## Note: This topic ultimately requires transfer to a live agent.");
         }
         if (topicMeta?.canResolveDirectly) {
-          parts.push("## Not: Bu konu doğrudan çözülebilir. Bilgi tabanı ve konu dosyasındaki adımları kullanarak HEMEN bilgilendir. Firma/şube/kullanıcı kodu SORMA. Bilgilendirme sonrası uğurlama prosedürüne geç.");
+          parts.push("## Note: This topic can be resolved directly. Use the knowledge base and topic file steps to provide information IMMEDIATELY. Do NOT ask for company/branch/user code. After providing information, proceed to farewell procedure.");
         } else {
-          parts.push("## ONEMLI: Bilgi tabaninda bu konuyla ilgili yardim adimlari varsa ONCE bunlari paylas. Sube kodu, kullanici adi veya diger bilgileri ilk turda SORMA. Kullanici bu adimlarla sorununu cozemezse sonraki turda escalation icin bilgi topla.");
+          parts.push("## IMPORTANT: If the knowledge base has help steps related to this topic, share them FIRST. Do NOT ask for branch code, username, or other details in the first turn. If the user cannot resolve their issue with these steps, collect information for escalation in the next turn.");
         }
       }
     }
 
     if (conversationContext?.escalationTriggered) {
-      parts.push(`## ESCALATION TETİKLENDİ\nSebep: ${conversationContext.escalationReason}\nEscalation mesajı gönder: "Sizi canlı destek temsilcimize aktarıyorum. Kısa sürede yardımcı olacaktır."`);
+      parts.push(`## ESCALATION TRIGGERED\nReason: ${conversationContext.escalationReason}\nSend escalation message: "I'm transferring you to a live support agent. They will assist you shortly."`);
     }
 
     // Structured context — human-readable for LLM
     const MEMORY_LABELS = {
-      branchCode: "Sube Kodu",
-      issueSummary: "Sorun Ozeti",
-      companyName: "Firma Adi",
-      fullName: "Ad Soyad",
-      phone: "Telefon",
+      branchCode: "Branch Code",
+      issueSummary: "Issue Summary",
+      companyName: "Company Name",
+      fullName: "Full Name",
+      phone: "Phone",
     };
 
-    const ctxLines = ["## Konusma Durumu"];
-    ctxLines.push(`- Asama: ${state}`);
-    ctxLines.push(`- Tur sayisi: ${turnCount}`);
+    const ctxLines = ["## Conversation State"];
+    ctxLines.push(`- Stage: ${state}`);
+    ctxLines.push(`- Turn count: ${turnCount}`);
     if (conversationContext?.currentTopic) {
-      ctxLines.push(`- Aktif konu: ${conversationContext.currentTopic}`);
+      ctxLines.push(`- Active topic: ${conversationContext.currentTopic}`);
     }
     if (conversationContext?.escalationTriggered) {
-      ctxLines.push("- ESCALATION TETIKLENDI — Aktarim mesaji gonder");
+      ctxLines.push("- ESCALATION TRIGGERED — Send transfer message");
     }
     parts.push(ctxLines.join("\n"));
 
-    // Toplanan bilgiler — LLM'in hangi alanlarin eksik oldugunu gormesi icin
-    // Topic tespit edilip ilk turda ise (zorunlu) etiketi gosterme — KB-first davranis icin
+    // Collected information — so LLM can see which fields are missing
+    // If topic detected and first turn, suppress (required) tag — KB-first behavior
     const allFields = [...(MEMORY_TEMPLATE.requiredFields || []), ...(MEMORY_TEMPLATE.optionalFields || [])];
-    const memLines = ["## Toplanan Bilgiler"];
+    const memLines = ["## Collected Information"];
     const requiredSet = new Set(MEMORY_TEMPLATE.requiredFields || []);
     const suppressRequired = conversationContext?.currentTopic && turnCount <= 1;
     for (const field of allFields) {
       const label = MEMORY_LABELS[field] || field;
       const value = memory?.[field];
-      const tag = (!suppressRequired && requiredSet.has(field)) ? " (zorunlu)" : "";
-      memLines.push(`- ${label}${tag}: ${value || "[bilinmiyor]"}`);
+      const tag = (!suppressRequired && requiredSet.has(field)) ? " (required)" : "";
+      memLines.push(`- ${label}${tag}: ${value || "[unknown]"}`);
     }
     parts.push(memLines.join("\n"));
-    parts.push("Onay metni (SADECE escalation/ticket toplama sonrası kullan): Talebinizi aldım. Şube kodu: <KOD>. Kısa açıklama: <ÖZET>. Destek ekibi en kısa sürede dönüş yapacaktır.");
-    parts.push("Uygun olduğunda yanıtının sonuna hızlı yanıt seçenekleri ekle: [QUICK_REPLIES: secenek1 | secenek2 | secenek3]. Maks 3 seçenek. Yalnızca kullanıcıyı yönlendirmek mantıklıysa ekle.");
+    parts.push("Confirmation text (ONLY use after escalation/ticket collection): I've received your request. Branch code: <CODE>. Brief description: <SUMMARY>. The support team will follow up shortly.");
+    parts.push("When appropriate, add quick reply options at the end of your response: [QUICK_REPLIES: option1 | option2 | option3]. Max 3 options. Only add when it makes sense to guide the user.");
 
-    // User Memory: kalici kullanici hafizasi
+    // User Memory: persistent user memory
     const userMemory = options?.userMemory;
     if (userMemory && typeof userMemory === "object" && Object.keys(userMemory).length > 0) {
-      const userMemLines = ["--- KULLANICI HAFIZASI ---", "Bu kullanici hakkinda bildiklerimiz:"];
+      const userMemLines = ["--- USER MEMORY ---", "What we know about this user:"];
       for (const [k, v] of Object.entries(userMemory)) {
         userMemLines.push(`${k}: ${v}`);
       }
@@ -151,7 +151,7 @@ function createPromptBuilder(deps) {
       parts.push(options.graphContext);
     }
 
-    // Quality warning (onceki turun skor sonucu)
+    // Quality warning (previous turn's score result)
     if (options?.qualityWarning) {
       parts.push(options.qualityWarning);
     }
@@ -159,52 +159,52 @@ function createPromptBuilder(deps) {
     // Loop warning
     if (conversationContext?.loopDetected) {
       parts.push(
-        "## UYARI: KONUSMA DONGUSU TESPIT EDILDI\n" +
-        `Kullanici ayni/benzer mesaji ${conversationContext.loopRepeatCount + 1} kez tekrarladi.\n` +
-        "- Farkli bir yaklasim dene veya eksik bilgi sor.\n" +
-        "- Cozum uretemiyorsan HEMEN canli destek temsilcisine yonlendir."
+        "## WARNING: CONVERSATION LOOP DETECTED\n" +
+        `The user has repeated the same/similar message ${conversationContext.loopRepeatCount + 1} times.\n` +
+        "- Try a different approach or ask for missing information.\n" +
+        "- If you cannot produce a solution, IMMEDIATELY offer to transfer to a live agent."
       );
     }
 
     // Turn limit warning
     if (conversationContext?.turnLimitReached && !conversationContext?.escalationTriggered) {
       parts.push(
-        "## UYARI: KONUSMA UZUN SUREDIR DEVAM EDIYOR\n" +
-        `Bu konusma ${conversationContext.turnCount} tur surdu.\n` +
-        "- Sorunu cozemediysen kullaniciya canli destek secenegi sun.\n" +
-        '- Ornek: "Bu konuda size daha iyi yardimci olabilmesi icin canli destek temsilcimize aktarmami ister misiniz?"'
+        "## WARNING: CONVERSATION HAS BEEN GOING ON FOR A LONG TIME\n" +
+        `This conversation has lasted ${conversationContext.turnCount} turns.\n` +
+        "- If you could not resolve the issue, offer the user the live support option.\n" +
+        '- Example: "Would you like me to transfer you to a live support agent who can assist you further with this?"'
       );
     }
 
-    // Zero-shot bootstrap: sektor bilgisi ile yardimci baglam
+    // Zero-shot bootstrap: sector knowledge as helper context
     if (options?.sectorTemplate) {
       const tmpl = options.sectorTemplate;
-      parts.push(`## Sektor Bilgisi: ${tmpl.title || ""}\n${tmpl.persona || ""}`);
+      parts.push(`## Sector Information: ${tmpl.title || ""}\n${tmpl.persona || ""}`);
       if (tmpl.policies?.length) {
-        parts.push("Politikalar:\n" + tmpl.policies.map(p => `- ${p}`).join("\n"));
+        parts.push("Policies:\n" + tmpl.policies.map(p => `- ${p}`).join("\n"));
       }
     }
 
     // KB empty — do NOT hallucinate, offer escalation
     if (!knowledgeResults || knowledgeResults.length === 0) {
-      parts.push("## KRITIK: Bilgi tabaninda bu konuyla ilgili kayit BULUNAMADI.\n" +
-        "- Bu konuda bilgi tabaninda veya konu dosyalarinda bilgi YOKSA kesinlikle uydurma/tahmin bilgi VERME.\n" +
-        "- Menu yolu, buton adi, islem adimi gibi spesifik bilgileri SADECE bilgi tabanindaki veya konu dosyasindaki verilere dayanarak ver.\n" +
-        "- Eger konu dosyasinda da bu konuya ait bilgi yoksa: 'Bu konuda detayli bilgim bulunmamaktadir. Size canli destek temsilcimiz yardimci olabilir. Sizi temsilcimize aktarmami ister misiniz?' de.\n" +
-        "- ASLA tahmin veya genel bilgiyle cevap VERME.");
+      parts.push("## CRITICAL: No records found in the knowledge base for this topic.\n" +
+        "- If there is NO information in the knowledge base or topic files about this subject, absolutely do NOT fabricate or guess information.\n" +
+        "- Only provide specific details like menu paths, button names, or process steps based SOLELY on data from the knowledge base or topic files.\n" +
+        "- If the topic files also have no information about this: say 'I don't have detailed information on this topic. Our live support agent can help you. Would you like me to transfer you to an agent?'\n" +
+        "- NEVER respond with guesses or general information.");
     }
 
-    // RAG: Bilgi tabani sonuclarini ekle (token budget ile sinirla)
+    // RAG: Add knowledge base results (limited by token budget)
     if (Array.isArray(knowledgeResults) && knowledgeResults.length > 0) {
-      const kbLines = ["## Bilgi Tabanı Sonuçları — MUTLAKA KULLAN",
-        "Aşağıdaki soru-cevap çiftleri kullanıcının sorusuyla ilişkili olabilir.",
-        "KRITIK: Bu bilgileri kullanarak HEMEN yanıt ver. Şube kodu veya canlı destek yönlendirmesi YAPMA.",
-        "Önce bu bilgileri paylaş, kullanıcı 'olmadı/çözmedi' derse ANCAK O ZAMAN escalation başlat.",
-        "Kullanıcının sorusuna uygun değilse görmezden gel ve 'Bu konuda detaylı bilgim bulunmamaktadır. Canlı destek temsilcimiz size yardımcı olabilir.' de.",
-        "ONEMLI: Bilgi tabaninda veya konu dosyasinda OLMAYAN menu yollari, buton adlari veya islem adimlari UYDURMA. Sadece asagidaki bilgileri kullan.", ""];
+      const kbLines = ["## Knowledge Base Results — MUST USE",
+        "The following Q&A pairs may be relevant to the user's question.",
+        "CRITICAL: Use this information to respond IMMEDIATELY. Do NOT ask for branch code or redirect to live support.",
+        "Share this information first. Only start escalation if the user says 'that didn't work/didn't help'.",
+        "If not relevant to the user's question, ignore and say 'I don't have detailed information on this topic. Our live support agent can help you.'",
+        "IMPORTANT: Do NOT fabricate menu paths, button names, or process steps that are NOT in the knowledge base or topic files. Only use the information below.", ""];
       for (const item of knowledgeResults) {
-        kbLines.push(`Soru: ${item.question}`);
-        kbLines.push(`Cevap: ${item.answer}`);
+        kbLines.push(`Q: ${item.question}`);
+        kbLines.push(`A: ${item.answer}`);
         kbLines.push("");
       }
       const ragText = kbLines.join("\n");
@@ -213,7 +213,7 @@ function createPromptBuilder(deps) {
 
     const finalPrompt = parts.join("\n\n");
 
-    logger.info("promptBuilder", "Prompt olusturuldu", {
+    logger.info("promptBuilder", "Prompt built", {
       state,
       turnCount,
       topic: conversationContext?.currentTopic || null,

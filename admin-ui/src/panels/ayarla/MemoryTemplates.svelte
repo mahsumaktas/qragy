@@ -20,7 +20,7 @@
     try {
       const res = await api.get("admin/agent/memory");
       const raw = res.files || res || [];
-      // Backend hash map donebilir: {"ticket-template.json": {...}} veya array: ["file1", "file2"]
+      // Backend may return a hash map: {"ticket-template.json": {...}} or array: ["file1", "file2"]
       if (Array.isArray(raw)) {
         files = raw;
       } else if (typeof raw === "object" && raw !== null) {
@@ -29,7 +29,7 @@
         files = [];
       }
     } catch (e) {
-      showToast("Bellek sablonlari yuklenemedi: " + e.message, "error");
+      showToast("Failed to load memory templates: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -38,7 +38,7 @@
   function selectFile(fileObj) {
     const filename = fileObj.name || fileObj;
     selectedFile = filename;
-    // onMount'ta tum data yukleniyor — files state'indeki mevcut data'yi kullan
+    // All data is loaded in onMount — use existing data from files state
     if (fileObj.data !== undefined) {
       content = typeof fileObj.data === "string" ? fileObj.data : JSON.stringify(fileObj.data, null, 2);
     } else {
@@ -51,20 +51,20 @@
     if (!selectedFile) return;
     try {
       await api.put("admin/agent/memory/" + encodeURIComponent(selectedFile), { content });
-      showToast(selectedFile + " kaydedildi", "success");
+      showToast(selectedFile + " saved", "success");
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>Bellek Sablonlari</h1><p>Hafiza dosya sablonlari</p></div>
-  <Button onclick={save} variant="primary" size="sm" disabled={!selectedFile}>Kaydet</Button>
+  <div><h1>Memory Templates</h1><p>Memory file templates</p></div>
+  <Button onclick={save} variant="primary" size="sm" disabled={!selectedFile}>Save</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="split-layout">
     <div class="file-list">
@@ -75,7 +75,7 @@
           {f.name || f}
         </div>
       {:else}
-        <div class="empty-list">Dosya yok</div>
+        <div class="empty-list">No files</div>
       {/each}
     </div>
     <div class="editor-panel">
@@ -83,14 +83,14 @@
         <div class="editor-toolbar">
           <span class="editor-filename">{selectedFile}</span>
           {#if jsonValid === true}
-            <span class="json-badge valid">JSON Gecerli</span>
+            <span class="json-badge valid">JSON Valid</span>
           {:else if jsonValid === false}
-            <span class="json-badge invalid">JSON Hatali</span>
+            <span class="json-badge invalid">JSON Invalid</span>
           {/if}
         </div>
         <textarea class="mono-editor" bind:value={content} spellcheck="false" oninput={() => checkJson(content)}></textarea>
       {:else}
-        <div class="no-file">Bir sablon secin</div>
+        <div class="no-file">Select a template</div>
       {/if}
     </div>
   </div>

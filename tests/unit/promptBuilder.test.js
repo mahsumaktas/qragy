@@ -76,7 +76,7 @@ describe("promptBuilder", () => {
       const prompt = builder.buildSystemPrompt(DEFAULT_MEMORY, DEFAULT_CONTEXT, bigResults);
 
       // RAG bolumunu prompt icerisinden cikart
-      const ragStart = prompt.indexOf("## Bilgi Taban");
+      const ragStart = prompt.indexOf("## Knowledge Base");
       expect(ragStart).toBeGreaterThan(-1);
 
       // RAG section'dan sonraki part boundary'yi bul
@@ -134,19 +134,19 @@ describe("promptBuilder", () => {
     it("includes loop warning", () => {
       const ctx = { ...DEFAULT_CONTEXT, loopDetected: true, loopRepeatCount: 3 };
       const prompt = builder.buildSystemPrompt(DEFAULT_MEMORY, ctx, [], {});
-      expect(prompt).toContain("KONUSMA DONGUSU TESPIT EDILDI");
+      expect(prompt).toContain("CONVERSATION LOOP DETECTED");
     });
 
     it("includes turn limit warning", () => {
       const ctx = { ...DEFAULT_CONTEXT, turnLimitReached: true, turnCount: 8 };
       const prompt = builder.buildSystemPrompt(DEFAULT_MEMORY, ctx, [], {});
-      expect(prompt).toContain("KONUSMA UZUN SUREDIR DEVAM EDIYOR");
+      expect(prompt).toContain("CONVERSATION HAS BEEN GOING ON FOR A LONG TIME");
     });
 
     it("does NOT include turn limit warning when escalation already triggered", () => {
       const ctx = { ...DEFAULT_CONTEXT, turnLimitReached: true, turnCount: 8, escalationTriggered: true, escalationReason: "test" };
       const prompt = builder.buildSystemPrompt(DEFAULT_MEMORY, ctx, [], {});
-      expect(prompt).not.toContain("KONUSMA UZUN SUREDIR DEVAM EDIYOR");
+      expect(prompt).not.toContain("CONVERSATION HAS BEEN GOING ON FOR A LONG TIME");
     });
   });
 });

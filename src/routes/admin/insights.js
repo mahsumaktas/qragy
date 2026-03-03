@@ -92,7 +92,7 @@ function mount(app, deps) {
   app.post("/api/admin/auto-faq/generate", requireAdminAccess, async (_req, res) => {
     const providerCfg = getProviderConfig();
     if (!providerCfg.apiKey && providerCfg.provider !== "ollama") {
-      return res.status(400).json({ error: "LLM API key gerekli." });
+      return res.status(400).json({ error: "LLM API key is required." });
     }
 
     const db = loadTicketsDb();
@@ -101,7 +101,7 @@ function mount(app, deps) {
       .slice(-10);
 
     if (!resolved.length) {
-      return res.json({ ok: true, generated: 0, message: "Uygun cozulmus ticket bulunamadi." });
+      return res.json({ ok: true, generated: 0, message: "No eligible resolved tickets found." });
     }
 
     const data = loadSuggestedFAQs();
@@ -109,13 +109,13 @@ function mount(app, deps) {
 
     for (const ticket of resolved.slice(0, 5)) {
       const chatText = ticket.chatHistory
-        .map(m => `${m.role === "user" ? "Kullanici" : "Bot"}: ${(m.content || "").slice(0, 300)}`)
+        .map(m => `${m.role === "user" ? "User" : "Bot"}: ${(m.content || "").slice(0, 300)}`)
         .join("\n");
 
       try {
         const result = await callLLM(
           [{ role: "user", parts: [{ text: chatText }] }],
-          'Bu konusma gecmisinden bir FAQ Q&A cifti olustur. Format: {"question":"...", "answer":"..."}. Turkce yaz. Sadece JSON yaz.',
+          'Create a FAQ Q&A pair from this conversation history. Format: {"question":"...", "answer":"..."}. Respond with JSON only.',
           256
         );
         const reply = (result.reply || "").trim();
@@ -151,7 +151,7 @@ function mount(app, deps) {
   app.post("/api/admin/auto-faq/:id/approve", requireAdminAccess, async (req, res) => {
     const data = loadSuggestedFAQs();
     const faq = data.faqs.find(f => f.id === req.params.id);
-    if (!faq) return res.status(404).json({ error: "FAQ bulunamadi." });
+    if (!faq) return res.status(404).json({ error: "FAQ not found." });
 
     const rows = loadCSVData();
     rows.push({ question: faq.question, answer: faq.answer, source: "auto-faq" });
@@ -169,7 +169,7 @@ function mount(app, deps) {
   app.post("/api/admin/auto-faq/:id/reject", requireAdminAccess, (req, res) => {
     const data = loadSuggestedFAQs();
     const faq = data.faqs.find(f => f.id === req.params.id);
-    if (!faq) return res.status(404).json({ error: "FAQ bulunamadi." });
+    if (!faq) return res.status(404).json({ error: "FAQ not found." });
     faq.status = "rejected";
     saveSuggestedFAQs(data);
     return res.json({ ok: true });

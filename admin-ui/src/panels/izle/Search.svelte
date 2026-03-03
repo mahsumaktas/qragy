@@ -20,13 +20,13 @@
   let debounceTimer;
 
   const STATUSES = [
-    { value: "", label: "Tumu" },
-    { value: "handoff_pending", label: "Aktarim Bekleyen" },
-    { value: "queued_after_hours", label: "Mesai Disi" },
-    { value: "handoff_success", label: "Basarili" },
-    { value: "handoff_failed", label: "Basarisiz" },
-    { value: "handoff_parent_posted", label: "Parent Aktarim" },
-    { value: "handoff_opened_no_summary", label: "Ozetsiz" },
+    { value: "", label: "All" },
+    { value: "handoff_pending", label: "Handoff Pending" },
+    { value: "queued_after_hours", label: "After Hours" },
+    { value: "handoff_success", label: "Successful" },
+    { value: "handoff_failed", label: "Failed" },
+    { value: "handoff_parent_posted", label: "Parent Handoff" },
+    { value: "handoff_opened_no_summary", label: "No Summary" },
   ];
 
   const statusColors = {
@@ -53,7 +53,7 @@
       tickets = res.tickets || [];
       total = res.total || 0;
     } catch (e) {
-      showToast("Arama hatasi: " + e.message, "error");
+      showToast("Search error: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -69,7 +69,7 @@
       const res = await api.get("admin/tickets/" + encodeURIComponent(ticketId));
       selectedTicket = res.ticket || res;
     } catch (e) {
-      showToast("Ticket yuklenemedi: " + e.message, "error");
+      showToast("Failed to load ticket: " + e.message, "error");
     }
   }
 
@@ -89,11 +89,11 @@
     if (!assignInput.trim()) return;
     try {
       await api.put("admin/tickets/" + encodeURIComponent(selectedTicket.id) + "/assign", { assignedTo: assignInput.trim() });
-      showToast("Atandi: " + assignInput.trim(), "success");
+      showToast("Assigned: " + assignInput.trim(), "success");
       assignInput = "";
       await reloadTicket(selectedTicket.id);
     } catch (e) {
-      showToast("Atama hatasi: " + e.message, "error");
+      showToast("Assignment error: " + e.message, "error");
     }
   }
 
@@ -101,11 +101,11 @@
     if (!priorityInput) return;
     try {
       await api.put("admin/tickets/" + encodeURIComponent(selectedTicket.id) + "/priority", { priority: priorityInput });
-      showToast("Oncelik degistirildi: " + priorityInput, "success");
+      showToast("Priority changed: " + priorityInput, "success");
       priorityInput = "";
       await reloadTicket(selectedTicket.id);
     } catch (e) {
-      showToast("Oncelik hatasi: " + e.message, "error");
+      showToast("Priority error: " + e.message, "error");
     }
   }
 
@@ -113,11 +113,11 @@
     if (!noteInput.trim()) return;
     try {
       await api.post("admin/tickets/" + encodeURIComponent(selectedTicket.id) + "/notes", { note: noteInput.trim() });
-      showToast("Not eklendi", "success");
+      showToast("Note added", "success");
       noteInput = "";
       await reloadTicket(selectedTicket.id);
     } catch (e) {
-      showToast("Not hatasi: " + e.message, "error");
+      showToast("Note error: " + e.message, "error");
     }
   }
 
@@ -130,11 +130,11 @@
 
 <div class="page-header">
   <div>
-    <h1>Arama</h1>
-    <p>Ticket ara ve filtrele ({total} sonuc)</p>
+    <h1>Search</h1>
+    <p>Search and filter tickets ({total} results)</p>
   </div>
   <div class="header-actions">
-    <Button onclick={exportCsv} variant="ghost" size="sm">CSV Indir</Button>
+    <Button onclick={exportCsv} variant="ghost" size="sm">Download CSV</Button>
   </div>
 </div>
 
@@ -142,7 +142,7 @@
   <input
     class="input search-input"
     type="text"
-    placeholder="ID, isim, ozet, telefon ara..."
+    placeholder="Search ID, name, summary, phone..."
     bind:value={searchQuery}
     oninput={handleSearch}
   />
@@ -152,7 +152,7 @@
     {/each}
   </select>
   <select class="select" bind:value={sourceFilter} onchange={loadTickets}>
-    <option value="">Tum Kaynaklar</option>
+    <option value="">All Sources</option>
     <option value="web">Web</option>
     <option value="whatsapp">WhatsApp</option>
     <option value="zendesk">Zendesk</option>
@@ -166,67 +166,67 @@
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Aranıyor..." />
+  <LoadingSpinner message="Searching..." />
 {:else if selectedTicket}
   <div class="detail-view">
-    <Button onclick={() => (selectedTicket = null)} variant="ghost" size="sm">← Listeye Don</Button>
+    <Button onclick={() => (selectedTicket = null)} variant="ghost" size="sm">← Back to List</Button>
     <div class="detail-header">
       <h2>{selectedTicket.id}</h2>
       <Badge variant={statusColors[selectedTicket.status] || "gray"}>{selectedTicket.status?.replace(/_/g, " ")}</Badge>
     </div>
     <div class="ticket-actions">
       <div class="action-group">
-        <label>Atama</label>
+        <label>Assign</label>
         <div class="action-row">
-          <input class="input action-input" type="text" placeholder="Temsilci adi" bind:value={assignInput} />
-          <Button onclick={assignTicket} variant="primary" size="sm">Ata</Button>
+          <input class="input action-input" type="text" placeholder="Agent name" bind:value={assignInput} />
+          <Button onclick={assignTicket} variant="primary" size="sm">Assign</Button>
         </div>
       </div>
       <div class="action-group">
-        <label>Oncelik</label>
+        <label>Priority</label>
         <div class="action-row">
           <select class="select" bind:value={priorityInput}>
-            <option value="">Sec...</option>
-            <option value="low">Dusuk</option>
+            <option value="">Select...</option>
+            <option value="low">Low</option>
             <option value="normal">Normal</option>
-            <option value="high">Yuksek</option>
+            <option value="high">High</option>
           </select>
-          <Button onclick={changePriority} variant="primary" size="sm">Degistir</Button>
+          <Button onclick={changePriority} variant="primary" size="sm">Change</Button>
         </div>
       </div>
       <div class="action-group">
-        <label>Not Ekle</label>
+        <label>Add Note</label>
         <div class="action-row">
-          <textarea class="input action-textarea" placeholder="Dahili not..." bind:value={noteInput} rows="2"></textarea>
-          <Button onclick={addNote} variant="primary" size="sm">Ekle</Button>
+          <textarea class="input action-textarea" placeholder="Internal note..." bind:value={noteInput} rows="2"></textarea>
+          <Button onclick={addNote} variant="primary" size="sm">Add</Button>
         </div>
       </div>
     </div>
     <div class="detail-grid">
       <div class="info-card">
-        <h3>Bilgiler</h3>
-        <div class="info-row"><span>Sube Kodu</span><span>{selectedTicket.branchCode || "-"}</span></div>
-        <div class="info-row"><span>Firma</span><span>{selectedTicket.companyName || "-"}</span></div>
-        <div class="info-row"><span>Ad Soyad</span><span>{selectedTicket.fullName || "-"}</span></div>
-        <div class="info-row"><span>Telefon</span><span>{selectedTicket.phone || "-"}</span></div>
-        <div class="info-row"><span>Kaynak</span><span>{selectedTicket.source || "-"}</span></div>
-        <div class="info-row"><span>Oncelik</span><span>{selectedTicket.priority || "normal"}</span></div>
-        <div class="info-row"><span>Atanan</span><span>{selectedTicket.assignedTo || "-"}</span></div>
-        <div class="info-row"><span>Olusturma</span><span>{fmtDate(selectedTicket.createdAt)}</span></div>
-        <div class="info-row"><span>Ozet</span><span>{selectedTicket.issueSummary || "-"}</span></div>
+        <h3>Details</h3>
+        <div class="info-row"><span>Branch Code</span><span>{selectedTicket.branchCode || "-"}</span></div>
+        <div class="info-row"><span>Company</span><span>{selectedTicket.companyName || "-"}</span></div>
+        <div class="info-row"><span>Full Name</span><span>{selectedTicket.fullName || "-"}</span></div>
+        <div class="info-row"><span>Phone</span><span>{selectedTicket.phone || "-"}</span></div>
+        <div class="info-row"><span>Source</span><span>{selectedTicket.source || "-"}</span></div>
+        <div class="info-row"><span>Priority</span><span>{selectedTicket.priority || "normal"}</span></div>
+        <div class="info-row"><span>Assigned To</span><span>{selectedTicket.assignedTo || "-"}</span></div>
+        <div class="info-row"><span>Created</span><span>{fmtDate(selectedTicket.createdAt)}</span></div>
+        <div class="info-row"><span>Summary</span><span>{selectedTicket.issueSummary || "-"}</span></div>
       </div>
       <div class="chat-card">
-        <h3>Sohbet Gecmisi</h3>
+        <h3>Chat History</h3>
         {#each selectedTicket.chatHistory || [] as msg}
           <ChatBubble sender={msg.role === "user" ? "user" : "bot"} message={msg.content || ""} />
         {:else}
-          <p class="no-msg">Mesaj yok</p>
+          <p class="no-msg">No messages</p>
         {/each}
       </div>
     </div>
     {#if selectedTicket.internalNotes?.length}
       <div class="info-card">
-        <h3>Notlar</h3>
+        <h3>Notes</h3>
         {#each selectedTicket.internalNotes as note}
           <div class="note-item">
             <span class="note-meta">{note.author} &middot; {fmtDate(note.at)}</span>
@@ -242,12 +242,12 @@
       <thead>
         <tr>
           <th>ID</th>
-          <th>Durum</th>
-          <th>Oncelik</th>
-          <th>Sube</th>
-          <th>Ozet</th>
-          <th>Kaynak</th>
-          <th>Tarih</th>
+          <th>Status</th>
+          <th>Priority</th>
+          <th>Branch</th>
+          <th>Summary</th>
+          <th>Source</th>
+          <th>Date</th>
           <th></th>
         </tr>
       </thead>
@@ -265,10 +265,10 @@
             <td>{truncate(t.issueSummary || "", 40)}</td>
             <td>{t.source || "web"}</td>
             <td>{fmtDate(t.createdAt)}</td>
-            <td><Button onclick={() => openTicket(t.id)} variant="ghost" size="sm">Ac</Button></td>
+            <td><Button onclick={() => openTicket(t.id)} variant="ghost" size="sm">Open</Button></td>
           </tr>
         {:else}
-          <tr><td colspan="8" class="empty-row">Sonuc bulunamadi</td></tr>
+          <tr><td colspan="8" class="empty-row">No results found</td></tr>
         {/each}
       </tbody>
     </table>

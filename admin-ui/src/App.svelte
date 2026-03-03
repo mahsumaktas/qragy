@@ -53,7 +53,7 @@
     <div class="login-card">
       <div class="login-logo">Q</div>
       <h2>Qragy Admin</h2>
-      <p>Devam etmek icin admin token girin.</p>
+      <p>Enter admin token to continue.</p>
       <input
         type="password"
         class="login-input"
@@ -74,7 +74,7 @@
             window.location.reload();
           }
         }}
-      >Giris Yap</button>
+      >Log In</button>
     </div>
   </div>
 {:else}
@@ -132,8 +132,8 @@
       <div class="coming-soon-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
       </div>
-      <h2>Yapilandiriliyor</h2>
-      <p><strong>{panel}</strong> paneli henuz hazir degil.</p>
+      <h2>Under Construction</h2>
+      <p>The <strong>{panel}</strong> panel is not ready yet.</p>
     </div>
   {/if}
 </Shell>

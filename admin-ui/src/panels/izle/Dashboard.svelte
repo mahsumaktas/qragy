@@ -21,7 +21,7 @@
       summary = sum;
     } catch (e) {
       error = e.message;
-      showToast("Dashboard yuklenemedi: " + e.message, "error");
+      showToast("Failed to load dashboard: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -43,35 +43,35 @@
 <div class="page-header">
   <div>
     <h1>Dashboard</h1>
-    <p>Sistem genel bakis</p>
+    <p>System overview</p>
   </div>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else if error}
-  <div class="error-state">Hata: {error}</div>
+  <div class="error-state">Error: {error}</div>
 {:else}
   <div class="kpi-grid">
     <KpiCard
-      label="Bugun Sohbet"
+      label="Today's Chats"
       value={stats?.today?.chats ?? 0}
-      sub="Cozum: %{stats?.today?.resolutionRate ?? 0}"
+      sub="Resolution: %{stats?.today?.resolutionRate ?? 0}"
     />
     <KpiCard
-      label="Haftalik Sohbet"
+      label="Weekly Chats"
       value={stats?.thisWeek?.chats ?? 0}
       sub={trendArrow(stats?.trends?.weeklyChats)}
       trend={stats?.trends?.weeklyChats > 0 ? "up" : stats?.trends?.weeklyChats < 0 ? "down" : ""}
     />
     <KpiCard
-      label="Haftalik CSAT"
+      label="Weekly CSAT"
       value={(stats?.thisWeek?.csatAvg ?? 0).toFixed(1) + "/5"}
       sub={trendArrow(stats?.trends?.weeklyCsat)}
       trend={stats?.trends?.weeklyCsat > 0 ? "up" : stats?.trends?.weeklyCsat < 0 ? "down" : ""}
     />
     <KpiCard
-      label="Aylik Cozum"
+      label="Monthly Resolution"
       value="%{stats?.thisMonth?.resolutionRate ?? 0}"
       sub={trendArrow(stats?.trends?.monthlyChats)}
     />
@@ -80,14 +80,14 @@
   {#if summary?.summary}
     <div class="grid-2">
       <div class="card">
-        <h2>Ticket Durumu</h2>
+        <h2>Ticket Status</h2>
         <div class="status-grid">
           <div class="status-item">
-            <span class="status-label">Toplam</span>
+            <span class="status-label">Total</span>
             <span class="status-val">{summary.summary.total ?? 0}</span>
           </div>
           <div class="status-item">
-            <span class="status-label">Son 24s</span>
+            <span class="status-label">Last 24h</span>
             <span class="status-val">{summary.summary.last24h ?? 0}</span>
           </div>
           {#each Object.entries(summary.summary.byStatus || {}) as [key, val]}
@@ -101,7 +101,7 @@
 
       {#if topTopics.length}
         <div class="card">
-          <h2>Haftalik Populer Konular</h2>
+          <h2>Weekly Popular Topics</h2>
           <BarChart items={topTopics} />
         </div>
       {/if}

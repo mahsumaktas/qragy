@@ -52,22 +52,22 @@ function validateOutput(reply, systemPromptFragments = []) {
   return { safe: true };
 }
 
-const GENERIC_REPLY = "Size teknik destek konusunda yardimci olmak icin buradayim. Nasil yardimci olabilirim?";
+const GENERIC_REPLY = "I'm here to help you with technical support. How can I assist you?";
 
 // ── LLM-based Relevance Guardrail ─────────────────────────────────────
 const RELEVANCE_SYSTEM_PROMPT = [
-  "Sen musteri destek sistemi icin ilgililik kontrol modulusun.",
-  "Kullanicinin mesaji teknik destek veya musteri hizmetleri ile ilgili mi belirle.",
+  "You are a relevance check module for a customer support system.",
+  "Determine whether the user's message is related to technical support or customer service.",
   "",
-  "ILGILI: Yazilim/sistem sorunu, hesap sorunu, sifre, yazici, rapor, baglanti, iletisim bilgisi, selamlama, vedalasmalar, temsilci istegi, onay/ret (evet/hayir), kisa sayisal kodlar (sube kodu olabilir), firma islemleri (sefer, bilet, fatura, guzergah, mola, fiyat, tarife, iade, iptal vb), donanim sorunlari (terminal, kart okuyucu, surucu karti, validasyon cihazi, POS, HGS, OGS), kullanici yonetimi (yetki, hesap, kullanici ekleme/silme), yedekleme, performans.",
-  "ILGISIZ: Siyaset, spor, genel kultur, matematik, yaratici yazim, AI/model hakkinda sorular, tamamen alakasiz konular.",
+  "RELEVANT: Software/system issues, account issues, password reset, login problems, printer issues, reports, connectivity, contact information, greetings, farewells, agent request, confirmation/rejection (yes/no), short alphanumeric codes (could be branch code), billing and invoicing, subscriptions, dashboard, user management (permissions, adding/removing users), integrations, API issues, data import/export, backup, performance, notifications, settings.",
+  "IRRELEVANT: Politics, sports, general knowledge, math, creative writing, AI/model questions, completely unrelated topics.",
   "",
-  'Sadece JSON cevap ver: {"relevant":true} veya {"relevant":false,"reason":"kisa aciklama"}',
+  'Respond with JSON only: {"relevant":true} or {"relevant":false,"reason":"brief explanation"}',
 ].join("\n");
 
 /**
- * LLM-based relevance check — off-topic mesajlari ucuz model ile yakala.
- * Fail-open: LLM hatasi veya parse hatasi durumunda mesaj gecerli sayilir.
+ * LLM-based relevance check — catches off-topic messages with a cheap model.
+ * Fail-open: if LLM or parse errors occur, the message is considered relevant.
  * @param {string} userMessage
  * @param {Function} callLLMFn - callLLM(messages, systemPrompt, maxTokens, options)
  * @returns {Promise<{relevant: boolean, reason: string}>}

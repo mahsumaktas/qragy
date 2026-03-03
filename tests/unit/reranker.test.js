@@ -161,7 +161,7 @@ describe("Reranker", () => {
     expect(result[0].question).toContain("Sifre");
     expect(mockLogger.warn).toHaveBeenCalledWith(
       "reranker",
-      "Cohere basarisiz, LLM fallback",
+      "Cohere failed, LLM fallback",
       expect.objectContaining({ error: expect.any(String) })
     );
 

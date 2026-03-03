@@ -31,7 +31,7 @@ describe("formatCitations", () => {
     expect(formatCitations([])).toEqual([]);
   });
 
-  it("handles missing source — defaults to 'Bilgi Tabani'", () => {
+  it("handles missing source — defaults to 'Knowledge Base'", () => {
     const results = [
       { question: "Rapor nasil alinir?", answer: "Raporlar > Yeni Rapor" },
       { question: "Baglanti sorunu", answer: "Ag ayarlarini kontrol edin", source: "" },
@@ -39,23 +39,23 @@ describe("formatCitations", () => {
 
     const citations = formatCitations(results);
 
-    expect(citations[0].source).toBe("Bilgi Tabani");
-    expect(citations[1].source).toBe("Bilgi Tabani");
+    expect(citations[0].source).toBe("Knowledge Base");
+    expect(citations[1].source).toBe("Knowledge Base");
   });
 
   it("handles multiple different sources", () => {
     const results = [
-      { question: "S1", answer: "A1", source: "SSS" },
-      { question: "S2", answer: "A2", source: "Teknik Destek" },
-      { question: "S3", answer: "A3", source: "Kullanici Kilavuzu" },
+      { question: "S1", answer: "A1", source: "FAQ" },
+      { question: "S2", answer: "A2", source: "Technical Support" },
+      { question: "S3", answer: "A3", source: "User Guide" },
     ];
 
     const citations = formatCitations(results);
 
     expect(citations).toHaveLength(3);
-    expect(citations[0].source).toBe("SSS");
-    expect(citations[1].source).toBe("Teknik Destek");
-    expect(citations[2].source).toBe("Kullanici Kilavuzu");
+    expect(citations[0].source).toBe("FAQ");
+    expect(citations[1].source).toBe("Technical Support");
+    expect(citations[2].source).toBe("User Guide");
     // Index'ler dogru siralanmis olmali
     expect(citations.map(c => c.index)).toEqual([1, 2, 3]);
   });

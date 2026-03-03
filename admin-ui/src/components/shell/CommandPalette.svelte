@@ -64,12 +64,12 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="cmd-overlay" onclick={handleOverlayClick}>
-    <div class="cmd-box" role="dialog" aria-label="Hizli arama">
+    <div class="cmd-box" role="dialog" aria-label="Quick search">
       <input
         bind:this={inputRef}
         bind:value={query}
         class="cmd-input"
-        placeholder="Panel veya islem ara..."
+        placeholder="Search panels or actions..."
         onkeydown={handleKeydown}
       />
       <div class="cmd-results">
@@ -88,7 +88,7 @@
           </div>
         {/each}
         {#if filtered.length === 0}
-          <div class="cmd-empty">Sonuc bulunamadi</div>
+          <div class="cmd-empty">No results found</div>
         {/if}
       </div>
     </div>

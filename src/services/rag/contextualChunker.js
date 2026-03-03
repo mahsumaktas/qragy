@@ -1,32 +1,32 @@
 "use strict";
 
 /**
- * Contextual Chunker — Anthropic's Contextual Retrieval yaklasimi
+ * Contextual Chunker — Anthropic's Contextual Retrieval approach
  *
- * INDEXING TIME'da her chunk icin LLM'den 1-2 cumlelik baglam uretir
- * ve chunk'in basina ekler. Bu sayede retrieval kalitesi ~%67 artar.
- * Runtime maliyeti SIFIR — tum is indexing sirasinda yapilir.
+ * At INDEXING TIME, generates 1-2 sentence context from LLM for each chunk
+ * and prepends it to the chunk. This improves retrieval quality by ~67%.
+ * Zero RUNTIME cost — all work happens during indexing.
  */
 
 const CONTEXT_SYSTEM_PROMPT = [
-  "Sen bir bilgi bankasi baglam yazarisin.",
-  "Sana bir dokumandan alinmis bir metin parcasi verilecek.",
-  "Kisa baglam cumlesi yaz — bu metin parcasinin ne hakkinda oldugunu 1-2 cumleyle ozetle.",
-  "SADECE baglam cumlesini yaz, baska bir sey ekleme.",
+  "You are a knowledge base context writer.",
+  "You will be given a text passage extracted from a document.",
+  "Write a brief context sentence — summarize what this text passage is about in 1-2 sentences.",
+  "ONLY write the context sentence, do not add anything else.",
 ].join("\n");
 
 const CONTEXT_MAX_TOKENS = 128;
 
 function buildContextPrompt(originalContent, documentTitle) {
   return [
-    `Dokuman: "${documentTitle}"`,
+    `Document: "${documentTitle}"`,
     "",
-    `Metin parcasi:`,
+    `Text passage:`,
     `"""`,
     originalContent,
     `"""`,
     "",
-    "Bu metin parcasi icin kisa bir baglam cumlesi yaz:",
+    "Write a brief context sentence for this text passage:",
   ].join("\n");
 }
 
@@ -37,7 +37,7 @@ function buildOriginalContent(chunk) {
   if (question && answer) {
     return `${question}: ${answer}`;
   }
-  // question bos olabilir — sadece answer varsa onu kullan
+  // question may be empty — use answer if available
   return answer || question;
 }
 
@@ -65,7 +65,7 @@ function createContextualChunker(deps) {
 
       const context = (reply || "").trim();
       if (!context) {
-        logger.warn("[ContextualChunker] LLM bos baglam dondurdu, original kullaniliyor");
+        logger.warn("[ContextualChunker] LLM returned empty context, using original");
         return { originalContent, contextualContent: originalContent, enriched: false };
       }
 
@@ -75,7 +75,7 @@ function createContextualChunker(deps) {
         enriched: true,
       };
     } catch (err) {
-      logger.warn(`[ContextualChunker] LLM baglam uretimi basarisiz: ${err.message}`);
+      logger.warn(`[ContextualChunker] LLM context generation failed: ${err.message}`);
       return { originalContent, contextualContent: originalContent, enriched: false };
     }
   }

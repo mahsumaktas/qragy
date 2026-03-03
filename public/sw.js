@@ -57,9 +57,9 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("push", (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || "QRAGY Teknik Destek";
+  const title = data.title || "QRAGY Technical Support";
   const options = {
-    body: data.body || "Yeni bir mesajiniz var.",
+    body: data.body || "You have a new message.",
     icon: "/qragy_logo.jpg",
     badge: "/qragy_logo.jpg",
     tag: "qragy-notification",

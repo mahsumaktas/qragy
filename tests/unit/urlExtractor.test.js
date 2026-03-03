@@ -51,7 +51,7 @@ describe("urlExtractor", () => {
     try {
       const extractor = createUrlExtractor({ logger });
       await expect(extractor.extract("https://example.com/file.pdf"))
-        .rejects.toThrow("Desteklenmeyen icerik tipi");
+        .rejects.toThrow("Unsupported content type");
     } finally {
       globalThis.fetch = originalFetch;
     }

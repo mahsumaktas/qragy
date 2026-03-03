@@ -25,9 +25,9 @@ function createKnowledgeService(deps) {
       const db = await lancedb.connect(lanceDbPath);
       knowledgeTable = await db.openTable("knowledge_qa");
       const rowCount = await knowledgeTable.countRows();
-      logger.info("kb", `Bilgi tabani yuklendi: ${rowCount} kayit`);
+      logger.info("kb", `Knowledge base loaded: ${rowCount} records`);
     } catch (err) {
-      logger.warn("kb", "Bilgi tabani yuklenemedi", err);
+      logger.warn("kb", "Failed to load knowledge base", err);
     }
   }
 
@@ -45,7 +45,7 @@ function createKnowledgeService(deps) {
         const vector = await embedText(row.question + " " + (row.answer || "").slice(0, 200));
         records.push({ question: row.question, answer: row.answer, source: row.source || "", vector });
       } catch (err) {
-        logger.warn("kb", `Embedding hatasi (skip): ${row.question?.slice(0, 40)}`, err);
+        logger.warn("kb", `Embedding error (skipped): ${row.question?.slice(0, 40)}`, err);
       }
     }
 
@@ -57,7 +57,7 @@ function createKnowledgeService(deps) {
     const db = await lancedb.connect(lanceDbPath);
     try { await db.dropTable("knowledge_qa"); } catch (err) { logger.warn("reingest", "dropTable", err); }
     knowledgeTable = await db.createTable("knowledge_qa", records);
-    logger.info("kb", `Bilgi tabani yeniden yuklendi: ${records.length} kayit`);
+    logger.info("kb", `Knowledge base reloaded: ${records.length} records`);
   }
 
   function fullTextSearch(query, topK = 5) {
@@ -130,7 +130,7 @@ function createKnowledgeService(deps) {
           .filter((r) => r._distance <= ragDistanceThreshold)
           .map((r) => ({ question: r.question, answer: r.answer, source: r.source || "", distance: r._distance }));
       } catch (err) {
-        logger.warn("kb", "Bilgi tabani vector arama hatasi", err);
+        logger.warn("kb", "Knowledge base vector search error", err);
       }
     }
 

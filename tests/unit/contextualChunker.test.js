@@ -13,16 +13,16 @@ describe("ContextualChunker", () => {
   }
 
   it("enrichChunk prepends context to chunk text", async () => {
-    const contextSentence = "Bu bilgi yazici kurulumu hakkindadir.";
+    const contextSentence = "This information is about printer setup.";
     const chunker = buildChunker({
       callLLM: async () => ({ reply: contextSentence }),
     });
 
-    const chunk = { question: "Yazici nasil kurulur?", answer: "Ayarlar > Yazicilar > Ekle" };
-    const result = await chunker.enrichChunk(chunk, "Teknik Destek KB");
+    const chunk = { question: "How to set up a printer?", answer: "Settings > Printers > Add" };
+    const result = await chunker.enrichChunk(chunk, "Technical Support KB");
 
     expect(result.enriched).toBe(true);
-    expect(result.originalContent).toBe("Yazici nasil kurulur?: Ayarlar > Yazicilar > Ekle");
+    expect(result.originalContent).toBe("How to set up a printer?: Settings > Printers > Add");
     expect(result.contextualContent).toContain(contextSentence);
     expect(result.contextualContent).toContain(result.originalContent);
     expect(result.contextualContent).toBe(`${contextSentence}\n${result.originalContent}`);

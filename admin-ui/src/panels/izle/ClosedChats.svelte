@@ -21,7 +21,7 @@
       const res = await api.get("admin/conversations");
       conversations = (res.conversations || []).filter((c) => c.status === "closed");
     } catch (e) {
-      showToast("Kapali sohbetler yuklenemedi: " + e.message, "error");
+      showToast("Failed to load closed chats: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -30,24 +30,24 @@
 
 <div class="page-header">
   <div>
-    <h1>Kapali Sohbetler <Badge variant="gray">{conversations.length}</Badge></h1>
-    <p>Kapatilmis sohbet gecmisi</p>
+    <h1>Closed Chats <Badge variant="gray">{conversations.length}</Badge></h1>
+    <p>Closed conversation history</p>
   </div>
-  <Button onclick={loadClosed} variant="ghost" size="sm">Yenile</Button>
+  <Button onclick={loadClosed} variant="ghost" size="sm">Refresh</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else if !selected}
   <div class="card">
     <table>
       <thead>
         <tr>
-          <th>Oturum</th>
-          <th>Mesaj</th>
-          <th>Kaynak</th>
-          <th>Son Mesaj</th>
-          <th>Kapanma</th>
+          <th>Session</th>
+          <th>Messages</th>
+          <th>Source</th>
+          <th>Last Message</th>
+          <th>Closed At</th>
           <th></th>
         </tr>
       </thead>
@@ -60,33 +60,33 @@
             <td>{truncate(conv.lastUserMessage || "", 50)}</td>
             <td>{fmtRelative(conv.updatedAt)}</td>
             <td>
-              <Button onclick={() => (selectedId = conv.sessionId)} variant="ghost" size="sm">Ac</Button>
+              <Button onclick={() => (selectedId = conv.sessionId)} variant="ghost" size="sm">Open</Button>
             </td>
           </tr>
         {:else}
-          <tr><td colspan="6" class="empty-row">Kapali sohbet yok</td></tr>
+          <tr><td colspan="6" class="empty-row">No closed chats</td></tr>
         {/each}
       </tbody>
     </table>
   </div>
 {:else}
   <div class="detail-view">
-    <Button onclick={() => (selectedId = null)} variant="ghost" size="sm">← Listeye Don</Button>
+    <Button onclick={() => (selectedId = null)} variant="ghost" size="sm">← Back to List</Button>
 
     <div class="detail-header">
       <h2>{selected.sessionId?.slice(-8)}</h2>
-      <Badge variant="gray">kapali</Badge>
+      <Badge variant="gray">closed</Badge>
     </div>
 
     <div class="detail-meta">
-      <span>Kaynak: {selected.source || "web"}</span>
-      <span>{selected.messageCount} mesaj</span>
+      <span>Source: {selected.source || "web"}</span>
+      <span>{selected.messageCount} messages</span>
       <span>{fmtRelative(selected.createdAt)}</span>
     </div>
 
     {#if selected.memory && Object.keys(selected.memory).length}
       <div class="memory-card">
-        <h3>Hafiza</h3>
+        <h3>Memory</h3>
         {#each Object.entries(selected.memory) as [k, v]}
           {#if v}
             <div class="memory-row">
@@ -99,11 +99,11 @@
     {/if}
 
     <div class="chat-card">
-      <h3>Mesajlar</h3>
+      <h3>Messages</h3>
       {#each selected.chatHistory || [] as msg}
         <ChatBubble sender={msg.role === "user" ? "user" : "bot"} message={msg.content || ""} />
       {:else}
-        <p class="no-msg">Mesaj gecmisi yok</p>
+        <p class="no-msg">No message history</p>
       {/each}
     </div>
   </div>

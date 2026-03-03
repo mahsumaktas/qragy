@@ -34,24 +34,24 @@ function mount(app, deps) {
   // ── Agent Files: Read ───────────────────────────────────────────────────
   app.get("/api/admin/agent/files/:filename", requireAdminAccess, (req, res) => {
     const filename = req.params.filename;
-    if (!isValidFilename(filename)) return res.status(400).json({ error: "Gecersiz dosya adi." });
+    if (!isValidFilename(filename)) return res.status(400).json({ error: "Invalid filename." });
 
     const filePath = path.join(AGENT_DIR, filename);
     try {
       const content = fs.readFileSync(filePath, "utf8");
       return res.json({ ok: true, filename, content });
     } catch (_err) {
-      return res.status(404).json({ error: "Dosya bulunamadi." });
+      return res.status(404).json({ error: "File not found." });
     }
   });
 
   // ── Agent Files: Save ───────────────────────────────────────────────────
   app.put("/api/admin/agent/files/:filename", requireAdminAccess, (req, res) => {
     const filename = req.params.filename;
-    if (!isValidFilename(filename)) return res.status(400).json({ error: "Gecersiz dosya adi." });
+    if (!isValidFilename(filename)) return res.status(400).json({ error: "Invalid filename." });
 
     const { content } = req.body || {};
-    if (typeof content !== "string") return res.status(400).json({ error: "content zorunludur." });
+    if (typeof content !== "string") return res.status(400).json({ error: "content is required." });
 
     const filePath = path.join(AGENT_DIR, filename);
     try {
@@ -84,7 +84,7 @@ function mount(app, deps) {
       const indexPath = path.join(TOPICS_DIR, "_index.json");
       const index = readJsonFileSafe(indexPath, { topics: [] });
       const topicIdx = index.topics.findIndex(t => t.id === req.params.topicId);
-      if (topicIdx < 0) return res.status(404).json({ error: "Konu bulunamadi." });
+      if (topicIdx < 0) return res.status(404).json({ error: "Topic not found." });
 
       const topic = index.topics[topicIdx];
       if (title !== undefined) topic.title = title;
@@ -111,12 +111,12 @@ function mount(app, deps) {
   app.post("/api/admin/agent/topics", requireAdminAccess, (req, res) => {
     try {
       const { id, title, keywords, requiresEscalation, canResolveDirectly, requiredInfo, content } = req.body || {};
-      if (!id || !title) return res.status(400).json({ error: "id ve title zorunludur." });
-      if (!/^[a-z0-9-]+$/.test(id)) return res.status(400).json({ error: "Gecersiz konu ID formati." });
+      if (!id || !title) return res.status(400).json({ error: "id and title are required." });
+      if (!/^[a-z0-9-]+$/.test(id)) return res.status(400).json({ error: "Invalid topic ID format." });
 
       const indexPath = path.join(TOPICS_DIR, "_index.json");
       const index = readJsonFileSafe(indexPath, { topics: [] });
-      if (index.topics.find(t => t.id === id)) return res.status(400).json({ error: "Bu ID zaten var." });
+      if (index.topics.find(t => t.id === id)) return res.status(400).json({ error: "This ID already exists." });
 
       const filename = `${id}.md`;
       const newTopic = {
@@ -146,7 +146,7 @@ function mount(app, deps) {
       const indexPath = path.join(TOPICS_DIR, "_index.json");
       const index = readJsonFileSafe(indexPath, { topics: [] });
       const topicIdx = index.topics.findIndex(t => t.id === req.params.topicId);
-      if (topicIdx < 0) return res.status(404).json({ error: "Konu bulunamadi." });
+      if (topicIdx < 0) return res.status(404).json({ error: "Topic not found." });
 
       const topic = index.topics[topicIdx];
       index.topics.splice(topicIdx, 1);
@@ -167,15 +167,15 @@ function mount(app, deps) {
   app.post("/api/admin/topics/suggest-keywords", requireAdminAccess, async (req, res) => {
     const { title } = req.body || {};
     if (!title || typeof title !== "string") {
-      return res.status(400).json({ error: "title zorunludur." });
+      return res.status(400).json({ error: "title is required." });
     }
     if (!callLLM) {
-      return res.status(500).json({ error: "LLM servisi yapilandirilmamis." });
+      return res.status(500).json({ error: "LLM service is not configured." });
     }
     try {
       const result = await callLLM(
         [{ role: "user", parts: [{ text: title }] }],
-        "Bir musteri destek konusu icin anahtar kelime onerisi yap. Konu basligini alacaksin. Kullanicilarin bu konuyu nasil sorabilecegini dusun ve 8-12 anahtar kelime/cümle oner. Virgülle ayrilmis tek satir halinde yaz. Sadece anahtar kelimeleri yaz, baska bir sey yazma. Turkce yaz.",
+        "Suggest keywords for a customer support topic. You will receive the topic title. Think about how customers might ask this topic and suggest 8-12 keywords/phrases. Write as a single line separated by commas. Write only the keywords, nothing else.",
         128
       );
       const keywords = (result.reply || "").trim();
@@ -200,13 +200,13 @@ function mount(app, deps) {
   app.put("/api/admin/agent/memory/:filename", requireAdminAccess, (req, res) => {
     const filename = req.params.filename;
     const allowed = ["ticket-template.json", "conversation-schema.json"];
-    if (!allowed.includes(filename)) return res.status(400).json({ error: "Gecersiz dosya adi." });
+    if (!allowed.includes(filename)) return res.status(400).json({ error: "Invalid filename." });
 
     const { content } = req.body || {};
-    if (typeof content !== "string") return res.status(400).json({ error: "content zorunludur." });
+    if (typeof content !== "string") return res.status(400).json({ error: "content is required." });
 
     try { JSON.parse(content); } catch (_err) {
-      return res.status(400).json({ error: "Gecersiz JSON formati." });
+      return res.status(400).json({ error: "Invalid JSON format." });
     }
 
     try {

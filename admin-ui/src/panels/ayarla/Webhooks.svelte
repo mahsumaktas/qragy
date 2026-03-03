@@ -25,7 +25,7 @@
       const res = await api.get("admin/webhooks");
       webhooks = res.webhooks || res || [];
     } catch (e) {
-      showToast("Webhooks yuklenemedi: " + e.message, "error");
+      showToast("Failed to load webhooks: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -51,32 +51,32 @@
       } else {
         await api.post("admin/webhooks", editHook);
       }
-      showToast("Kaydedildi", "success");
+      showToast("Saved", "success");
       editOpen = false;
       await loadWebhooks();
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 
   async function deleteHook(id) {
-    const ok = await showConfirm({ title: "Sil", message: "Bu webhook silinecek.", confirmText: "Sil", danger: true });
+    const ok = await showConfirm({ title: "Delete", message: "This webhook will be deleted.", confirmText: "Delete", danger: true });
     if (!ok) return;
     try {
       await api.delete("admin/webhooks/" + id);
-      showToast("Silindi", "success");
+      showToast("Deleted", "success");
       await loadWebhooks();
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 
   async function testHook(id) {
     try {
       await api.post("admin/webhooks/" + id + "/test", {});
-      showToast("Test gonderildi", "success");
+      showToast("Test sent", "success");
     } catch (e) {
-      showToast("Test hatasi: " + e.message, "error");
+      showToast("Test error: " + e.message, "error");
     }
   }
 
@@ -85,7 +85,7 @@
       await api.put("admin/webhooks/" + (w.id || w._id), { active: !w.active });
       await loadWebhooks();
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 
@@ -100,44 +100,44 @@
 
 <div class="page-header">
   <div><h1>Webhooks</h1><p>{webhooks.length} webhook</p></div>
-  <Button onclick={openNew} variant="primary" size="sm">+ Yeni Webhook</Button>
+  <Button onclick={openNew} variant="primary" size="sm">+ New Webhook</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="card">
     <table>
-      <thead><tr><th>URL</th><th>Eventler</th><th>Durum</th><th></th></tr></thead>
+      <thead><tr><th>URL</th><th>Events</th><th>Status</th><th></th></tr></thead>
       <tbody>
         {#each webhooks as w}
           <tr>
             <td class="mono">{w.url}</td>
             <td>{(w.events || []).join(", ")}</td>
             <td>
-              <button class="status-toggle" class:active={w.active !== false} onclick={() => toggleActive(w)} title={w.active !== false ? "Devre disi birak" : "Etkinlestir"}>
-                <Badge variant={w.active !== false ? "green" : "gray"}>{w.active !== false ? "aktif" : "pasif"}</Badge>
+              <button class="status-toggle" class:active={w.active !== false} onclick={() => toggleActive(w)} title={w.active !== false ? "Disable" : "Enable"}>
+                <Badge variant={w.active !== false ? "green" : "gray"}>{w.active !== false ? "active" : "inactive"}</Badge>
               </button>
             </td>
             <td class="actions">
               <Button onclick={() => testHook(w.id || w._id)} variant="ghost" size="sm">Test</Button>
-              <Button onclick={() => openEdit(w)} variant="ghost" size="sm">Duzenle</Button>
-              <Button onclick={() => deleteHook(w.id || w._id)} variant="ghost" size="sm">Sil</Button>
+              <Button onclick={() => openEdit(w)} variant="ghost" size="sm">Edit</Button>
+              <Button onclick={() => deleteHook(w.id || w._id)} variant="ghost" size="sm">Delete</Button>
             </td>
           </tr>
         {:else}
-          <tr><td colspan="4" class="empty-row">Webhook yok</td></tr>
+          <tr><td colspan="4" class="empty-row">No webhooks</td></tr>
         {/each}
       </tbody>
     </table>
   </div>
 {/if}
 
-<Modal bind:open={editOpen} title={editId ? "Webhook Duzenle" : "Yeni Webhook"}>
+<Modal bind:open={editOpen} title={editId ? "Edit Webhook" : "New Webhook"}>
   <div class="form-group"><span class="lbl">URL</span><input class="input" bind:value={editHook.url} placeholder="https://..." /></div>
-  <div class="form-group"><span class="lbl">Secret</span><input class="input" bind:value={editHook.secret} placeholder="Opsiyonel" /></div>
+  <div class="form-group"><span class="lbl">Secret</span><input class="input" bind:value={editHook.secret} placeholder="Optional" /></div>
   <div class="form-group">
-    <span class="lbl">Eventler</span>
+    <span class="lbl">Events</span>
     <div class="event-checks">
       {#each EVENT_OPTIONS as ev}
         <!-- svelte-ignore a11y_label_has_associated_control -->
@@ -149,8 +149,8 @@
     </div>
   </div>
   <div class="modal-actions">
-    <Button onclick={() => (editOpen = false)} variant="secondary">Iptal</Button>
-    <Button onclick={save} variant="primary">Kaydet</Button>
+    <Button onclick={() => (editOpen = false)} variant="secondary">Cancel</Button>
+    <Button onclick={save} variant="primary">Save</Button>
   </div>
 </Modal>
 

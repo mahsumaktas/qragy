@@ -1,5 +1,5 @@
 <script>
-  let { accept = "", multiple = false, onfiles, label = "Dosya sec veya surukle" } = $props();
+  let { accept = "", multiple = false, onfiles, label = "Select or drag files" } = $props();
   let dragging = $state(false);
   let inputRef;
 

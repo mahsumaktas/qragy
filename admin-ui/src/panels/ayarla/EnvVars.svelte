@@ -17,7 +17,7 @@
       const raw = res.env || res.config || res || {};
       entries = Object.entries(raw).map(([key, value]) => ({ key, value: String(value), masked: MASKED_KEYS.includes(key) }));
     } catch (e) {
-      showToast("Ortam degiskenleri yuklenemedi: " + e.message, "error");
+      showToast("Failed to load environment variables: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -31,25 +31,25 @@
     if (!Object.keys(updates).length) return;
     try {
       await api.put("admin/env", { updates });
-      showToast("Kaydedildi — yeniden baslama gerekebilir", "success");
+      showToast("Saved — restart may be required", "success");
       updates = {};
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>Ortam Degiskenleri</h1><p>Sunucu .env degerleri</p></div>
-  <Button onclick={save} variant="primary" size="sm" disabled={!Object.keys(updates).length}>Kaydet</Button>
+  <div><h1>Environment Variables</h1><p>Server .env values</p></div>
+  <Button onclick={save} variant="primary" size="sm" disabled={!Object.keys(updates).length}>Save</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="card">
     <table>
-      <thead><tr><th>Anahtar</th><th>Deger</th></tr></thead>
+      <thead><tr><th>Key</th><th>Value</th></tr></thead>
       <tbody>
         {#each entries as entry}
           <tr>
@@ -63,7 +63,7 @@
             </td>
           </tr>
         {:else}
-          <tr><td colspan="2" class="empty-row">Degisken yok</td></tr>
+          <tr><td colspan="2" class="empty-row">No variables</td></tr>
         {/each}
       </tbody>
     </table>

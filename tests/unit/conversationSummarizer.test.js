@@ -49,7 +49,7 @@ describe("conversationSummarizer", () => {
     expect(result.summary).toBeTruthy();
     expect(result.summary.length).toBeGreaterThan(20);
     expect(result.trimmedHistory.length).toBe(9); // 1 summary + 8 recent
-    expect(result.trimmedHistory[0].content).toContain("[Konusma ozeti:");
+    expect(result.trimmedHistory[0].content).toContain("[Conversation summary:");
     expect(mockCallLLM).toHaveBeenCalledTimes(1);
   });
 

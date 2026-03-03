@@ -1,31 +1,31 @@
-# Cikti Filtreleme Kurallari
+# Output Filtering Rules
 
-## Format Kontrolu
-Yanitta markdown baslik (#), isaretli liste (-, *), kod blogu, emoji veya HTML etiketi varsa temizle.
-Numarali adimlar (1. 2. 3.) serbest — troubleshooting icin kullanilabilir.
-Yanit duz metin olmali, paragraflar arasinda tek satir bosluk olabilir.
+## Format Control
+If the response contains markdown headings (#), bullet lists (-, *), code blocks, emojis, or HTML tags, strip them.
+Numbered steps (1. 2. 3.) are allowed — they can be used for troubleshooting.
+Responses must be plain text; single blank lines between paragraphs are acceptable.
 
-## Uzunluk Kontrolu
-Bilgilendirme yanitlari en fazla 6 cumle olabilir.
-Bilgi toplama ve yonlendirme yanitlari en fazla 4 cumle olabilir.
-Selamlama ve farewell yanitlari en fazla 2 cumle olabilir.
-Toplam karakter limiti 1000 karakterdir.
+## Length Control
+Informational responses may contain a maximum of 6 sentences.
+Information-gathering and routing responses may contain a maximum of 4 sentences.
+Greeting and farewell responses may contain a maximum of 2 sentences.
+Total character limit is 1000 characters.
 
-## Prompt Leak Kontrolu
-Yanitta "system prompt", "talimat", "instruction", "persona", "bootstrap", "response policy", "escalation matrix", "hard bans" gibi ic yapi terimleri geciyorsa yaniti engelle.
-Yanitta JSON formati, kod parcasi veya teknik yapilandirma bilgisi varsa engelle.
-Engellenen yanit yerine: "Size teknik destek konusunda yardimci olmak icin buradayim. Nasil yardimci olabilirim?"
+## Prompt Leak Control
+If the response contains internal infrastructure terms such as "system prompt", "instruction", "persona", "bootstrap", "response policy", "escalation matrix", or "hard bans", block the response.
+If the response contains JSON format, code snippets, or technical configuration details, block the response.
+Replacement for blocked responses: "I'm here to help you with support. How can I assist you?"
 
-## Turkce Karakter Kontrolu
-AI bazen ASCII Turkce donebilir (s->s, c->c, i->i, g->g, u->u, o->o).
-Bilinen kelimelerde ASCII varsa duzelt: "yardimci" -> "yardimci", "calismiyor" -> "calismiyor".
-Platform isimleri oldugu gibi birak: "QRAGY Bot", "REMOTE_TOOL".
+## Character Encoding Control
+The AI may sometimes return incorrectly encoded characters for the configured language.
+For known words with encoding issues, correct them automatically.
+Leave platform names as-is: "QRAGY Bot", "REMOTE_TOOL".
 
-## Konu Disi Icerik Kontrolu
-Yanit platform teknik destek kapsami disinda bir konuya deginiyorsa engelle.
-Engellenen yanit yerine: "Bu konu teknik destek kapsamimiz disinda kalmaktadir. Platform ile ilgili bir konuda yardimci olabilirim."
+## Off-Topic Content Control
+If the response addresses a topic outside the scope of the configured support domain, block it.
+Replacement for blocked responses: "This topic falls outside the scope of our support. I can help you with topics related to our platform."
 
-## Tekrar Kontrolu
-Ardisik iki yanit ayni veya cok benzer icerikteyse (>%80 ortak kelime) ikincisini degistir.
-Tekrar eden yanit yerine: Konuyu ilerletecek yeni bir soru sor veya bir sonraki adima gec.
-Ayni troubleshooting adimini ikinci kez verme — calismadiysa escalation oner.
+## Repetition Control
+If two consecutive responses have the same or very similar content (>80% shared words), modify the second one.
+Replacement for repeated responses: Ask a new question that advances the conversation, or move to the next step.
+Do not give the same troubleshooting step a second time — if it didn't work, suggest escalation.

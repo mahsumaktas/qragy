@@ -23,7 +23,7 @@ function createGraphQuery(deps) {
     try {
       return await sqliteDb.queryEdgesByEntity(entityName, limit);
     } catch (err) {
-      logger.warn("graphQuery", "Graf sorgu hatasi", err);
+      logger.warn("graphQuery", "Graph query error", err);
       return [];
     }
   }
@@ -51,7 +51,7 @@ function createGraphQuery(deps) {
       charCount += line.length;
     }
 
-    return `--- BILGI GRAFI ---\n${lines.join("\n")}\n---`;
+    return `--- KNOWLEDGE GRAPH ---\n${lines.join("\n")}\n---`;
   }
 
   return { query, formatForPrompt };

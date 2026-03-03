@@ -4,18 +4,18 @@
  * Question Extractor Service
  *
  * Extracts a standalone question from chat history + latest message.
- * Resolves references like "ayni seyi baska sube icin soyle" into
+ * Resolves references like "the same for another branch" into
  * a complete, context-independent question.
  */
 
-const EXTRACTION_PROMPT = `Sen bir soru cikarma asistanisin. Kullanicinin sohbet gecmisini ve son mesajini aliyorsun.
-Gorevion: Son mesaji, sohbet gecmisindeki baglami kullanarak bagimsiz bir soruya donustur.
+const EXTRACTION_PROMPT = `You are a question extraction assistant. You receive the user's chat history and latest message.
+Task: Transform the latest message using the context from chat history into an independent question.
 
-Kurallar:
-- Zamireri ve referanslari coz ("o", "bu", "ayni sey", "orasi" gibi)
-- Sadece cikarilan soruyu dondur, baska bir sey yazma
-- Eger son mesaj zaten bagimsiz bir soruysa, aynen dondur
-- Turkce yaz`;
+Rules:
+- Resolve pronouns and references ("that", "this", "the same thing", "that place", etc.)
+- Return only the extracted question, write nothing else
+- If the latest message is already an independent question, return it as is
+- Use the same language as the original`;
 
 function createQuestionExtractor(deps) {
   const { callLLM, getProviderConfig, logger } = deps;
@@ -28,10 +28,10 @@ function createQuestionExtractor(deps) {
     // Build context from recent history (last 6 messages max)
     const recentHistory = chatHistory.slice(-6);
     const historyText = recentHistory
-      .map(m => `${m.role === "user" ? "Kullanici" : "Bot"}: ${m.content}`)
+      .map(m => `${m.role === "user" ? "User" : "Bot"}: ${m.content}`)
       .join("\n");
 
-    const prompt = `${EXTRACTION_PROMPT}\n\nSohbet Gecmisi:\n${historyText}\n\nSon Mesaj: ${latestMessage}\n\nBagimsiz Soru:`;
+    const prompt = `${EXTRACTION_PROMPT}\n\nChat History:\n${historyText}\n\nLatest Message: ${latestMessage}\n\nIndependent Question:`;
 
     try {
       const providerConfig = getProviderConfig();
@@ -40,14 +40,14 @@ function createQuestionExtractor(deps) {
 
       const extracted = (result.reply || "").trim();
       if (!extracted || extracted.length > latestMessage.length * 3) {
-        logger.info("questionExtractor", "Sanity check basarisiz, orijinal kullaniliyor", {
+        logger.info("questionExtractor", "Sanity check failed, using original", {
           originalLen: latestMessage.length,
           extractedLen: extracted ? extracted.length : 0,
         });
         return latestMessage;
       }
 
-      logger.info("questionExtractor", "Soru cikarildi", {
+      logger.info("questionExtractor", "Question extracted", {
         original: latestMessage.slice(0, 80),
         extracted: extracted.slice(0, 80),
         changed: extracted !== latestMessage,

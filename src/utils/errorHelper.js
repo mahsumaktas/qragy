@@ -1,7 +1,7 @@
 // src/utils/errorHelper.js
 
-const SAFE_PREFIXES = ["Gecersiz", "Eksik", "Bulunamadi"];
-const GENERIC_ERROR = "Bir hata olustu. Lutfen tekrar deneyin.";
+const SAFE_PREFIXES = ["Invalid", "Missing", "Not found"];
+const GENERIC_ERROR = "An error occurred. Please try again.";
 
 function safeError(err, context = "unknown") {
   const message = err?.message || String(err || "");
@@ -11,7 +11,7 @@ function safeError(err, context = "unknown") {
 
   // JSON parse errors
   if (err instanceof SyntaxError || message.includes("JSON")) {
-    return "Gecersiz veri formati.";
+    return "Invalid data format.";
   }
 
   // Known safe prefixes — pass through

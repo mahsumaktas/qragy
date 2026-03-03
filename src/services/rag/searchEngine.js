@@ -130,7 +130,7 @@ function createSearchEngine(deps) {
     return results.map((item, index) => ({
       index: index + 1,
       title: item.question || "",
-      source: item.source || "Bilgi Tabani",
+      source: item.source || "Knowledge Base",
       snippet: (item.answer || "").slice(0, 200),
     }));
   }
@@ -172,7 +172,7 @@ function createSearchEngine(deps) {
           }))
         );
       } catch (err) {
-        logger.warn("searchEngine", "Vector arama hatasi, sadece text kullaniliyor", err);
+        logger.warn("searchEngine", "Vector search error, using text only", err);
       }
     }
 
@@ -191,7 +191,7 @@ function createSearchEngine(deps) {
       finalResults = textResults.slice(0, maxFinal);
     }
 
-    logger.info("searchEngine", "Hybrid arama tamamlandi", {
+    logger.info("searchEngine", "Hybrid search completed", {
       query: query.slice(0, 80),
       vectorHits: vectorResults.length,
       textHits: textResults.length,

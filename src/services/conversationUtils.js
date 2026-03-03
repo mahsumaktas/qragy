@@ -20,8 +20,8 @@ function createConversationUtils(deps) {
   } = deps;
 
   // ── Sentiment Analysis (keyword-based) ──────────────────────────────────
-  const POSITIVE_WORDS = new Set(["tesekkurler", "tesekkur", "sagol", "sagolun", "harika", "super", "muhtesem", "guzel", "memnunum", "tatmin", "basarili", "cozuldu", "duzeldim", "halloldu", "cok iyi", "mukemmel", "elinize saglik", "sorunsuz"]);
-  const NEGATIVE_WORDS = new Set(["rezalet", "skandal", "berbat", "korkunc", "igrenc", "kotu", "kizgin", "sinirli", "sacma", "aptal", "yetersiz", "beceriksiz", "cozumsuz", "hala bekliyorum", "maalesef", "hayal kirikligi", "sikayetci", "utanc", "bozuk", "arizali", "ise yaramadi", "vakit kaybettim"]);
+  const POSITIVE_WORDS = new Set(["thank you", "thanks", "great", "awesome", "wonderful", "excellent", "perfect", "satisfied", "resolved", "fixed", "helpful", "amazing", "well done", "good job", "works now", "appreciate"]);
+  const NEGATIVE_WORDS = new Set(["terrible", "awful", "horrible", "disgusting", "bad", "angry", "furious", "ridiculous", "stupid", "inadequate", "incompetent", "unresolved", "still waiting", "unfortunately", "disappointed", "frustrated", "broken", "faulty", "did not work", "waste of time"]);
 
   function analyzeSentiment(text) {
     if (!text) return "neutral";
@@ -89,17 +89,17 @@ function createConversationUtils(deps) {
   async function generateEscalationSummary(contents, memory, conversationContext) {
     const fallback = memory.issueSummary
       || conversationContext?.currentTopic
-      || "Canlı destek talebi";
+      || "Live support request";
 
     const providerCfg = getProviderConfig();
     if (!providerCfg.apiKey && providerCfg.provider !== "ollama") return fallback;
 
     const summaryPrompt = [
-      "Aşağıdaki konuşma geçmişini analiz et ve canlı destek temsilcisi için kısa bir sorun özeti yaz.",
-      "Kurallar:",
-      "- Türkçe yaz, düz metin, 1-2 cümle.",
-      "- Kullanıcının sorununu, ilettiği bilgileri (şube kodu, firma, hata mesajı vb.) ve yapılan adımları özetle.",
-      "- Sadece özeti yaz, başka bir şey yazma."
+      "Analyze the following conversation history and write a brief issue summary for the live support agent.",
+      "Rules:",
+      "- Write in English, plain text, 1-2 sentences.",
+      "- Summarize the user's issue, provided information (branch code, company, error message, etc.) and steps taken.",
+      "- Write only the summary, nothing else."
     ].join("\n");
 
     try {
@@ -121,17 +121,17 @@ function createConversationUtils(deps) {
     if (providerCfg.apiKey || providerCfg.provider === "ollama") {
       try {
         const chatText = oldMessages
-          .map(m => `${m.role === "user" ? "Kullanici" : "Bot"}: ${(m.content || "").slice(0, 200)}`)
+          .map(m => `${m.role === "user" ? "User" : "Bot"}: ${(m.content || "").slice(0, 200)}`)
           .join("\n");
         const result = await callLLM(
           [{ role: "user", parts: [{ text: chatText }] }],
-          "Bu konusma gecmisini tek paragrafta ozetle. Turkce yaz, 2-3 cumle. Sadece ozeti yaz.",
+          "Summarize this conversation history in a single paragraph. Write in English, 2-3 sentences. Write only the summary.",
           128
         );
         const summary = (result.reply || "").trim();
         if (summary) {
           return [
-            { role: "assistant", content: `[Önceki konuşma özeti: ${summary}]` },
+            { role: "assistant", content: `[Previous conversation summary: ${summary}]` },
             ...recentMessages
           ];
         }

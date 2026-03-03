@@ -14,7 +14,7 @@
       const res = await api.get("admin/whatsapp");
       config = res.config || res || {};
     } catch (e) {
-      showToast("WhatsApp config yuklenemedi: " + e.message, "error");
+      showToast("Failed to load WhatsApp config: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -23,35 +23,35 @@
   async function save() {
     try {
       await api.put("admin/whatsapp", config);
-      showToast("Kaydedildi", "success");
+      showToast("Saved", "success");
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>WhatsApp</h1><p>WhatsApp Business entegrasyonu</p></div>
-  <Button onclick={save} variant="primary" size="sm">Kaydet</Button>
+  <div><h1>WhatsApp</h1><p>WhatsApp Business integration</p></div>
+  <Button onclick={save} variant="primary" size="sm">Save</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="card">
     <div class="form-grid">
       <div class="form-group"><span class="lbl">API Token</span><input class="input" type="password" bind:value={config.accessToken} /></div>
-      <div class="form-group"><span class="lbl">Telefon ID</span><input class="input" bind:value={config.phoneNumberId} /></div>
+      <div class="form-group"><span class="lbl">Phone ID</span><input class="input" bind:value={config.phoneNumberId} /></div>
       <div class="form-group"><span class="lbl">Verify Token</span><input class="input" bind:value={config.verifyToken} /></div>
       <div class="form-group"><span class="lbl">Business Account ID</span><input class="input" bind:value={config.businessAccountId} /></div>
-      <div class="form-row"><span class="lbl">Aktif</span><Toggle bind:checked={config.enabled} /></div>
+      <div class="form-row"><span class="lbl">Active</span><Toggle bind:checked={config.enabled} /></div>
     </div>
   </div>
 
   <div class="card webhook-card">
     <div class="card-title">Webhook URL</div>
-    <p class="desc">Meta Developer Portal'dan asagidaki URL'yi webhook olarak ekleyin. Verify Token yukaridaki degerle ayni olmali.</p>
-    <input class="input webhook-url" value={config.webhookUrl || ""} readonly onclick={(e) => { e.target.select(); navigator.clipboard?.writeText(e.target.value); showToast("Kopyalandi", "success"); }} />
+    <p class="desc">Add the URL below as a webhook in the Meta Developer Portal. The Verify Token must match the value above.</p>
+    <input class="input webhook-url" value={config.webhookUrl || ""} readonly onclick={(e) => { e.target.select(); navigator.clipboard?.writeText(e.target.value); showToast("Copied", "success"); }} />
   </div>
 {/if}
 

@@ -5,10 +5,10 @@ var currentStep = 1;
 var TOTAL_STEPS = 4;
 
 var STEP_NAMES = {
-  1: "Sirket Bilgileri",
-  2: "Gorunum Ayarlari",
-  3: "Sikca Sorulan Sorular",
-  4: "Onizleme",
+  1: "Company Info",
+  2: "Appearance Settings",
+  3: "Frequently Asked Questions",
+  4: "Preview",
 };
 
 // ── DOM Helpers ──
@@ -38,7 +38,7 @@ function updateUI() {
   });
 
   // Update labels
-  $("stepIndicator").textContent = "Adim " + currentStep + "/" + TOTAL_STEPS;
+  $("stepIndicator").textContent = "Step " + currentStep + "/" + TOTAL_STEPS;
   $("stepName").textContent = STEP_NAMES[currentStep] || "";
 
   // If preview step, render preview
@@ -76,7 +76,7 @@ function prevStep() {
 
 // ── Preview ──
 function renderPreview() {
-  var companyName = $("companyName").value.trim() || "Sirket";
+  var companyName = $("companyName").value.trim() || "Company";
   var logoUrl = $("logoUrl").value.trim();
   var themeColor = $("themeColor").value;
 
@@ -97,11 +97,11 @@ function renderPreview() {
   }
 
   // Title
-  $("previewTitle").textContent = companyName + " Destek";
+  $("previewTitle").textContent = companyName + " Support";
 
   // Welcome message
   $("previewWelcome").textContent =
-    "Merhaba, " + companyName + " Destek hattina hos geldiniz. Size nasil yardimci olabilirim?";
+    "Hello, welcome to " + companyName + " Support. How can I help you?";
 
   // Theme bar
   $("previewThemeBar").style.background = themeColor;
@@ -121,7 +121,7 @@ function renderPreview() {
       el.className = "preview-faq";
 
       var strongQ = document.createElement("strong");
-      strongQ.textContent = "S: ";
+      strongQ.textContent = "Q: ";
       el.appendChild(strongQ);
 
       var qText = document.createTextNode(faq.q);
@@ -130,7 +130,7 @@ function renderPreview() {
       el.appendChild(document.createElement("br"));
 
       var strongA = document.createElement("strong");
-      strongA.textContent = "C: ";
+      strongA.textContent = "A: ";
       el.appendChild(strongA);
 
       var aText = document.createTextNode(faq.a);
@@ -160,13 +160,13 @@ function collectFaqs() {
 function completeSetup() {
   var companyName = $("companyName").value.trim();
   if (!companyName) {
-    showToast("Sirket adi zorunludur.");
+    showToast("Company name is required.");
     return;
   }
 
   var btn = $("btnComplete");
   btn.disabled = true;
-  btn.textContent = "Kaydediliyor...";
+  btn.textContent = "Saving...";
 
   var payload = {
     companyName: companyName,
@@ -184,7 +184,7 @@ function completeSetup() {
     .then(function (res) {
       if (!res.ok) {
         return res.json().then(function (data) {
-          throw new Error(data.error || "Bir hata olustu.");
+          throw new Error(data.error || "An error occurred.");
         });
       }
       return res.json();
@@ -194,8 +194,8 @@ function completeSetup() {
     })
     .catch(function (err) {
       btn.disabled = false;
-      btn.textContent = "Tamamla";
-      showToast(err.message || "Bir hata olustu.");
+      btn.textContent = "Complete";
+      showToast(err.message || "An error occurred.");
     });
 }
 

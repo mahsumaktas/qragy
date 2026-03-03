@@ -3,32 +3,32 @@
 /**
  * Admin Assistant (Action-capable Agent) Route
  *
- * POST /api/admin/assistant — Aksiyon alabilen AI asistan
- * Kaliteci derdini anlatir veya dosya atar, asistan gerekli API cagrilarini yapar.
+ * POST /api/admin/assistant — Action-capable AI assistant
+ * User describes their issue or uploads a file, assistant makes the necessary API calls.
  *
- * Qragy Pipeline Entegrasyonu:
- *   - RAG Search: Kullanici mesajina gore bilgi tabaninda arama yapar, sonuclari LLM context'ine ekler
- *   - Agent Config: Mevcut bot yapilandirmasini (soul, persona, konular) otomatik yukler
- *   - Response Validation: LLM ciktisini halusinasyon, tekrar, dil kontrolunden gecirir
- *   - Provider Config: Ana chatbot pipeline ile ayni model/parametreleri kullanir
+ * Qragy Pipeline Integration:
+ *   - RAG Search: Searches knowledge base based on user message, adds results to LLM context
+ *   - Agent Config: Automatically loads current bot configuration (soul, persona, topics)
+ *   - Response Validation: Validates LLM output for hallucination, repetition, language checks
+ *   - Provider Config: Uses the same model/parameters as the main chatbot pipeline
  */
 
 const { validateBotResponse } = require("../../services/responseValidator");
 
 // ── Allowed Actions Whitelist ────────────────────────────────────────────
 const ALLOWED_ACTIONS = {
-  add_kb_entries:         { description: "Bilgi tabanina soru-cevap ekle", dangerous: false },
-  list_kb:               { description: "Bilgi tabani kayitlarini listele", dangerous: false },
-  read_agent_file:       { description: "Agent dosyasini oku", dangerous: false },
-  update_agent_file:     { description: "Agent dosyasini guncelle", dangerous: true },
-  list_topics:           { description: "Konulari listele", dangerous: false },
-  create_topic:          { description: "Yeni konu olustur", dangerous: false },
-  update_topic:          { description: "Konuyu guncelle", dangerous: true },
-  read_config:           { description: "Ayarlari oku", dangerous: false },
-  update_chat_flow:      { description: "Sohbet akisi guncelle", dangerous: true },
-  update_site_config:    { description: "Gorunum ayarlari guncelle", dangerous: true },
-  update_sunshine_config:{ description: "Zendesk entegrasyonu guncelle", dangerous: true },
-  process_uploaded_file: { description: "Yuklenen dosyayi isle", dangerous: false },
+  add_kb_entries:         { description: "Add Q&A entries to knowledge base", dangerous: false },
+  list_kb:               { description: "List knowledge base records", dangerous: false },
+  read_agent_file:       { description: "Read agent file", dangerous: false },
+  update_agent_file:     { description: "Update agent file", dangerous: true },
+  list_topics:           { description: "List topics", dangerous: false },
+  create_topic:          { description: "Create new topic", dangerous: false },
+  update_topic:          { description: "Update topic", dangerous: true },
+  read_config:           { description: "Read configuration", dangerous: false },
+  update_chat_flow:      { description: "Update chat flow", dangerous: true },
+  update_site_config:    { description: "Update appearance settings", dangerous: true },
+  update_sunshine_config:{ description: "Update Zendesk integration", dangerous: true },
+  process_uploaded_file: { description: "Process uploaded file", dangerous: false },
 };
 
 const VALID_AGENT_FILES = [
@@ -80,7 +80,7 @@ function parseAssistantResponse(rawText) {
 async function executeAction(actionName, params, deps) {
   const meta = ALLOWED_ACTIONS[actionName];
   if (!meta) {
-    return { action: actionName, status: "error", result: "Bilinmeyen aksiyon: " + actionName };
+    return { action: actionName, status: "error", result: "Unknown action: " + actionName };
   }
 
   const {
@@ -100,7 +100,7 @@ async function executeAction(actionName, params, deps) {
       // ── KB ──────────────────────────────────────────────────────────
       case "add_kb_entries": {
         const entries = Array.isArray(params?.entries) ? params.entries : [];
-        if (!entries.length) return { action: actionName, status: "error", result: "Eklenecek kayit yok." };
+        if (!entries.length) return { action: actionName, status: "error", result: "No entries to add." };
         const rows = loadCSVData();
         let added = 0;
         for (const e of entries) {
@@ -112,33 +112,33 @@ async function executeAction(actionName, params, deps) {
           saveCSVData(rows);
           await reingestKnowledgeBase();
         }
-        return { action: actionName, status: "success", result: added + " kayit eklendi.", count: added };
+        return { action: actionName, status: "success", result: added + " entries added.", count: added };
       }
 
       case "list_kb": {
         const rows = loadCSVData();
         const records = rows.map((r, i) => ({ id: i + 1, question: r.question || "", answer: r.answer || "" }));
-        return { action: actionName, status: "success", result: records.length + " kayit bulundu.", records };
+        return { action: actionName, status: "success", result: records.length + " records found.", records };
       }
 
       // ── Agent Files ─────────────────────────────────────────────────
       case "read_agent_file": {
         const filename = String(params?.filename || "");
         if (!VALID_AGENT_FILES.includes(filename)) {
-          return { action: actionName, status: "error", result: "Gecersiz dosya: " + filename + ". Gecerli dosyalar: " + VALID_AGENT_FILES.join(", ") };
+          return { action: actionName, status: "error", result: "Invalid file: " + filename + ". Valid files: " + VALID_AGENT_FILES.join(", ") };
         }
         const content = readTextFileSafe(path.join(AGENT_DIR, filename), "");
-        return { action: actionName, status: "success", result: content || "(bos dosya)", filename };
+        return { action: actionName, status: "success", result: content || "(empty file)", filename };
       }
 
       case "update_agent_file": {
         const filename = String(params?.filename || "");
         const content = String(params?.content || "");
         if (!VALID_AGENT_FILES.includes(filename)) {
-          return { action: actionName, status: "error", result: "Gecersiz dosya: " + filename };
+          return { action: actionName, status: "error", result: "Invalid file: " + filename };
         }
         if (!content.trim()) {
-          return { action: actionName, status: "error", result: "Icerik bos olamaz." };
+          return { action: actionName, status: "error", result: "Content cannot be empty." };
         }
         const filePath = path.join(AGENT_DIR, filename);
         // Backup old version
@@ -148,25 +148,25 @@ async function executeAction(actionName, params, deps) {
         }
         fs.writeFileSync(filePath, content, "utf8");
         loadAllAgentConfig();
-        return { action: actionName, status: "success", result: filename + " guncellendi." };
+        return { action: actionName, status: "success", result: filename + " updated." };
       }
 
       // ── Topics ──────────────────────────────────────────────────────
       case "list_topics": {
         const index = readJsonFileSafe(path.join(TOPICS_DIR, "_index.json"), { topics: [] });
         const topics = index.topics.map(t => ({ id: t.id, title: t.title, keywords: t.keywords }));
-        return { action: actionName, status: "success", result: topics.length + " konu bulundu.", topics };
+        return { action: actionName, status: "success", result: topics.length + " topics found.", topics };
       }
 
       case "create_topic": {
         const id = String(params?.id || "").trim();
         const title = String(params?.title || "").trim();
-        if (!id || !title) return { action: actionName, status: "error", result: "id ve title zorunludur." };
-        if (!/^[a-z0-9-]+$/.test(id)) return { action: actionName, status: "error", result: "Gecersiz ID formati." };
+        if (!id || !title) return { action: actionName, status: "error", result: "id and title are required." };
+        if (!/^[a-z0-9-]+$/.test(id)) return { action: actionName, status: "error", result: "Invalid ID format." };
 
         const indexPath = path.join(TOPICS_DIR, "_index.json");
         const index = readJsonFileSafe(indexPath, { topics: [] });
-        if (index.topics.find(t => t.id === id)) return { action: actionName, status: "error", result: "Bu ID zaten var." };
+        if (index.topics.find(t => t.id === id)) return { action: actionName, status: "error", result: "This ID already exists." };
 
         const filename = id + ".md";
         const newTopic = {
@@ -181,17 +181,17 @@ async function executeAction(actionName, params, deps) {
         fs.writeFileSync(indexPath, JSON.stringify(index, null, 2), "utf8");
         fs.writeFileSync(path.join(TOPICS_DIR, filename), params?.content || "", "utf8");
         loadAllAgentConfig();
-        return { action: actionName, status: "success", result: "Konu olusturuldu: " + title };
+        return { action: actionName, status: "success", result: "Topic created: " + title };
       }
 
       case "update_topic": {
         const topicId = String(params?.topicId || "").trim();
-        if (!topicId) return { action: actionName, status: "error", result: "topicId zorunludur." };
+        if (!topicId) return { action: actionName, status: "error", result: "topicId is required." };
 
         const indexPath = path.join(TOPICS_DIR, "_index.json");
         const index = readJsonFileSafe(indexPath, { topics: [] });
         const topicIdx = index.topics.findIndex(t => t.id === topicId);
-        if (topicIdx < 0) return { action: actionName, status: "error", result: "Konu bulunamadi." };
+        if (topicIdx < 0) return { action: actionName, status: "error", result: "Topic not found." };
 
         const topic = index.topics[topicIdx];
         if (params?.title) topic.title = params.title;
@@ -203,7 +203,7 @@ async function executeAction(actionName, params, deps) {
         }
         loadAllAgentConfig();
         invalidateTopicCache(topicId);
-        return { action: actionName, status: "success", result: "Konu guncellendi: " + topic.title };
+        return { action: actionName, status: "success", result: "Topic updated: " + topic.title };
       }
 
       // ── Config ──────────────────────────────────────────────────────
@@ -222,46 +222,46 @@ async function executeAction(actionName, params, deps) {
           if (masked.webhookSecret) masked.webhookSecret = masked.webhookSecret.slice(0, 4) + "****";
           return { action: actionName, status: "success", result: JSON.stringify(masked), config: masked };
         }
-        return { action: actionName, status: "error", result: "Gecersiz config tipi. Gecerli: chat-flow, site-config, sunshine-config" };
+        return { action: actionName, status: "error", result: "Invalid config type. Valid: chat-flow, site-config, sunshine-config" };
       }
 
       case "update_chat_flow": {
         if (!params?.config || typeof params.config !== "object") {
-          return { action: actionName, status: "error", result: "config objesi zorunludur." };
+          return { action: actionName, status: "error", result: "config object is required." };
         }
         saveChatFlowConfig(params.config);
-        return { action: actionName, status: "success", result: "Sohbet akisi guncellendi." };
+        return { action: actionName, status: "success", result: "Chat flow updated." };
       }
 
       case "update_site_config": {
         if (!params?.config || typeof params.config !== "object") {
-          return { action: actionName, status: "error", result: "config objesi zorunludur." };
+          return { action: actionName, status: "error", result: "config object is required." };
         }
         saveSiteConfig(params.config);
-        return { action: actionName, status: "success", result: "Gorunum ayarlari guncellendi." };
+        return { action: actionName, status: "success", result: "Appearance settings updated." };
       }
 
       case "update_sunshine_config": {
         if (!params?.config || typeof params.config !== "object") {
-          return { action: actionName, status: "error", result: "config objesi zorunludur." };
+          return { action: actionName, status: "error", result: "config object is required." };
         }
         saveSunshineConfig(params.config);
-        return { action: actionName, status: "success", result: "Zendesk entegrasyonu guncellendi." };
+        return { action: actionName, status: "success", result: "Zendesk integration updated." };
       }
 
       // ── File Processing ─────────────────────────────────────────────
       case "process_uploaded_file": {
         // This is handled specially at the endpoint level (file content is already in context)
         // Here we just confirm intent
-        return { action: actionName, status: "success", result: "Dosya islendi ve bilgi tabanina eklendi." };
+        return { action: actionName, status: "success", result: "File processed and added to knowledge base." };
       }
 
       default:
-        return { action: actionName, status: "error", result: "Handler bulunamadi." };
+        return { action: actionName, status: "error", result: "Handler not found." };
     }
   } catch (err) {
     logger.error("executeAction error:", actionName, err);
-    return { action: actionName, status: "error", result: "Hata: " + (err.message || String(err)) };
+    return { action: actionName, status: "error", result: "Error: " + (err.message || String(err)) };
   }
 }
 
@@ -287,12 +287,12 @@ async function extractTextFromFile(filePath, mimetype, originalname, deps) {
     const XLSX = require("xlsx");
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
-    if (!sheetName) return "(bos xlsx)";
+    if (!sheetName) return "(empty xlsx)";
     const sheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
     return rows.map(r => Object.values(r).join(" | ")).join("\n");
   }
-  throw new Error("Desteklenmeyen dosya formati: " + ext);
+  throw new Error("Unsupported file format: " + ext);
 }
 
 // ── Extract Q/A pairs from XLSX (reused from knowledge.js) ──────────
@@ -336,32 +336,32 @@ function buildEnrichedSystemPrompt(basePrompt, ragResults, agentConfigSummary, k
 
   // Agent config context — current bot state
   if (agentConfigSummary) {
-    const lines = ["\n\n## Mevcut Bot Yapilandirmasi (Canli Durum)"];
+    const lines = ["\n\n## Current Bot Configuration (Live State)"];
     if (agentConfigSummary.soulText) {
-      lines.push("### Soul (Ruh - Temel Kimlik)\n" + agentConfigSummary.soulText.slice(0, 500));
+      lines.push("### Soul (Core Identity)\n" + agentConfigSummary.soulText.slice(0, 500));
     }
     if (agentConfigSummary.personaText) {
-      lines.push("### Persona (Kisilik)\n" + agentConfigSummary.personaText.slice(0, 500));
+      lines.push("### Persona (Personality)\n" + agentConfigSummary.personaText.slice(0, 500));
     }
     if (agentConfigSummary.domainText) {
-      lines.push("### Domain (Alan Bilgisi)\n" + agentConfigSummary.domainText.slice(0, 500));
+      lines.push("### Domain (Domain Knowledge)\n" + agentConfigSummary.domainText.slice(0, 500));
     }
     if (agentConfigSummary.topicCount > 0) {
-      lines.push("### Tanimli Konular (" + agentConfigSummary.topicCount + " adet)\n" + agentConfigSummary.topicIndexSummary);
+      lines.push("### Defined Topics (" + agentConfigSummary.topicCount + " total)\n" + agentConfigSummary.topicIndexSummary);
     }
     parts.push(lines.join("\n\n"));
   }
 
   // KB stats
-  parts.push("\n\n## Bilgi Tabani Durumu\nToplam kayit sayisi: " + (kbSize || 0));
+  parts.push("\n\n## Knowledge Base Status\nTotal records: " + (kbSize || 0));
 
   // RAG context — relevant KB entries for the current query
   if (Array.isArray(ragResults) && ragResults.length > 0) {
-    const ragLines = ["\n\n## Bilgi Tabani Arama Sonuclari (RAG)",
-      "Kullanicinin mesajiyla iliskili olabilecek mevcut bilgi tabani kayitlari:", ""];
+    const ragLines = ["\n\n## Knowledge Base Search Results (RAG)",
+      "Existing knowledge base records potentially related to the user's message:", ""];
     for (const item of ragResults) {
-      ragLines.push("Soru: " + (item.question || ""));
-      ragLines.push("Cevap: " + (item.answer || ""));
+      ragLines.push("Question: " + (item.question || ""));
+      ragLines.push("Answer: " + (item.answer || ""));
       ragLines.push("");
     }
     parts.push(ragLines.join("\n"));
@@ -417,15 +417,15 @@ function mount(app, deps) {
           results.push(result);
           recordAuditEvent("assistant:" + act.action, ALLOWED_ACTIONS[act.action].description, req.ip);
         }
-        return res.json({ ok: true, reply: "Islemler tamamlandi.", actions_executed: results });
+        return res.json({ ok: true, reply: "Actions completed.", actions_executed: results });
       }
 
       if (message === "__cancel_actions__") {
-        return res.json({ ok: true, reply: "Islemler iptal edildi." });
+        return res.json({ ok: true, reply: "Actions cancelled." });
       }
 
       if (!message && !req.file) {
-        return res.status(400).json({ error: "message veya dosya zorunludur." });
+        return res.status(400).json({ error: "message or file is required." });
       }
 
       // ── Process uploaded file ───────────────────────────────────
@@ -441,21 +441,21 @@ function mount(app, deps) {
             const pairs = extractQAFromXlsx(req.file.path, deps);
             if (pairs.length > 0) {
               fileQAPairs = pairs;
-              fileContext = "[YUKLENEN DOSYA: " + req.file.originalname + "]\n" +
-                "Dosyadan " + pairs.length + " soru-cevap cifti cikarildi:\n" +
-                pairs.slice(0, 10).map((p, i) => (i + 1) + ". S: " + p.question + " | C: " + p.answer).join("\n") +
-                (pairs.length > 10 ? "\n... ve " + (pairs.length - 10) + " kayit daha." : "");
+              fileContext = "[UPLOADED FILE: " + req.file.originalname + "]\n" +
+                pairs.length + " Q&A pairs extracted from file:\n" +
+                pairs.slice(0, 10).map((p, i) => (i + 1) + ". Q: " + p.question + " | A: " + p.answer).join("\n") +
+                (pairs.length > 10 ? "\n... and " + (pairs.length - 10) + " more records." : "");
             }
           }
 
           // Other formats: text extraction
           if (!fileContext) {
             const text = await extractTextFromFile(req.file.path, req.file.mimetype, req.file.originalname, deps);
-            fileContext = "[YUKLENEN DOSYA: " + req.file.originalname + "]\n" + text.slice(0, 8000);
+            fileContext = "[UPLOADED FILE: " + req.file.originalname + "]\n" + text.slice(0, 8000);
           }
         } catch (fileErr) {
           logger.warn("Assistant file parse error:", fileErr);
-          fileContext = "[YUKLENEN DOSYA: " + req.file.originalname + "]\nDosya okunamadi: " + fileErr.message;
+          fileContext = "[UPLOADED FILE: " + req.file.originalname + "]\nFailed to read file: " + fileErr.message;
         } finally {
           // Cleanup temp file
           try { fs.unlinkSync(req.file.path); } catch (_e) { /* ignore */ }
@@ -469,7 +469,7 @@ function mount(app, deps) {
         try {
           ragResults = await searchKnowledge(searchQuery, 5);
         } catch (ragErr) {
-          logger.warn("assistant", "RAG arama hatasi", ragErr);
+          logger.warn("assistant", "RAG search error", ragErr);
         }
       }
 
@@ -487,7 +487,7 @@ function mount(app, deps) {
 
       // ── Build enriched system prompt ──────────────────────────
       const basePrompt = readTextFileSafe(path.join(AGENT_DIR, "admin-assistant.md"), "")
-        || "Sen Qragy admin panel asistanisin. Turkce cevap ver. JSON formati kullan.";
+        || "You are the Qragy admin panel assistant. Respond in English. Use JSON format.";
       const systemPrompt = buildEnrichedSystemPrompt(basePrompt, ragResults, agentConfigSummary, kbSize);
 
       const messages = (Array.isArray(history) ? history : []).slice(-10).map(function (h) {
@@ -502,7 +502,7 @@ function mount(app, deps) {
       if (fileContext) {
         userText = (userText ? userText + "\n\n" : "") + fileContext;
       }
-      if (!userText) userText = "Merhaba";
+      if (!userText) userText = "Hello";
       messages.push({ role: "user", parts: [{ text: userText }] });
 
       // ── Qragy Pipeline: Provider Config ───────────────────────
@@ -525,9 +525,9 @@ function mount(app, deps) {
         const validation = validateBotResponse(finalReply, "tr");
         if (!validation.valid && validation.reason === "hallucination_marker") {
           // Strip hallucinated content, retry once
-          logger.warn("assistant", "Halusinasyon tespit edildi, tekrar deneniyor", validation.reason);
+          logger.warn("assistant", "Hallucination detected, retrying", validation.reason);
           messages.push({ role: "model", parts: [{ text: llmResult.reply }] });
-          messages.push({ role: "user", parts: [{ text: "UYARI: Onceki cevapta halusinasyon tespit edildi. Lutfen kurallara uygun, JSON formatinda tekrar cevap ver." }] });
+          messages.push({ role: "user", parts: [{ text: "WARNING: Hallucination detected in previous response. Please respond again following the rules, in JSON format." }] });
           iterations++;
           continue;
         }
@@ -560,8 +560,8 @@ function mount(app, deps) {
               saveCSVData(rows);
               await reingestKnowledgeBase();
             }
-            results.push({ action: "process_uploaded_file", status: "success", result: added + " kayit bilgi tabanina eklendi.", count: added });
-            recordAuditEvent("assistant:process_uploaded_file", added + " kayit eklendi", req.ip);
+            results.push({ action: "process_uploaded_file", status: "success", result: added + " entries added to knowledge base.", count: added });
+            recordAuditEvent("assistant:process_uploaded_file", added + " entries added", req.ip);
           } else {
             const result = await executeAction(act.action, act.params, deps);
             results.push(result);
@@ -572,7 +572,7 @@ function mount(app, deps) {
 
         // Feed results back to LLM for next iteration
         messages.push({ role: "model", parts: [{ text: llmResult.reply }] });
-        messages.push({ role: "user", parts: [{ text: "Action sonuclari:\n" + JSON.stringify(results) }] });
+        messages.push({ role: "user", parts: [{ text: "Action results:\n" + JSON.stringify(results) }] });
 
         iterations++;
       }

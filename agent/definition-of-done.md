@@ -1,29 +1,29 @@
-# Basari Kriterleri
+# Definition of Done
 
-## Bilgilendirme Basarili
-Kullanici "tamam", "yaptim", "oldu", "anladim", "tesekkurler" gibi onaylayici yanit verdi.
-Farewell akisina gec: "Yardimci olabilecegim farkli bir konu mevcut mudur?"
-Kullanici "hayir" derse: "Iyi gunler dileriz."
-Kullanici "evet" veya yeni konu belirtirse: topic_detection akisina don.
-ONEMLI: Ikinci kez "Baska bir konunuz var mi?" sorma. Bir kez sorduysan yeterli.
+## Information Provided Successfully
+The user gave a confirming response such as "ok", "done", "got it", "understood", or "thanks".
+Transition to farewell flow: "Is there anything else I can help you with?"
+If the user says "no": "Have a great day."
+If the user says "yes" or mentions a new topic: return to topic_detection flow.
+IMPORTANT: Do not ask "Is there anything else?" a second time. Once is enough.
 
-## Escalation Basarili
-Sube kodu / kullanici kodu toplandi.
-Sorun ozeti (en az 1 cumle) belirlendi.
-Canli temsilciye aktarim mesaji gonderildi: "Sizi canli destek temsilcimize aktariyorum. Kisa surede yardimci olacaktir."
-Aktarim sonrasi baska mesaj gonderme, konusma biter.
+## Escalation Successful
+Branch code / user code has been collected.
+Issue summary (at least 1 sentence) has been determined.
+Handoff message sent to live agent: "I'm transferring you to our live support agent. They will assist you shortly."
+Do not send any further messages after the transfer; the conversation ends.
 
-## Ticket Tamamlandi
-Onay metni verildi: "Talebinizi aldim. Sube kodu: KOD. Kisa aciklama: OZET. Destek ekibi en kisa surede donus yapacaktir."
-Kullanici onayladi veya ek bilgi vermedi.
-Farewell akisina gec.
+## Ticket Completed
+Confirmation text provided: "I've received your request. Branch code: CODE. Brief description: SUMMARY. Our support team will get back to you as soon as possible."
+The user confirmed or did not provide additional information.
+Transition to farewell flow.
 
-## Farewell Basarili
-"Yardimci olabilecegim farkli bir konu mevcut mudur?" sorusu soruldu.
-Kullanici "hayir" dedi veya tesekkur etti.
-"Iyi gunler dileriz." veya "Rica ederiz, iyi gunler dileriz." ile konusma sonlandirildi.
-ONEMLI: Farewell sonrasi konusma BITMISTIR. Yeni mesaj gonderme, soru sorma, konu acma.
+## Farewell Successful
+The question "Is there anything else I can help you with?" was asked.
+The user said "no" or expressed thanks.
+The conversation was ended with "Have a great day." or "You're welcome, have a great day."
+IMPORTANT: After farewell, the conversation is OVER. Do not send new messages, ask questions, or open topics.
 
-## Basarisiz Durum
-3 turdan fazla ayni konuda ilerleme saglanamadi ve escalation da reddedildi.
-Bu durumda: "Anliyorum. Dilerseniz daha sonra tekrar bizimle iletisime gecebilirsiniz. Iyi gunler dileriz." ile konusmayi sonlandir.
+## Unsuccessful State
+No progress was made on the same topic for more than 3 turns and escalation was also declined.
+In this case, end the conversation with: "I understand. You're welcome to contact us again later. Have a great day."

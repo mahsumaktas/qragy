@@ -34,14 +34,14 @@ function createLLMHealthService({
       status: Number(error?.status) || 0,
       context,
     });
-    // Eski kayitlari temizle (pencere disi)
+    // Clean old records (outside time window)
     while (
       llmErrorLog.length > 0 &&
       llmErrorLog[0].timestamp < now - errorWindowMs
     ) {
       llmErrorLog.shift();
     }
-    // Maks 100 kayit tut
+    // Keep max 100 records
     if (llmErrorLog.length > 100) {
       llmErrorLog.splice(0, llmErrorLog.length - 100);
     }
@@ -79,9 +79,9 @@ function createLLMHealthService({
       );
       const latencyMs = Date.now() - start;
       const reply = (result?.reply || "").trim().toLowerCase();
-      // Yanit dogrulamasi — API cevap donmeli (MAX_TOKENS da kabul, onemli olan yanit donmesi)
+      // Response validation — API should return response (MAX_TOKENS also ok, important is response returned)
       if (!reply && result?.finishReason !== "MAX_TOKENS") {
-        throw new Error("API yanit donmedi (bos response)");
+        throw new Error("API did not return response (empty response)");
       }
       const errorSummary = getLLMErrorSummary();
       llmHealthStatus = {
@@ -94,13 +94,13 @@ function createLLMHealthService({
         lastError: errorSummary.lastError,
         lastErrorAt: errorSummary.lastErrorAt || null,
       };
-      // Eger son pencerede hatalar varsa uyari ver
+      // Warn if there are errors in the recent time window
       if (errorSummary.recentErrors > 0) {
         llmHealthStatus.warning =
-          errorSummary.recentErrors + " hata (son 10dk)";
+          errorSummary.recentErrors + " errors (last 10 min)";
         logger.warn(
           "llm-health",
-          `OK (${latencyMs}ms) — ${errorSummary.recentErrors} hata (son 10dk)`
+          `OK (${latencyMs}ms) — ${errorSummary.recentErrors} errors (last 10 min)`
         );
       } else {
         logger.info("llm-health", `OK (${latencyMs}ms)`);
@@ -111,7 +111,7 @@ function createLLMHealthService({
       llmHealthStatus = {
         ok: false,
         checkedAt: new Date().toISOString(),
-        error: err.message || "Bilinmeyen hata",
+        error: err.message || "Unknown error",
         latencyMs: null,
         provider: cfg.provider + " / " + cfg.model,
         recentErrors: errorSummary.recentErrors,

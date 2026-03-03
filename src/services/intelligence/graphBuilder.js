@@ -12,19 +12,19 @@
 const ENTITY_TYPES = ["product", "branch", "issue_type", "resolution", "customer_segment"];
 const RELATION_TYPES = ["has_device", "has_issue", "resolved_by", "located_at"];
 
-const EXTRACTION_SYSTEM_PROMPT = `Sen bir bilgi grafi cikarma asistanisin.
-Verilen destek tiketi ozetinden entity ve relationship cikar.
+const EXTRACTION_SYSTEM_PROMPT = `You are a knowledge graph extraction assistant.
+Extract entities and relationships from the given support ticket summary.
 
-Entity tipleri: ${ENTITY_TYPES.join(", ")}
-Iliskiler: ${RELATION_TYPES.join(", ")}
+Entity types: ${ENTITY_TYPES.join(", ")}
+Relationships: ${RELATION_TYPES.join(", ")}
 
-JSON formatinda yanit ver:
+Respond in JSON format:
 {
   "entities": [{"name": "...", "type": "..."}],
   "relationships": [{"source": "...", "target": "...", "relation": "..."}]
 }
 
-Sadece JSON yanit ver, baska bir sey yazma.`;
+Respond with JSON only, do not write anything else.`;
 
 function createGraphBuilder(deps) {
   const { callLLM, getProviderConfig, sqliteDb, logger } = deps;
@@ -41,7 +41,7 @@ function createGraphBuilder(deps) {
 
       const providerConfig = getProviderConfig();
       const messages = [
-        { role: "user", parts: [{ text: `Tiket Ozeti: ${summary}\nSube Kodu: ${branchCode}` }] },
+        { role: "user", parts: [{ text: `Ticket Summary: ${summary}\nBranch Code: ${branchCode}` }] },
       ];
 
       const response = await callLLM(messages, EXTRACTION_SYSTEM_PROMPT, 1024, providerConfig);
@@ -78,7 +78,7 @@ function createGraphBuilder(deps) {
         );
       }
     } catch (err) {
-      logger.warn("graphBuilder", "Entity cikarma basarisiz, atlanıyor", err);
+      logger.warn("graphBuilder", "Entity extraction failed, skipping", err);
     }
   }
 

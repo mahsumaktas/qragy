@@ -36,7 +36,7 @@ function normalizeForMatching(text) {
     .trim();
 }
 
-const CREDENTIAL_PATTERN = /(?:sifre|parola|password|pin|şifre)\s*[:=]?\s*\S+/gi;
+const CREDENTIAL_PATTERN = /(?:password|pin|passwd|secret|token)\s*[:=]?\s*\S+/gi;
 
 function maskCredentials(text) {
   if (!text || typeof text !== "string") return text;

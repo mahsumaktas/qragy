@@ -93,13 +93,13 @@ function createTicketStore(deps) {
   function updateTicketHandoffResult(ticketId, resultStatus, detail = "", meta = {}) {
     const normalizedStatus = HANDOFF_RESULT_STATUS_MAP[resultStatus];
     if (!normalizedStatus) {
-      return { error: "Gecersiz handoff status degeri." };
+      return { error: "Invalid handoff status value." };
     }
 
     const db = loadTicketsDb();
     const ticket = db.tickets.find((item) => item.id === ticketId);
     if (!ticket) {
-      return { error: "Ticket bulunamadi." };
+      return { error: "Ticket not found." };
     }
 
     const timestamp = nowIso();

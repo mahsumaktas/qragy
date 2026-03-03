@@ -9,9 +9,9 @@ describe("chatProcessor", () => {
   beforeEach(() => {
     deps = {
       getChatFlowConfig: vi.fn(() => ({
-        gibberishMessage: "Anlayamadim, lutfen tekrar yazar misiniz?",
-        farewellMessage: "Iyi gunler dilerim!",
-        anythingElseMessage: "Baska bir konuda yardimci olabilir miyim?",
+        gibberishMessage: "I couldn't understand your message. Could you please describe your issue in more detail?",
+        farewellMessage: "Have a great day! Feel free to reach out again anytime.",
+        anythingElseMessage: "Is there anything else I can help you with?",
         questionExtractionEnabled: false,
       })),
       getGoogleModel: vi.fn(() => "gemini-2.0-flash"),
@@ -44,10 +44,10 @@ describe("chatProcessor", () => {
       })),
       buildDeterministicCollectionReply: vi.fn(() => null),
       getProviderConfig: vi.fn(() => ({ apiKey: "test-key", provider: "google" })),
-      buildMissingFieldsReply: vi.fn(() => "Lutfen sube kodunuzu belirtin."),
+      buildMissingFieldsReply: vi.fn(() => "Please provide your account ID."),
       compressConversationHistory: vi.fn(async (msgs) => msgs),
       callLLMWithFallback: vi.fn(async () => ({
-        reply: "Yazici sorununuz icin kontrol edin.",
+        reply: "For your printer issue, please check the settings.",
         finishReason: "STOP",
         fallbackUsed: false,
       })),
@@ -55,17 +55,17 @@ describe("chatProcessor", () => {
       getSoulText: vi.fn(() => "soul"),
       getPersonaText: vi.fn(() => "persona"),
       validateOutput: vi.fn(() => ({ safe: true })),
-      GENERIC_REPLY: "Size yardimci olabilir miyim?",
+      GENERIC_REPLY: "I'm here to help you with technical support. How can I assist you?",
       validateBotResponse: vi.fn(() => ({ valid: true })),
       searchKnowledge: vi.fn(async () => []),
       recordContentGap: vi.fn(),
       buildSystemPrompt: vi.fn(() => "system prompt"),
-      generateEscalationSummary: vi.fn(async () => "Ozet: Yazici sorunu"),
+      generateEscalationSummary: vi.fn(async () => "Summary: Printer issue"),
       createOrReuseTicket: vi.fn(() => ({
         ticket: { id: "TK-test-9999", status: "handoff_pending" },
         created: true,
       })),
-      buildConfirmationMessage: vi.fn(() => "Talebinizi aldim. Sube kodu: EST01."),
+      buildConfirmationMessage: vi.fn(() => "I've noted your request. Account ID: EST01."),
       fireWebhook: vi.fn(),
       recordAnalyticsEvent: vi.fn(),
       sanitizeAssistantReply: vi.fn((r) => r),
@@ -95,7 +95,7 @@ describe("chatProcessor", () => {
       "web"
     );
 
-    expect(result.reply).toBe("Anlayamadim, lutfen tekrar yazar misiniz?");
+    expect(result.reply).toBe("I couldn't understand your message. Could you please describe your issue in more detail?");
     expect(result.source).toBe("gibberish");
   });
 
@@ -108,7 +108,7 @@ describe("chatProcessor", () => {
       "web"
     );
 
-    expect(result.reply).toBe("Baska bir konuda yardimci olabilir miyim?");
+    expect(result.reply).toBe("Is there anything else I can help you with?");
     expect(result.source).toBe("closing-flow");
   });
 
@@ -140,7 +140,7 @@ describe("chatProcessor", () => {
     );
 
     // Falls back to buildMissingFieldsReply
-    expect(result.reply).toBe("Lutfen sube kodunuzu belirtin.");
+    expect(result.reply).toBe("Please provide your account ID.");
     expect(deps.recordLLMError).toHaveBeenCalled();
   });
 
@@ -158,7 +158,7 @@ describe("chatProcessor", () => {
     );
 
     expect(deps.validateBotResponse).toHaveBeenCalled();
-    expect(result.reply).toBe("Lutfen sube kodunuzu belirtin.");
+    expect(result.reply).toBe("Please provide your account ID.");
   });
 
   it("detects output injection", async () => {
@@ -174,7 +174,7 @@ describe("chatProcessor", () => {
       "web"
     );
 
-    expect(result.reply).toBe("Size yardimci olabilir miyim?");
+    expect(result.reply).toBe("I'm here to help you with technical support. How can I assist you?");
   });
 
   it("records analytics event", async () => {
@@ -200,7 +200,7 @@ describe("chatProcessor", () => {
     );
 
     expect(result.source).toBe("fallback-no-key");
-    expect(result.reply).toBe("Lutfen sube kodunuzu belirtin.");
+    expect(result.reply).toBe("Please provide your account ID.");
   });
 
   it("respects deterministic collection mode", async () => {
@@ -209,14 +209,14 @@ describe("chatProcessor", () => {
       currentTopic: null,
       escalationTriggered: false,
     });
-    deps.buildDeterministicCollectionReply.mockReturnValue("Sube kodunuzu yazar misiniz?");
+    deps.buildDeterministicCollectionReply.mockReturnValue("Could you please provide your account ID?");
 
     const result = await processor.processChatMessage(
-      [{ role: "user", content: "merhaba" }],
+      [{ role: "user", content: "hello" }],
       "web"
     );
 
-    expect(result.reply).toBe("Sube kodunuzu yazar misiniz?");
+    expect(result.reply).toBe("Could you please provide your account ID?");
     expect(result.source).toBe("rule-engine");
     expect(deps.buildDeterministicCollectionReply).toHaveBeenCalled();
   });

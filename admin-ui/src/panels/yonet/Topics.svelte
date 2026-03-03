@@ -26,7 +26,7 @@
       const res = await api.get("admin/agent/topics");
       topics = res.topics || res || [];
     } catch (e) {
-      showToast("Konular yuklenemedi: " + e.message, "error");
+      showToast("Failed to load topics: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -60,27 +60,27 @@
     try {
       if (editId) {
         await api.put("admin/agent/topics/" + editId, editTopic);
-        showToast("Guncellendi", "success");
+        showToast("Updated", "success");
       } else {
         await api.post("admin/agent/topics", editTopic);
-        showToast("Olusturuldu", "success");
+        showToast("Created", "success");
       }
       editOpen = false;
       await loadTopics();
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 
   async function deleteTopic(id) {
-    const ok = await showConfirm({ title: "Konuyu Sil", message: "Bu konu silinecek. Emin misiniz?", confirmText: "Sil", danger: true });
+    const ok = await showConfirm({ title: "Delete Topic", message: "This topic will be deleted. Are you sure?", confirmText: "Delete", danger: true });
     if (!ok) return;
     try {
       await api.delete("admin/agent/topics/" + id);
-      showToast("Silindi", "success");
+      showToast("Deleted", "success");
       await loadTopics();
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 
@@ -103,44 +103,44 @@
       const suggested = res.keywords || [];
       const merged = [...new Set([...editTopic.keywords, ...suggested])];
       editTopic.keywords = merged;
-      showToast(suggested.length + " keyword onerildi", "info");
+      showToast(suggested.length + " keywords suggested", "info");
     } catch (e) {
-      showToast("Oneri hatasi: " + e.message, "error");
+      showToast("Suggestion error: " + e.message, "error");
     }
   }
 </script>
 
 <div class="page-header">
   <div>
-    <h1>Konular <Badge variant="blue">{topics.length}</Badge></h1>
-    <p>Bot'un bilgi konulari</p>
+    <h1>Topics <Badge variant="blue">{topics.length}</Badge></h1>
+    <p>Bot knowledge topics</p>
   </div>
-  <Button onclick={openNew} variant="primary" size="sm">+ Yeni Konu</Button>
+  <Button onclick={openNew} variant="primary" size="sm">+ New Topic</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="topics-grid">
     {#each topics as t}
       <div class="topic-card">
         <div class="topic-header">
           <h3>{t.title}</h3>
-          <Badge variant={t.enabled !== false ? "green" : "gray"}>{t.enabled !== false ? "aktif" : "pasif"}</Badge>
+          <Badge variant={t.enabled !== false ? "green" : "gray"}>{t.enabled !== false ? "active" : "inactive"}</Badge>
         </div>
         {#if t.description}
           <p class="topic-desc">{t.description}</p>
         {/if}
         <div class="topic-meta">
           {#if t.requiresEscalation}
-            <Badge variant="orange">Eskalasyon</Badge>
+            <Badge variant="orange">Escalation</Badge>
           {/if}
           {#if t.canResolveDirectly !== false}
-            <Badge variant="blue">Dogrudan cozum</Badge>
+            <Badge variant="blue">Direct resolution</Badge>
           {/if}
         </div>
         {#if t.requiredInfo?.length}
-          <p class="topic-info">Gerekli: {t.requiredInfo.join(", ")}</p>
+          <p class="topic-info">Required: {t.requiredInfo.join(", ")}</p>
         {/if}
         {#if t.keywords?.length}
           <div class="topic-tags">
@@ -153,33 +153,33 @@
           </div>
         {/if}
         <div class="topic-actions">
-          <Button onclick={() => openEdit(t)} variant="ghost" size="sm">Duzenle</Button>
-          <Button onclick={() => deleteTopic(t.id || t._id)} variant="ghost" size="sm">Sil</Button>
+          <Button onclick={() => openEdit(t)} variant="ghost" size="sm">Edit</Button>
+          <Button onclick={() => deleteTopic(t.id || t._id)} variant="ghost" size="sm">Delete</Button>
         </div>
       </div>
     {:else}
-      <div class="empty-state">Henuz konu yok</div>
+      <div class="empty-state">No topics yet</div>
     {/each}
   </div>
 {/if}
 
-<Modal bind:open={editOpen} title={editId ? "Konu Duzenle" : "Yeni Konu"}>
+<Modal bind:open={editOpen} title={editId ? "Edit Topic" : "New Topic"}>
   <div class="form-group">
-    <label>Baslik
-      <input class="input" bind:value={editTopic.title} placeholder="Konu basligi" />
+    <label>Title
+      <input class="input" bind:value={editTopic.title} placeholder="Topic title" />
     </label>
   </div>
   <div class="form-group">
-    <label>Aciklama
-      <textarea class="textarea" bind:value={editTopic.description} rows="3" placeholder="Konu aciklamasi..."></textarea>
+    <label>Description
+      <textarea class="textarea" bind:value={editTopic.description} rows="3" placeholder="Topic description..."></textarea>
     </label>
   </div>
   <div class="form-group">
-    <label>Anahtar Kelimeler
+    <label>Keywords
       <div class="kw-input-row">
-        <input class="input" bind:value={newKeyword} placeholder="Kelime ekle..." onkeydown={(e) => { if (e.key === "Enter") { e.preventDefault(); addKeyword(); } }} />
-        <Button onclick={addKeyword} variant="secondary" size="sm">Ekle</Button>
-        <Button onclick={suggestKeywords} variant="ghost" size="sm">AI Oner</Button>
+        <input class="input" bind:value={newKeyword} placeholder="Add keyword..." onkeydown={(e) => { if (e.key === "Enter") { e.preventDefault(); addKeyword(); } }} />
+        <Button onclick={addKeyword} variant="secondary" size="sm">Add</Button>
+        <Button onclick={suggestKeywords} variant="ghost" size="sm">AI Suggest</Button>
       </div>
     </label>
     <div class="kw-tags">
@@ -189,23 +189,23 @@
     </div>
   </div>
   <div class="form-group">
-    <label>Gerekli Bilgiler (virgul ile ayirin)
-      <input class="input" bind:value={requiredInfoText} placeholder="ad soyad, telefon, siparis no..." />
+    <label>Required Information (comma separated)
+      <input class="input" bind:value={requiredInfoText} placeholder="full name, phone, order no..." />
     </label>
   </div>
   <div class="form-row">
-    <label>Eskalasyon Gerektirir
+    <label>Requires Escalation
       <Toggle bind:checked={editTopic.requiresEscalation} />
     </label>
   </div>
   <div class="form-row">
-    <label>Dogrudan Cozulebilir
+    <label>Can Resolve Directly
       <Toggle bind:checked={editTopic.canResolveDirectly} />
     </label>
   </div>
   <div class="modal-actions">
-    <Button onclick={() => (editOpen = false)} variant="secondary">Iptal</Button>
-    <Button onclick={save} variant="primary">Kaydet</Button>
+    <Button onclick={() => (editOpen = false)} variant="secondary">Cancel</Button>
+    <Button onclick={save} variant="primary">Save</Button>
   </div>
 </Modal>
 

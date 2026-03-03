@@ -3,49 +3,49 @@
 /**
  * Reflexion Engine
  *
- * Negatif geri bildirimlerden ogrenme motoru.
- * Kullanici memnun kalmadiginda LLM ile analiz yapar,
- * hata turunu ve dogru bilgiyi kaydeder.
- * Sonraki cevaplarda gecmis hatalardan uyari uretir.
+ * Learning engine from negative feedback.
+ * When user is unsatisfied, analyzes with LLM,
+ * records error type and correct information.
+ * Produces warnings from past errors in subsequent responses.
  *
  * Factory pattern: createReflexion(deps)
  */
 
-const ANALYZE_SYSTEM_PROMPT = `Sen bir musteri destek kalite analiz asistanisin.
-Kullanici verilen cevaptan memnun kalmadi. Soruyu, cevabi ve RAG baglam bilgisini inceleyerek hatanin kaynagini analiz et.
+const ANALYZE_SYSTEM_PROMPT = `You are a customer support quality analysis assistant.
+The user was unsatisfied with the provided answer. Examine the question, answer, and RAG context to analyze the root cause of the error.
 
-JSON formatinda cevap ver. Baska bir sey yazma.
+Respond in JSON format. Write nothing else.
 Format:
 {
-  "topic": "konu baslik (2-3 kelime)",
+  "topic": "topic title (2-3 words)",
   "errorType": "wrong_info|incomplete|irrelevant|tone_issue",
-  "analysis": "1-2 cumlelik analiz",
-  "correctInfo": "dogru bilgi veya oneri (bilinmiyorsa bos string)"
+  "analysis": "1-2 sentence analysis",
+  "correctInfo": "correct information or suggestion (empty string if unknown)"
 }`;
 
 function createReflexion(deps) {
   const { callLLM, getProviderConfig, sqliteDb, logger } = deps;
 
   /**
-   * Negatif geri bildirim sonrasi LLM ile analiz yap ve kaydet.
+   * Analyze with LLM after negative feedback and save.
    * @param {object} params
    * @param {string} params.sessionId
-   * @param {string} params.query - Kullanici sorusu
-   * @param {string} params.answer - Verilen cevap
-   * @param {Array} params.ragResults - RAG sonuclari
+   * @param {string} params.query - User question
+   * @param {string} params.answer - Provided answer
+   * @param {Array} params.ragResults - RAG results
    */
   async function analyze({ sessionId, query, answer, ragResults }) {
     try {
       const ragContext = Array.isArray(ragResults) && ragResults.length > 0
         ? ragResults.map(r => (r.answer || r.text || "").slice(0, 200)).join("\n")
-        : "RAG sonucu yok";
+        : "No RAG results";
 
       const userMessage = [
-        "Kullanici bu cevaptan memnun kalmadi.",
+        "User was unsatisfied with this answer.",
         "",
-        `Kullanici Sorusu: ${query}`,
-        `Verilen Cevap: ${answer}`,
-        `RAG Baglami:\n${ragContext}`,
+        `User Question: ${query}`,
+        `Provided Answer: ${answer}`,
+        `RAG Context:\n${ragContext}`,
       ].join("\n");
 
       const messages = [{ role: "user", parts: [{ text: userMessage }] }];
@@ -78,17 +78,17 @@ function createReflexion(deps) {
 
       await sqliteDb.saveReflexionLog(logData);
     } catch (err) {
-      logger.warn("reflexion", "Analiz basarisiz, kayit atlanıyor", err);
+      logger.warn("reflexion", "Analysis failed, record skipped", err);
     }
   }
 
   /**
-   * Belirli bir konu icin gecmis reflexion uyarilarini formatla.
-   * @param {string} topic - Aranacak konu (intent)
-   * @param {Object} [opts] - Ek arama parametreleri
-   * @param {string} [opts.standaloneQuery] - standaloneQuery ile ek arama
-   * @param {number} [opts.limit] - Maks sonuc sayisi
-   * @returns {string} Formatlenmis uyari metni veya bos string
+   * Format past reflexion warnings for a specific topic.
+   * @param {string} topic - Topic to search (intent)
+   * @param {Object} [opts] - Additional search parameters
+   * @param {string} [opts.standaloneQuery] - Additional search with standaloneQuery
+   * @param {number} [opts.limit] - Max result count
+   * @returns {string} Formatted warning text or empty string
    */
   async function getWarnings(topic, opts = {}) {
     const { standaloneQuery, limit = 3 } = typeof opts === "number" ? { limit: opts } : opts;
@@ -110,14 +110,14 @@ function createReflexion(deps) {
     }
 
     const warnings = results.map(r => {
-      const lines = [`DIKKAT: ${r.analysis}`];
+      const lines = [`WARNING: ${r.analysis}`];
       if (r.correctInfo) {
-        lines.push(`Dogru bilgi: ${r.correctInfo}`);
+        lines.push(`Correct info: ${r.correctInfo}`);
       }
       return lines.join("\n");
     });
 
-    return `--- GECMIS HATALAR (Reflexion) ---\n${warnings.join("\n---\n")}\n---`;
+    return `--- PAST ERRORS (Reflexion) ---\n${warnings.join("\n---\n")}\n---`;
   }
 
   return { analyze, getWarnings };

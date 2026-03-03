@@ -4,11 +4,11 @@
  * Persistent Job Queue Service
  *
  * SQLite-backed polling worker for fire-and-forget tasks.
- * Pattern: createJobQueue(deps) factory — agentQueue.js ile ayni yaklasim.
+ * Pattern: createJobQueue(deps) factory — same approach as agentQueue.js.
  *
  * Job lifecycle: pending -> running -> completed | dead
- * Retry: exponential backoff, max 5dk
- * Crash recovery: startup'ta stale 'running' job'lar 'pending'e reset
+ * Retry: exponential backoff, max 5 min
+ * Crash recovery: on startup, stale 'running' jobs reset to 'pending'
  */
 
 const JOB_STATUS = {
@@ -19,8 +19,8 @@ const JOB_STATUS = {
 };
 
 const DEFAULT_POLL_MS = 2000;
-const MAX_BACKOFF_MS = 300000; // 5 dakika
-const CLEANUP_INTERVAL_MS = 86400000; // 24 saat
+const MAX_BACKOFF_MS = 300000; // 5 minutes
+const CLEANUP_INTERVAL_MS = 86400000; // 24 hours
 const STOP_TIMEOUT_MS = 30000;
 
 function createJobQueue(deps) {
@@ -54,7 +54,7 @@ function createJobQueue(deps) {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_job_queue_status_runAfter ON job_queue (status, runAfter)`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_job_queue_type ON job_queue (type)`);
   } catch (err) {
-    logger.warn("jobQueue", "Table olusturma hatasi", err);
+    logger.warn("jobQueue", "Table creation error", err);
   }
 
   function _getDb() {
@@ -64,9 +64,9 @@ function createJobQueue(deps) {
   // ── Public API ───────────────────────────────────────────────────────
 
   /**
-   * Job ekle.
-   * @param {string} type - Handler tipi
-   * @param {Object} payload - Islenecek veri
+   * Add job.
+   * @param {string} type - Handler type
+   * @param {Object} payload - Data to process
    * @param {Object} [opts] - { priority, maxAttempts, runAfter }
    * @returns {number|null} job id
    */
@@ -91,13 +91,13 @@ function createJobQueue(deps) {
       );
       return Number(result.lastInsertRowid);
     } catch (err) {
-      logger.warn("jobQueue", "add hatasi", { type, error: err.message });
+      logger.warn("jobQueue", "add error", { type, error: err.message });
       return null;
     }
   }
 
   /**
-   * Handler kaydet.
+   * Register handler.
    * @param {string} type
    * @param {function} asyncFn - async (payload) => void
    */
@@ -106,7 +106,7 @@ function createJobQueue(deps) {
   }
 
   /**
-   * Worker baslat.
+   * Start worker.
    * @param {Object} [opts] - { pollIntervalMs }
    */
   function start(opts = {}) {
@@ -115,18 +115,18 @@ function createJobQueue(deps) {
     stopRequested = false;
     pollMs = opts.pollIntervalMs || DEFAULT_POLL_MS;
 
-    // Crash recovery: stale 'running' job'lari reset et
+    // Crash recovery: reset stale 'running' jobs
     _resetStaleJobs();
 
-    // Cleanup timer: 24 saatte bir completed job'lari temizle
+    // Cleanup timer: clean completed jobs every 24 hours
     cleanupTimer = setInterval(_cleanupCompleted, CLEANUP_INTERVAL_MS);
 
-    logger.info("jobQueue", `Worker baslatildi (poll: ${pollMs}ms, handlers: ${handlers.size})`);
+    logger.info("jobQueue", `Worker started (poll: ${pollMs}ms, handlers: ${handlers.size})`);
     _tick();
   }
 
   /**
-   * Worker durdur. In-flight job bitmesini bekle (max 30s).
+   * Stop worker. Wait for in-flight job to complete (max 30s).
    * @returns {Promise<void>}
    */
   async function stop() {
@@ -143,17 +143,17 @@ function createJobQueue(deps) {
       cleanupTimer = null;
     }
 
-    // In-flight job varsa bekle
+    // Wait for in-flight job if exists
     if (currentJobPromise) {
       const timeout = new Promise((resolve) => setTimeout(resolve, STOP_TIMEOUT_MS));
       await Promise.race([currentJobPromise, timeout]);
     }
 
-    logger.info("jobQueue", "Worker durduruldu");
+    logger.info("jobQueue", "Worker stopped");
   }
 
   /**
-   * Dead job listele.
+   * List dead jobs.
    * @param {number} [limit=50]
    * @returns {Array}
    */
@@ -164,13 +164,13 @@ function createJobQueue(deps) {
       ).all(JOB_STATUS.DEAD, limit);
       return rows.map(_parseRow);
     } catch (err) {
-      logger.warn("jobQueue", "listDead hatasi", err);
+      logger.warn("jobQueue", "listDead error", err);
       return [];
     }
   }
 
   /**
-   * Dead job'u pending'e dondur.
+   * Retry dead job by resetting to pending.
    * @param {number} jobId
    * @returns {boolean}
    */
@@ -183,14 +183,14 @@ function createJobQueue(deps) {
       ).run(JOB_STATUS.PENDING, now, jobId, JOB_STATUS.DEAD);
       return result.changes > 0;
     } catch (err) {
-      logger.warn("jobQueue", "retryDead hatasi", { jobId, error: err.message });
+      logger.warn("jobQueue", "retryDead error", { jobId, error: err.message });
       return false;
     }
   }
 
   /**
-   * Tum dead job'lari sil.
-   * @returns {number} silinen sayi
+   * Purge all dead jobs.
+   * @returns {number} number deleted
    */
   function purgeDead() {
     try {
@@ -199,13 +199,13 @@ function createJobQueue(deps) {
       ).run(JOB_STATUS.DEAD);
       return result.changes;
     } catch (err) {
-      logger.warn("jobQueue", "purgeDead hatasi", err);
+      logger.warn("jobQueue", "purgeDead error", err);
       return 0;
     }
   }
 
   /**
-   * Status bazli count.
+   * Get status-based counts.
    * @returns {{ pending, running, completed, dead }}
    */
   function getStats() {
@@ -219,7 +219,7 @@ function createJobQueue(deps) {
       }
       return stats;
     } catch (err) {
-      logger.warn("jobQueue", "getStats hatasi", err);
+      logger.warn("jobQueue", "getStats error", err);
       return { pending: 0, running: 0, completed: 0, dead: 0 };
     }
   }
@@ -230,7 +230,7 @@ function createJobQueue(deps) {
     try {
       row.payload = JSON.parse(row.payload);
     } catch {
-      // payload zaten string kalsin
+      // payload remains string
     }
     return row;
   }
@@ -242,10 +242,10 @@ function createJobQueue(deps) {
         `UPDATE job_queue SET status = ?, updatedAt = ? WHERE status = ?`
       ).run(JOB_STATUS.PENDING, now, JOB_STATUS.RUNNING);
       if (result.changes > 0) {
-        logger.info("jobQueue", `${result.changes} stale job reset edildi (crash recovery)`);
+        logger.info("jobQueue", `${result.changes} stale jobs reset (crash recovery)`);
       }
     } catch (err) {
-      logger.warn("jobQueue", "stale job reset hatasi", err);
+      logger.warn("jobQueue", "stale job reset error", err);
     }
   }
 
@@ -256,10 +256,10 @@ function createJobQueue(deps) {
         `DELETE FROM job_queue WHERE status = ? AND completedAt < ?`
       ).run(JOB_STATUS.COMPLETED, cutoff);
       if (result.changes > 0) {
-        logger.info("jobQueue", `${result.changes} eski completed job temizlendi`);
+        logger.info("jobQueue", `${result.changes} old completed jobs cleaned up`);
       }
     } catch (err) {
-      logger.warn("jobQueue", "cleanup hatasi", err);
+      logger.warn("jobQueue", "cleanup error", err);
     }
   }
 
@@ -281,7 +281,7 @@ function createJobQueue(deps) {
 
       return _parseRow(row);
     } catch (err) {
-      logger.warn("jobQueue", "claimNext hatasi", err);
+      logger.warn("jobQueue", "claimNext error", err);
       return null;
     }
   }
@@ -293,7 +293,7 @@ function createJobQueue(deps) {
         `UPDATE job_queue SET status = ?, completedAt = ?, updatedAt = ? WHERE id = ?`
       ).run(JOB_STATUS.COMPLETED, now, now, jobId);
     } catch (err) {
-      logger.warn("jobQueue", "markCompleted hatasi", { jobId, error: err.message });
+      logger.warn("jobQueue", "markCompleted error", { jobId, error: err.message });
     }
   }
 
@@ -314,15 +314,15 @@ function createJobQueue(deps) {
         ).run(JOB_STATUS.PENDING, attempts, errorMsg, runAfter, now, jobId);
       }
     } catch (err) {
-      logger.warn("jobQueue", "markFailed hatasi", { jobId, error: err.message });
+      logger.warn("jobQueue", "markFailed error", { jobId, error: err.message });
     }
   }
 
   async function _processJob(job) {
     const handler = handlers.get(job.type);
     if (!handler) {
-      logger.warn("jobQueue", `Handler bulunamadi: ${job.type}`, { jobId: job.id });
-      _markFailed(job.id, job.maxAttempts, job.maxAttempts, `Handler bulunamadi: ${job.type}`);
+      logger.warn("jobQueue", `Handler not found: ${job.type}`, { jobId: job.id });
+      _markFailed(job.id, job.maxAttempts, job.maxAttempts, `Handler not found: ${job.type}`);
       return;
     }
 
@@ -332,7 +332,7 @@ function createJobQueue(deps) {
       _markCompleted(job.id);
     } catch (err) {
       const errorMsg = String(err.message || err).slice(0, 500);
-      logger.warn("jobQueue", `Job basarisiz: ${job.type}`, { jobId: job.id, attempt: newAttempts, error: errorMsg });
+      logger.warn("jobQueue", `Job failed: ${job.type}`, { jobId: job.id, attempt: newAttempts, error: errorMsg });
       _markFailed(job.id, newAttempts, job.maxAttempts, errorMsg);
     }
   }
@@ -344,13 +344,13 @@ function createJobQueue(deps) {
     if (job) {
       currentJobPromise = _processJob(job).finally(() => {
         currentJobPromise = null;
-        // Is bulundu, hemen devam et
+        // Job found, continue immediately
         if (running && !stopRequested) {
           setImmediate(_tick);
         }
       });
     } else {
-      // Bos kuyruk, pollMs bekle
+      // Empty queue, wait for poll interval
       currentJobPromise = null;
       timer = setTimeout(_tick, pollMs);
     }

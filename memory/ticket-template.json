@@ -8,8 +8,8 @@
     "fullName",
     "phone"
   ],
-  "confirmationTemplate": "Talebinizi aldım. Şube kodu: {{branchCode}}. Kısa açıklama: {{issueSummary}}. Destek ekibi en kısa sürede dönüş yapacaktır.",
-  "statusFollowupTemplate": "Talebiniz daha önce alındı ve destek ekibine iletildi. Dönüş bekleniyor. Yeni bir talep açmak isterseniz yeni şube kodu ve sorun özeti yazabilirsiniz.",
-  "outsideSupportHoursTemplate": "Canlı destek şu an mesai dışındadır. Talebiniz kayda alındı; mesai saatlerinde temsilciye aktarılacaktır.",
-  "notes": "Talep belleği şeması. Runtime veri çıkarımı ve handoff kararları server.js içinde yapılır."
+  "confirmationTemplate": "Your request has been received. Branch code: {{branchCode}}. Summary: {{issueSummary}}. Our support team will get back to you as soon as possible.",
+  "statusFollowupTemplate": "Your request was already received and forwarded to the support team. We are awaiting a response. If you'd like to open a new request, please provide a new branch code and issue summary.",
+  "outsideSupportHoursTemplate": "Live support is currently outside of business hours. Your request has been logged and will be forwarded to an agent during business hours.",
+  "notes": "Ticket memory schema. Runtime data extraction and handoff decisions are handled in server.js."
 }

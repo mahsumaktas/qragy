@@ -24,7 +24,7 @@ function mount(app, deps) {
   // ── Webhooks: Create ────────────────────────────────────────────────────
   app.post("/api/admin/webhooks", requireAdminAccess, (req, res) => {
     const { url, events, secret } = req.body || {};
-    if (!url) return res.status(400).json({ error: "url zorunludur." });
+    if (!url) return res.status(400).json({ error: "url is required." });
     const hooks = loadWebhooks();
     const hook = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
@@ -42,7 +42,7 @@ function mount(app, deps) {
   app.put("/api/admin/webhooks/:id", requireAdminAccess, (req, res) => {
     const hooks = loadWebhooks();
     const hook = hooks.find(h => h.id === req.params.id);
-    if (!hook) return res.status(404).json({ error: "Webhook bulunamadi." });
+    if (!hook) return res.status(404).json({ error: "Webhook not found." });
     const { url, events, active, secret } = req.body || {};
     if (url !== undefined) hook.url = url;
     if (Array.isArray(events)) hook.events = events;
@@ -56,7 +56,7 @@ function mount(app, deps) {
   app.delete("/api/admin/webhooks/:id", requireAdminAccess, (req, res) => {
     const hooks = loadWebhooks();
     const idx = hooks.findIndex(h => h.id === req.params.id);
-    if (idx < 0) return res.status(404).json({ error: "Webhook bulunamadi." });
+    if (idx < 0) return res.status(404).json({ error: "Webhook not found." });
     hooks.splice(idx, 1);
     saveWebhooks(hooks);
     return res.json({ ok: true });
@@ -66,7 +66,7 @@ function mount(app, deps) {
   app.post("/api/admin/webhooks/:id/test", requireAdminAccess, async (req, res) => {
     const hooks = loadWebhooks();
     const hook = hooks.find(h => h.id === req.params.id);
-    if (!hook) return res.status(404).json({ error: "Webhook bulunamadi." });
+    if (!hook) return res.status(404).json({ error: "Webhook not found." });
     try {
       const body = JSON.stringify({ event: "test", data: { message: "Qragy webhook test" }, timestamp: new Date().toISOString() });
       const headers = { "Content-Type": "application/json" };

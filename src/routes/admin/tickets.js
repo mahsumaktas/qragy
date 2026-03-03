@@ -84,7 +84,7 @@ function mount(app, deps) {
     const ticket = db.tickets.find((item) => item.id === ticketId);
 
     if (!ticket) {
-      return res.status(404).json({ error: "Ticket bulunamadi." });
+      return res.status(404).json({ error: "Ticket not found." });
     }
 
     return res.json({
@@ -134,12 +134,12 @@ function mount(app, deps) {
     const { assignedTo } = req.body || {};
     const db = loadTicketsDb();
     const ticket = db.tickets.find(t => t.id === ticketId);
-    if (!ticket) return res.status(404).json({ error: "Ticket bulunamadi." });
+    if (!ticket) return res.status(404).json({ error: "Ticket not found." });
     ticket.assignedTo = String(assignedTo || "").trim();
     ticket.updatedAt = nowIso();
     if (!ticket.firstResponseAt) ticket.firstResponseAt = ticket.updatedAt;
     ticket.events = Array.isArray(ticket.events) ? ticket.events : [];
-    ticket.events.push({ at: ticket.updatedAt, type: "assigned", message: `Ticket ${ticket.assignedTo || "kimseye"} atandi.` });
+    ticket.events.push({ at: ticket.updatedAt, type: "assigned", message: `Ticket assigned to ${ticket.assignedTo || "nobody"}.` });
     saveTicketsDb(db);
     const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "";
     recordAuditEvent("ticket_assign", `${ticketId} -> ${ticket.assignedTo}`, clientIp);
@@ -150,10 +150,10 @@ function mount(app, deps) {
   app.post("/api/admin/tickets/:ticketId/notes", requireAdminAccess, (req, res) => {
     const ticketId = String(req.params.ticketId || "").trim();
     const { note, author } = req.body || {};
-    if (!note) return res.status(400).json({ error: "note zorunludur." });
+    if (!note) return res.status(400).json({ error: "note is required." });
     const db = loadTicketsDb();
     const ticket = db.tickets.find(t => t.id === ticketId);
-    if (!ticket) return res.status(404).json({ error: "Ticket bulunamadi." });
+    if (!ticket) return res.status(404).json({ error: "Ticket not found." });
     if (!Array.isArray(ticket.internalNotes)) ticket.internalNotes = [];
     const entry = { at: nowIso(), note: String(note).slice(0, 2000), author: String(author || "admin").slice(0, 100) };
     ticket.internalNotes.push(entry);
@@ -167,14 +167,14 @@ function mount(app, deps) {
     const ticketId = String(req.params.ticketId || "").trim();
     const { priority } = req.body || {};
     const valid = ["low", "normal", "high"];
-    if (!valid.includes(priority)) return res.status(400).json({ error: "priority: low/normal/high olmalidir." });
+    if (!valid.includes(priority)) return res.status(400).json({ error: "priority must be low/normal/high." });
     const db = loadTicketsDb();
     const ticket = db.tickets.find(t => t.id === ticketId);
-    if (!ticket) return res.status(404).json({ error: "Ticket bulunamadi." });
+    if (!ticket) return res.status(404).json({ error: "Ticket not found." });
     ticket.priority = priority;
     ticket.updatedAt = nowIso();
     ticket.events = Array.isArray(ticket.events) ? ticket.events : [];
-    ticket.events.push({ at: ticket.updatedAt, type: "priority_changed", message: `Oncelik ${priority} olarak degistirildi.` });
+    ticket.events.push({ at: ticket.updatedAt, type: "priority_changed", message: `Priority changed to ${priority}.` });
     saveTicketsDb(db);
     const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "";
     recordAuditEvent("ticket_priority", `${ticketId} -> ${priority}`, clientIp);
@@ -190,7 +190,7 @@ function mount(app, deps) {
   app.post("/api/admin/prompt-versions/:id/rollback", requireAdminAccess, (req, res) => {
     const data = loadPromptVersions();
     const version = data.versions.find(v => v.id === req.params.id);
-    if (!version) return res.status(404).json({ error: "Versiyon bulunamadi." });
+    if (!version) return res.status(404).json({ error: "Version not found." });
     const filePath = path.join(AGENT_DIR, version.filename);
     try {
       if (fs.existsSync(filePath)) {
@@ -198,7 +198,7 @@ function mount(app, deps) {
       }
       fs.writeFileSync(filePath, version.content, "utf8");
       loadAllAgentConfig();
-      return res.json({ ok: true, message: `${version.filename} geri alindi.` });
+      return res.json({ ok: true, message: `${version.filename} reverted.` });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });
     }

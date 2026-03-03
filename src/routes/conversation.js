@@ -42,7 +42,7 @@ function mount(app, deps) {
     fileFilter: (_req, file, cb) => {
       const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
       if (allowed.includes(file.mimetype)) cb(null, true);
-      else cb(new Error("Desteklenmeyen dosya tipi. Sadece resim ve PDF kabul edilir."));
+      else cb(new Error("Unsupported file type. Only images and PDF are accepted."));
     }
   });
 
@@ -50,7 +50,7 @@ function mount(app, deps) {
   app.post("/api/tickets/:ticketId/handoff", (req, res) => {
     const ticketId = String(req.params.ticketId || "").trim();
     if (!ticketId) {
-      return res.status(400).json({ error: "ticketId zorunludur." });
+      return res.status(400).json({ error: "ticketId is required." });
     }
 
     const status = String(req.body?.status || "").trim().toLowerCase();
@@ -59,7 +59,7 @@ function mount(app, deps) {
 
     const result = updateTicketHandoffResult(ticketId, status, detail, meta);
     if (result.error) {
-      const isNotFound = /bulunamadi/i.test(result.error);
+      const isNotFound = /not found/i.test(result.error);
       return res.status(isNotFound ? 404 : 400).json({ error: result.error });
     }
 
@@ -71,7 +71,7 @@ function mount(app, deps) {
         jobQueue.add("graph-extract", { ticket: result.ticket });
       } else if (ngGraphBuilder) {
         Promise.resolve().then(() => ngGraphBuilder.extractAndStore(result.ticket))
-          .catch(err => logger.warn("conversation", "graphBuilder.extractAndStore hatasi", err));
+          .catch(err => logger.warn("conversation", "graphBuilder.extractAndStore error", err));
       }
     }
 
@@ -81,7 +81,7 @@ function mount(app, deps) {
   // ── Session Status Check ───────────────────────────────────────────────
   app.get("/api/conversations/status/:sessionId", (req, res) => {
     const sessionId = String(req.params.sessionId || "").trim();
-    if (!sessionId) return res.status(400).json({ error: "sessionId zorunludur." });
+    if (!sessionId) return res.status(400).json({ error: "sessionId is required." });
     const data = loadConversations();
     const conv = data.conversations.find(c => c.sessionId === sessionId);
     if (!conv) return res.json({ active: false });
@@ -92,7 +92,7 @@ function mount(app, deps) {
   app.post("/api/conversations/close", (req, res) => {
     const sessionId = String(req.body?.sessionId || "").trim();
     if (!sessionId) {
-      return res.status(400).json({ error: "sessionId zorunludur." });
+      return res.status(400).json({ error: "sessionId is required." });
     }
     const reason = String(req.body?.reason || "inactivity").trim();
     const allowed = ["inactivity", "user", "farewell"];
@@ -107,18 +107,18 @@ function mount(app, deps) {
   app.post("/api/tickets/:ticketId/rating", (req, res) => {
     const ticketId = String(req.params.ticketId || "").trim();
     if (!ticketId) {
-      return res.status(400).json({ error: "ticketId zorunludur." });
+      return res.status(400).json({ error: "ticketId is required." });
     }
 
     const rating = Number(req.body?.rating);
     if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      return res.status(400).json({ error: "Rating 1-5 arasi olmalidir." });
+      return res.status(400).json({ error: "Rating must be between 1-5." });
     }
 
     const db = loadTicketsDb();
     const ticket = db.tickets.find((item) => item.id === ticketId);
     if (!ticket) {
-      return res.status(404).json({ error: "Ticket bulunamadi." });
+      return res.status(404).json({ error: "Ticket not found." });
     }
 
     const timestamp = nowIso();
@@ -129,7 +129,7 @@ function mount(app, deps) {
     ticket.events.push({
       at: timestamp,
       type: "csat_rating",
-      message: `Kullanici ${rating}/5 puan verdi.`,
+      message: `User gave ${rating}/5 rating.`,
       rating
     });
 
@@ -141,7 +141,7 @@ function mount(app, deps) {
 
   // ── Chat File Upload ───────────────────────────────────────────────────
   app.post("/api/chat/upload", chatUpload.single("file"), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: "Dosya gerekli." });
+    if (!req.file) return res.status(400).json({ error: "File is required." });
     const fileUrl = `/uploads/${req.file.filename}`;
     return res.json({ ok: true, url: fileUrl, name: req.file.originalname, size: req.file.size });
   });
@@ -152,7 +152,7 @@ function mount(app, deps) {
   app.post("/api/chat/feedback", (req, res) => {
     const { sessionId, messageIndex, rating } = req.body || {};
     if (!rating || !["up", "down"].includes(rating)) {
-      return res.status(400).json({ error: "rating: 'up' veya 'down' olmalidir." });
+      return res.status(400).json({ error: "rating must be 'up' or 'down'." });
     }
     const data = loadFeedback();
     data.entries.push({
@@ -186,7 +186,7 @@ function mount(app, deps) {
           } else {
             Promise.resolve().then(() =>
               ngReflexion.analyze({ sessionId, query: userQuery, answer: botAnswer, ragResults: [] })
-            ).catch(err => logger.warn("feedback", "reflexion.analyze hatasi", err));
+            ).catch(err => logger.warn("feedback", "reflexion.analyze error", err));
           }
         }
       }

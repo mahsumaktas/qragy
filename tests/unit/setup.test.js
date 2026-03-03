@@ -185,8 +185,8 @@ describe("Setup Route", () => {
 
     // Verify site config updated
     const siteConfig = store.getSiteConfig();
-    expect(siteConfig.heroTitle).toBe("Acme Corp Destek");
-    expect(siteConfig.headerTitle).toBe("Acme Corp Destek");
+    expect(siteConfig.heroTitle).toBe("Acme Corp Support");
+    expect(siteConfig.headerTitle).toBe("Acme Corp Support");
     expect(siteConfig.themeColor).toBe("#FF0000");
 
     // Verify chatFlow config updated

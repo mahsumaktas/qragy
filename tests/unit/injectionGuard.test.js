@@ -85,6 +85,6 @@ describe("Injection Guard", () => {
   });
 
   it("should have a generic reply constant", () => {
-    expect(GENERIC_REPLY).toContain("yardimci");
+    expect(GENERIC_REPLY).toContain("help");
   });
 });

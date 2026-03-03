@@ -107,7 +107,7 @@ describe("SearchEngine", () => {
       expect(citations[1]).toEqual({
         index: 2,
         title: "Soru 2?",
-        source: "Bilgi Tabani",
+        source: "Knowledge Base",
         snippet: "Kisa cevap",
       });
     });

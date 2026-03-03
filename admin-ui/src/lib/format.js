@@ -2,7 +2,7 @@ export function fmtDate(dateStr) {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("tr-TR", {
+  return d.toLocaleDateString("en-US", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -15,7 +15,7 @@ export function fmtDateShort(dateStr) {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("tr-TR", {
+  return d.toLocaleDateString("en-US", {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -29,12 +29,12 @@ export function fmtRelative(dateStr) {
   if (isNaN(d.getTime())) return "-";
   const diff = Date.now() - d.getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "az once";
-  if (mins < 60) return mins + " dk once";
+  if (mins < 1) return "just now";
+  if (mins < 60) return mins + " min ago";
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return hours + " saat once";
+  if (hours < 24) return hours + " hr ago";
   const days = Math.floor(hours / 24);
-  if (days < 30) return days + " gun once";
+  if (days < 30) return days + " days ago";
   return fmtDate(dateStr);
 }
 

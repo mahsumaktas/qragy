@@ -4,7 +4,7 @@ export function getConfirm() {
   return current;
 }
 
-export function showConfirm({ title, message, confirmText = "Onayla", cancelText = "Iptal", danger = false }) {
+export function showConfirm({ title, message, confirmText = "Confirm", cancelText = "Cancel", danger = false }) {
   return new Promise((resolve) => {
     current = {
       title,

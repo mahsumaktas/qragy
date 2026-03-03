@@ -6,7 +6,7 @@
     sortDir = $bindable("asc"),
     selectable = false,
     selected = $bindable([]),
-    emptyText = "Veri bulunamadi",
+    emptyText = "No data found",
     onrowclick,
   } = $props();
 
@@ -25,7 +25,7 @@
     return [...rows].sort((a, b) => {
       const va = a[sortKey] ?? "";
       const vb = b[sortKey] ?? "";
-      const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb), "tr");
+      const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb), "en");
       return sortDir === "asc" ? cmp : -cmp;
     });
   });

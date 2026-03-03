@@ -9,11 +9,11 @@ const HALLUCINATION_MARKERS = [
   "i cannot", "i'm sorry but",
 ];
 
-const HEDGING_MARKERS = ["sanirim", "galiba", "tahminimce", "belki de", "emin degilim"];
+const HEDGING_MARKERS = ["i think", "maybe", "perhaps", "i guess", "not sure", "i'm not certain", "possibly", "it might be"];
 
-const TURKISH_INDICATORS = /[çğıöşüÇĞİÖŞÜ]|(\b(bir|ve|ile|icin|nasil|ne|bu|su|olan|gibi|var|yok|size|sizi|lütfen|lutfen|tesekkur|yardimci|olabilir|destek|aktariyorum|kontrol|iletebilir|bilgi|merhaba|iyi gunler)\b)/i;
+const ENGLISH_INDICATORS = /\b(the|and|with|for|how|what|this|that|which|like|have|can|you|your|please|thank|help|support|transfer|check|information|hello|goodbye|issue|account|password)\b/i;
 
-function validateBotResponse(reply, expectedLang = "tr") {
+function validateBotResponse(reply, expectedLang = "en") {
   if (!reply || typeof reply !== "string") return { valid: false, reason: "empty" };
   const trimmed = reply.trim();
   if (trimmed.length < 10) return { valid: false, reason: "too_short" };
@@ -51,11 +51,11 @@ function validateBotResponse(reply, expectedLang = "tr") {
   }
 
   // Language check
-  if (expectedLang === "tr" && trimmed.length > 50) {
-    if (!TURKISH_INDICATORS.test(trimmed)) return { valid: false, reason: "language_mismatch" };
+  if (expectedLang === "en" && trimmed.length > 50) {
+    if (!ENGLISH_INDICATORS.test(trimmed)) return { valid: false, reason: "language_mismatch" };
   }
 
   return { valid: true };
 }
 
-module.exports = { validateBotResponse, HALLUCINATION_MARKERS, HEDGING_MARKERS };
+module.exports = { validateBotResponse, HALLUCINATION_MARKERS, HEDGING_MARKERS, ENGLISH_INDICATORS };

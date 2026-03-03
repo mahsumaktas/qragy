@@ -17,7 +17,7 @@
       const res = await api.get("admin/content-gaps");
       gaps = res.gaps || res || [];
     } catch (e) {
-      showToast("Content gaps yuklenemedi: " + e.message, "error");
+      showToast("Failed to load content gaps: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -25,16 +25,16 @@
 </script>
 
 <div class="page-header">
-  <div><h1>Content Gaps</h1><p>Cevaplanamayan sorular</p></div>
-  <Button onclick={loadGaps} variant="ghost" size="sm">Yenile</Button>
+  <div><h1>Content Gaps</h1><p>Unanswered questions</p></div>
+  <Button onclick={loadGaps} variant="ghost" size="sm">Refresh</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="card">
     <table>
-      <thead><tr><th>Soru</th><th>Sayi</th><th>Son Gorulme</th></tr></thead>
+      <thead><tr><th>Question</th><th>Count</th><th>Last Seen</th></tr></thead>
       <tbody>
         {#each gaps as g}
           <tr>
@@ -43,7 +43,7 @@
             <td>{g.lastSeen || "-"}</td>
           </tr>
         {:else}
-          <tr><td colspan="3" class="empty-row">Content gap yok</td></tr>
+          <tr><td colspan="3" class="empty-row">No content gaps</td></tr>
         {/each}
       </tbody>
     </table>

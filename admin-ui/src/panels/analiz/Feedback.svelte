@@ -22,7 +22,7 @@
       report = r;
       feedbacks = f.feedbacks || f || [];
     } catch (e) {
-      showToast("Feedback yuklenemedi: " + e.message, "error");
+      showToast("Failed to load feedback: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -30,31 +30,31 @@
 </script>
 
 <div class="page-header">
-  <div><h1>Feedback Raporu</h1><p>Kullanici geri bildirimleri</p></div>
+  <div><h1>Feedback Report</h1><p>User feedback</p></div>
   <select class="select" bind:value={days} onchange={load}>
-    <option value={7}>7 Gun</option>
-    <option value={30}>30 Gun</option>
-    <option value={90}>90 Gun</option>
+    <option value={7}>7 Days</option>
+    <option value={30}>30 Days</option>
+    <option value={90}>90 Days</option>
   </select>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   {#if report}
     <div class="kpi-grid">
-      <KpiCard label="Toplam Feedback" value={report.totalFeedbacks ?? report.total ?? 0} />
-      <KpiCard label="Ort. CSAT" value={(report.avgCsat ?? 0).toFixed(1) + "/5"} />
-      <KpiCard label="Pozitif" value={report.positive ?? 0} color="var(--success)" />
-      <KpiCard label="Negatif" value={report.negative ?? 0} color="var(--error)" />
+      <KpiCard label="Total Feedback" value={report.totalFeedbacks ?? report.total ?? 0} />
+      <KpiCard label="Avg. CSAT" value={(report.avgCsat ?? 0).toFixed(1) + "/5"} />
+      <KpiCard label="Positive" value={report.positive ?? 0} color="var(--success)" />
+      <KpiCard label="Negative" value={report.negative ?? 0} color="var(--error)" />
     </div>
   {/if}
 
   {#if feedbacks.length}
     <div class="card">
-      <h2>Son Geri Bildirimler</h2>
+      <h2>Recent Feedback</h2>
       <table>
-        <thead><tr><th>Puan</th><th>Yorum</th><th>Oturum</th></tr></thead>
+        <thead><tr><th>Score</th><th>Comment</th><th>Session</th></tr></thead>
         <tbody>
           {#each feedbacks.slice(0, 20) as fb}
             <tr>

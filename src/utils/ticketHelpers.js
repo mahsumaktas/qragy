@@ -71,8 +71,8 @@ function buildTicketRecord(memory, supportAvailability, context = {}, defaults =
         type: "ticket_created",
         message:
           initialStatus === TICKET_STATUS.HANDOFF_PENDING
-            ? "Talep oluşturuldu ve temsilci aktarımı için hazır."
-            : "Talep oluşturuldu, mesai dışı olduğu için sıraya alındı.",
+            ? "Request created and ready for agent handoff."
+            : "Request created and queued (outside business hours).",
       },
     ],
   };

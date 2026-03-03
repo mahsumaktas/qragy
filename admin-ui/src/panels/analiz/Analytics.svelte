@@ -14,9 +14,9 @@
   let data = $state(null);
 
   const ranges = [
-    { id: "7", label: "7 Gun" },
-    { id: "30", label: "30 Gun" },
-    { id: "90", label: "90 Gun" },
+    { id: "7", label: "7 Days" },
+    { id: "30", label: "30 Days" },
+    { id: "90", label: "90 Days" },
   ];
 
   onMount(() => load());
@@ -26,7 +26,7 @@
     try {
       data = await api.get("admin/analytics?range=" + range);
     } catch (e) {
-      showToast("Analytics yuklenemedi: " + e.message, "error");
+      showToast("Failed to load analytics: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -50,25 +50,25 @@
 </script>
 
 <div class="page-header">
-  <div><h1>Analytics</h1><p>Performans analizi</p></div>
+  <div><h1>Analytics</h1><p>Performance analysis</p></div>
   <Button onclick={exportData} variant="ghost" size="sm">Export</Button>
 </div>
 
 <Tabs tabs={ranges} bind:active={range} onchange={handleRange} />
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else if data}
   <div class="kpi-grid">
-    <KpiCard label="Toplam Sohbet" value={data.totalChats ?? data.chats ?? 0} />
-    <KpiCard label="Eskalasyon" value={data.totalEscalations ?? data.escalations ?? 0} />
-    <KpiCard label="Ort. CSAT" value={(data.avgCsat ?? data.csatAvg ?? 0).toFixed(1) + "/5"} />
-    <KpiCard label="Cozum Orani" value={"%"+(data.resolutionRate ?? 0)} />
+    <KpiCard label="Total Chats" value={data.totalChats ?? data.chats ?? 0} />
+    <KpiCard label="Escalations" value={data.totalEscalations ?? data.escalations ?? 0} />
+    <KpiCard label="Avg. CSAT" value={(data.avgCsat ?? data.csatAvg ?? 0).toFixed(1) + "/5"} />
+    <KpiCard label="Resolution Rate" value={(data.resolutionRate ?? 0) + "%"} />
   </div>
 
   {#if topTopics.length}
     <div class="card">
-      <h2>Populer Konular</h2>
+      <h2>Popular Topics</h2>
       <BarChart items={topTopics} />
     </div>
   {/if}

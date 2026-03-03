@@ -122,8 +122,8 @@ describe("E2E Full Flow Tests", () => {
       expect(res.body.ok).toBe(true);
       expect(saveSiteConfig).toHaveBeenCalledWith(
         expect.objectContaining({
-          heroTitle: "TestCo Destek",
-          headerTitle: "TestCo Destek",
+          heroTitle: "TestCo Support",
+          headerTitle: "TestCo Support",
           logoUrl: "https://example.com/logo.png",
         })
       );

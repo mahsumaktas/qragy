@@ -9,9 +9,9 @@ describe("webChatPipeline", () => {
   beforeEach(() => {
     deps = {
       getChatFlowConfig: vi.fn(() => ({
-        gibberishMessage: "Anlayamadim, lutfen tekrar yazar misiniz?",
-        farewellMessage: "Iyi gunler dilerim!",
-        anythingElseMessage: "Baska bir konuda yardimci olabilir miyim?",
+        gibberishMessage: "I couldn't understand your message. Could you please describe your issue in more detail?",
+        farewellMessage: "Have a great day! Feel free to reach out again anytime.",
+        anythingElseMessage: "Is there anything else I can help you with?",
         csatEnabled: false,
         maxClarificationRetries: 3,
         questionExtractionEnabled: false,
@@ -36,8 +36,8 @@ describe("webChatPipeline", () => {
       sanitizeAssistantReply: vi.fn((r) => r),
       getLastAssistantMessage: vi.fn(() => null),
       isAssistantEscalationMessage: vi.fn(() => false),
-      getStatusFollowupMessage: vi.fn(() => "Talebiniz islem gormeye devam ediyor."),
-      getOutsideSupportHoursMessage: vi.fn(() => "Mesai saatleri disindayiz."),
+      getStatusFollowupMessage: vi.fn(() => "Your request was previously received and forwarded to the support team."),
+      getOutsideSupportHoursMessage: vi.fn(() => "Live support is currently unavailable outside business hours."),
 
       loadTicketsDb: vi.fn(() => ({ tickets: [] })),
       findRecentDuplicateTicket: vi.fn(() => null),
@@ -45,8 +45,8 @@ describe("webChatPipeline", () => {
         ticket: { id: "TK-test-1234", status: "handoff_pending" },
         created: true,
       })),
-      buildConfirmationMessage: vi.fn(() => "Talebinizi aldim."),
-      buildMissingFieldsReply: vi.fn(() => "Lutfen sube kodunuzu ve sorununuzu belirtin."),
+      buildConfirmationMessage: vi.fn(() => "I've noted your request."),
+      buildMissingFieldsReply: vi.fn(() => "Please provide your account ID and describe your issue."),
       ACTIVE_TICKET_STATUSES: new Set(["handoff_pending", "queued_after_hours"]),
 
       loadConversations: vi.fn(() => ({ conversations: [] })),
@@ -54,11 +54,11 @@ describe("webChatPipeline", () => {
 
       callLLM: vi.fn(async () => ({ reply: "classified-topic", finishReason: "STOP" })),
       callLLMWithFallback: vi.fn(async () => ({
-        reply: "Yazici sorununuz icin ayarlar bolumunu kontrol edin.",
+        reply: "For your printer issue, please check the settings section.",
         finishReason: "STOP",
         fallbackUsed: false,
       })),
-      generateEscalationSummary: vi.fn(async () => "Yazici sorunu - EST01 subesi"),
+      generateEscalationSummary: vi.fn(async () => "Printer issue - EST01 branch"),
 
       searchKnowledge: vi.fn(async () => []),
       recordContentGap: vi.fn(),
@@ -81,12 +81,12 @@ describe("webChatPipeline", () => {
       incrementClarificationCount: vi.fn(() => 1),
       resetClarificationCount: vi.fn(),
 
-      ESCALATION_MESSAGE_REGEX: /aktariyorum|temsilci/i,
-      CONFIRMATION_PREFIX_REGEX: /^talebinizi aldim/i,
-      NEW_TICKET_INTENT_REGEX: /yeni talep/i,
-      ISSUE_HINT_REGEX: /yazici|sorun|hata|ariza/i,
-      GENERIC_REPLY: "Size yardimci olabilir miyim?",
-      POST_ESCALATION_FOLLOWUP_MESSAGE: "Canli destek aktarimi devam ediyor.",
+      ESCALATION_MESSAGE_REGEX: /connecting you with a live support agent/i,
+      CONFIRMATION_PREFIX_REGEX: /^I['']ve noted your request/i,
+      NEW_TICKET_INTENT_REGEX: /(?:new\s*(?:request|ticket|issue)|another\s*(?:request|issue)|start\s*over)/i,
+      ISSUE_HINT_REGEX: /(?:error|can't|cannot|broken|fail|crash|bug|issue|problem|not working|slow|stuck|freeze|wrong|printer|report|billing|login)/i,
+      GENERIC_REPLY: "I'm here to help you with technical support. How can I assist you?",
+      POST_ESCALATION_FOLLOWUP_MESSAGE: "Your request has been forwarded to the live support team. An agent will assist you shortly. Please hold on.",
 
       formatCitations: vi.fn(() => []),
     };
@@ -109,7 +109,7 @@ describe("webChatPipeline", () => {
     });
 
     expect(result).not.toBeNull();
-    expect(result.reply).toBe("Anlayamadim, lutfen tekrar yazar misiniz?");
+    expect(result.reply).toBe("I couldn't understand your message. Could you please describe your issue in more detail?");
     expect(result.source).toBe("gibberish");
     expect(deps.recordAnalyticsEvent).toHaveBeenCalledWith(
       expect.objectContaining({ source: "gibberish" })
@@ -132,24 +132,24 @@ describe("webChatPipeline", () => {
     });
 
     expect(result).not.toBeNull();
-    expect(result.reply).toBe("Baska bir konuda yardimci olabilir miyim?");
+    expect(result.reply).toBe("Is there anything else I can help you with?");
     expect(result.source).toBe("closing-flow");
   });
 
   it("returns missing fields reply when fields incomplete", () => {
-    deps.buildDeterministicCollectionReply.mockReturnValue("Sube kodunuzu yazar misiniz?");
+    deps.buildDeterministicCollectionReply.mockReturnValue("Could you please provide your account ID?");
 
     const result = pipeline.handleDeterministicReply({
-      rawMessages: [{ role: "user", content: "merhaba" }],
+      rawMessages: [{ role: "user", content: "hello" }],
       memory: {},
       conversationContext: { conversationState: "welcome_or_greet" },
-      activeUserMessages: ["merhaba"],
+      activeUserMessages: ["hello"],
       hasClosedTicketHistory: false,
       chatStartTime: Date.now(),
     });
 
     expect(result).not.toBeNull();
-    expect(result.reply).toBe("Sube kodunuzu yazar misiniz?");
+    expect(result.reply).toBe("Could you please provide your account ID?");
     expect(result.source).toBe("rule-engine");
   });
 
@@ -165,7 +165,7 @@ describe("webChatPipeline", () => {
       chatStartTime: Date.now(),
     });
 
-    expect(result.reply).toBe("Yazici sorununuz icin ayarlar bolumunu kontrol edin.");
+    expect(result.reply).toBe("For your printer issue, please check the settings section.");
     expect(result.source).toBe("gemini");
     expect(deps.callLLMWithFallback).toHaveBeenCalled();
     expect(deps.buildSystemPrompt).toHaveBeenCalled();
@@ -191,11 +191,11 @@ describe("webChatPipeline", () => {
     });
 
     // Falls back to buildMissingFieldsReply when validation fails
-    expect(result.reply).toBe("Lutfen sube kodunuzu ve sorununuzu belirtin.");
+    expect(result.reply).toBe("Please provide your account ID and describe your issue.");
   });
 
   it("rate limits messages via deterministic reply max retries", () => {
-    deps.buildDeterministicCollectionReply.mockReturnValue("Sube kodunuzu yazar misiniz?");
+    deps.buildDeterministicCollectionReply.mockReturnValue("Could you please provide your account ID?");
     deps.incrementClarificationCount.mockReturnValue(4); // exceeds maxClarificationRetries=3
 
     const result = pipeline.handleDeterministicReply({

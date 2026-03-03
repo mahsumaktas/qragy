@@ -19,42 +19,42 @@
       const res = await api.get("admin/prompt-versions");
       versions = res.versions || res || [];
     } catch (e) {
-      showToast("Prompt versiyonlari yuklenemedi: " + e.message, "error");
+      showToast("Failed to load prompt versions: " + e.message, "error");
     } finally {
       loading = false;
     }
   }
 
   async function rollback(v) {
-    if (!confirm(`"${v.filename || v.file}" dosyasini bu versiyona geri almak istediginize emin misiniz?`)) return;
+    if (!confirm(`Are you sure you want to roll back "${v.filename || v.file}" to this version?`)) return;
     try {
       await api.post("admin/prompt-versions/" + (v.id || v._id) + "/rollback");
-      showToast("Geri alindi: " + (v.filename || v.file), "success");
+      showToast("Rolled back: " + (v.filename || v.file), "success");
       selectedVersion = null;
       await loadVersions();
     } catch (e) {
-      showToast("Geri alma hatasi: " + e.message, "error");
+      showToast("Rollback error: " + e.message, "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>Prompt Gecmisi</h1><p>Prompt versiyon gecmisi</p></div>
-  <Button onclick={loadVersions} variant="ghost" size="sm">Yenile</Button>
+  <div><h1>Prompt History</h1><p>Prompt version history</p></div>
+  <Button onclick={loadVersions} variant="ghost" size="sm">Refresh</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else if selectedVersion}
   <div class="detail">
-    <Button onclick={() => (selectedVersion = null)} variant="ghost" size="sm">← Geri</Button>
+    <Button onclick={() => (selectedVersion = null)} variant="ghost" size="sm">← Back</Button>
     <div class="version-card">
       <div class="version-header">
         <div>
           <h2>{selectedVersion.filename || selectedVersion.file}</h2>
           <p class="meta">{fmtDate(selectedVersion.savedAt || selectedVersion.createdAt)}</p>
         </div>
-        <Button onclick={() => rollback(selectedVersion)} variant="danger" size="sm">Geri Al</Button>
+        <Button onclick={() => rollback(selectedVersion)} variant="danger" size="sm">Rollback</Button>
       </div>
       <pre class="content-pre">{selectedVersion.content || ""}</pre>
     </div>
@@ -62,19 +62,19 @@
 {:else}
   <div class="card">
     <table>
-      <thead><tr><th>Dosya</th><th>Tarih</th><th></th></tr></thead>
+      <thead><tr><th>File</th><th>Date</th><th></th></tr></thead>
       <tbody>
         {#each versions as v}
           <tr>
             <td>{v.filename || v.file}</td>
             <td>{fmtDate(v.savedAt || v.createdAt)}</td>
             <td class="action-col">
-              <Button onclick={() => (selectedVersion = v)} variant="ghost" size="sm">Goruntule</Button>
-              <Button onclick={() => rollback(v)} variant="danger" size="sm">Geri Al</Button>
+              <Button onclick={() => (selectedVersion = v)} variant="ghost" size="sm">View</Button>
+              <Button onclick={() => rollback(v)} variant="danger" size="sm">Rollback</Button>
             </td>
           </tr>
         {:else}
-          <tr><td colspan="3" class="empty-row">Versiyon yok</td></tr>
+          <tr><td colspan="3" class="empty-row">No versions</td></tr>
         {/each}
       </tbody>
     </table>

@@ -7,18 +7,18 @@ describe("Error Helper", () => {
   });
 
   it("should pass through safe prefixes", () => {
-    expect(safeError(new Error("Gecersiz parametre"), "test")).toBe("Gecersiz parametre");
-    expect(safeError(new Error("Eksik alan: email"), "test")).toBe("Eksik alan: email");
-    expect(safeError(new Error("Bulunamadi"), "test")).toBe("Bulunamadi");
+    expect(safeError(new Error("Invalid parameter"), "test")).toBe("Invalid parameter");
+    expect(safeError(new Error("Missing field: email"), "test")).toBe("Missing field: email");
+    expect(safeError(new Error("Not found"), "test")).toBe("Not found");
   });
 
   it("should handle JSON/SyntaxError specially", () => {
     const syntaxErr = new SyntaxError("Unexpected token < in JSON");
-    expect(safeError(syntaxErr, "test")).toBe("Gecersiz veri formati.");
+    expect(safeError(syntaxErr, "test")).toBe("Invalid data format.");
   });
 
   it("should handle JSON keyword in message", () => {
-    expect(safeError(new Error("Invalid JSON payload"), "test")).toBe("Gecersiz veri formati.");
+    expect(safeError(new Error("Invalid JSON payload"), "test")).toBe("Invalid data format.");
   });
 
   it("should handle null/undefined errors", () => {

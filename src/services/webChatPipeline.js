@@ -129,7 +129,7 @@ function createWebChatPipeline(deps) {
   }) {
     const chatFlowConfig = getChatFlowConfig();
 
-    // Escalation session lock: escalation sonrasi ayni session'dan gelen mesajlar
+    // Escalation session lock: post-escalation messages from same session
     const convDataEarly = loadConversations();
     const existingConvEarly = convDataEarly.conversations.find(c => c.sessionId === sessionId);
     if (existingConvEarly?.escalationStatus === "active") {
@@ -137,12 +137,12 @@ function createWebChatPipeline(deps) {
         !isStatusFollowupMessage(latestUserMessage) &&
         !isNonIssueMessage(latestUserMessage);
       if (isNewTopic) {
-        // Yeni konu — escalation lock'u kaldir, normal akisa devam et
+        // New topic — remove escalation lock, continue normal flow
         existingConvEarly.escalationStatus = null;
         saveConversations(convDataEarly);
-        logger.info("webChatPipeline:earlyCheck", "Escalation lock kaldirildi, yeni konu", { sessionId });
+        logger.info("webChatPipeline:earlyCheck", "Escalation lock removed, new topic", { sessionId });
       } else {
-        logger.info("webChatPipeline:earlyCheck", "Escalation-locked, post-escalation mesaji", { sessionId });
+        logger.info("webChatPipeline:earlyCheck", "Escalation-locked, post-escalation message", { sessionId });
         recordAnalyticsEvent({ source: "escalation-locked", responseTimeMs: Date.now() - chatStartTime });
         return webResponse({
           reply: POST_ESCALATION_FOLLOWUP_MESSAGE,
@@ -157,7 +157,7 @@ function createWebChatPipeline(deps) {
 
     // Gibberish
     if (isGibberishMessage(latestUserMessage)) {
-      logger.info("webChatPipeline:earlyCheck", "Gibberish tespit edildi", { sessionId, msgPreview: latestUserMessage.slice(0, 80) });
+      logger.info("webChatPipeline:earlyCheck", "Gibberish detected", { sessionId, msgPreview: latestUserMessage.slice(0, 80) });
       recordAnalyticsEvent({ source: "gibberish", responseTimeMs: Date.now() - chatStartTime });
       return webResponse({
         reply: chatFlowConfig.gibberishMessage,
@@ -170,9 +170,9 @@ function createWebChatPipeline(deps) {
     const convData = loadConversations();
     const existingConv = convData.conversations.find(c => c.sessionId === sessionId);
     if (existingConv?.farewellOffered && activeUserMessages.length > 0) {
-      // Farewell sonrasi gelen mesaj da farewell ise → konusmayi kapat, uzatma
+      // If message after farewell is also farewell → close conversation, don't extend
       if (isFarewellMessage(latestUserMessage, activeUserMessages.length) || isNonIssueMessage(latestUserMessage)) {
-        logger.info("webChatPipeline:earlyCheck", "Farewell sonrasi tekrar farewell, konusma kapatiliyor", { sessionId });
+        logger.info("webChatPipeline:earlyCheck", "Farewell after farewell, closing conversation", { sessionId });
         recordAnalyticsEvent({ source: "closing-flow", responseTimeMs: Date.now() - chatStartTime });
         return webResponse({
           reply: chatFlowConfig.farewellMessage,
@@ -182,11 +182,11 @@ function createWebChatPipeline(deps) {
           csatTrigger: chatFlowConfig.csatEnabled,
         });
       }
-      logger.info("webChatPipeline:earlyCheck", "Farewell sonrasi yeni mesaj, konusma yeniden acildi", { sessionId });
+      logger.info("webChatPipeline:earlyCheck", "New message after farewell, conversation reopened", { sessionId });
       existingConv.farewellOffered = false;
       saveConversations(convData);
       return webResponse({
-        reply: "Baska bir konuda yardimci olabilir miyim?",
+        reply: "Is there anything else I can help you with?",
         source: "closed-followup",
         memory,
       });
@@ -194,17 +194,17 @@ function createWebChatPipeline(deps) {
 
     // Farewell / closing flow
     if (isFarewellMessage(latestUserMessage, activeUserMessages.length)) {
-      logger.info("webChatPipeline:earlyCheck", "Farewell mesaji tespit edildi", { sessionId, msgPreview: latestUserMessage.slice(0, 80) });
+      logger.info("webChatPipeline:earlyCheck", "Farewell message detected", { sessionId, msgPreview: latestUserMessage.slice(0, 80) });
       const hasTicket = hasRequiredFields(memory);
       if (existingConv) {
         existingConv.farewellOffered = true;
         saveConversations(convData);
       }
 
-      // Onceki bot mesaji zaten farewell-like ise (rica, yardimci, baska konu) → konusmayi kapat
+      // If previous bot message was already farewell-like → close conversation
       const lastBotMsgObj = getLastAssistantMessage(rawMessages);
       const lastBotText = lastBotMsgObj?.content || "";
-      const botAlreadyFarewelled = lastBotText && /(?:rica|iyi gunler|yardimci olabileceg|baska.*konu|baska.*soru)/i.test(
+      const botAlreadyFarewelled = lastBotText && /(?:welcome|have a good day|help you with|anything else|another question)/i.test(
         normalizeForMatching(lastBotText)
       );
 
@@ -271,7 +271,7 @@ function createWebChatPipeline(deps) {
         source: "ticket-status",
         memory: lastClosedTicketMemory,
         hasClosedTicketHistory,
-        quickReplies: ["Yeni talep olu\u015Ftur"],
+        quickReplies: ["Create new request"],
       });
     }
 
@@ -281,7 +281,7 @@ function createWebChatPipeline(deps) {
       const isNewIssue = ISSUE_HINT_REGEX.test(normalizeForMatching(latestUserMessage)) &&
         !isStatusFollowupMessage(latestUserMessage);
       if (!isNewIssue) {
-        logger.info("webChatPipeline:earlyCheck", "Post-escalation followup (yeni konu degil)", { sessionId });
+        logger.info("webChatPipeline:earlyCheck", "Post-escalation followup (not a new topic)", { sessionId });
         recordAnalyticsEvent({ source: "post-escalation", responseTimeMs: Date.now() - chatStartTime });
         return webResponse({
           reply: POST_ESCALATION_FOLLOWUP_MESSAGE,
@@ -307,14 +307,14 @@ function createWebChatPipeline(deps) {
       return null;
     }
 
-    // Topic-guided escalation: topic varken de required fields doluysa ticket olustur
-    // (kullanici sube kodu verdikten sonra direkt aktarim)
-    // turnCount > 1 kosulu: ilk mesajda sube kodu gecse bile troubleshooting once yapilsin
+    // Topic-guided escalation: create ticket when required fields are met even with a topic
+    // (direct handoff after user provides branch code)
+    // turnCount > 1 condition: even if branch code is in first message, troubleshooting first
     const isTopicEscalation = conversationContext.currentTopic
       && hasRequiredFields(memory)
       && conversationContext.turnCount > 1;
 
-    // Topic var ama henuz escalation degil (ilk turda sube kodu gecmis olabilir) → atla
+    // Topic exists but not yet escalation (branch code may have been in first turn) → skip
     if (conversationContext.currentTopic && !isTopicEscalation) {
       return null;
     }
@@ -329,7 +329,7 @@ function createWebChatPipeline(deps) {
     });
     const ticket = ticketResult.ticket;
     updateConversationTicket(sessionId, ticket.id);
-    // Topic-escalation durumunda escalation session lock
+    // Escalation session lock for topic-escalation
     if (isTopicEscalation) {
       const tcConvData = loadConversations();
       const tcConv = tcConvData.conversations.find(c => c.sessionId === sessionId);
@@ -353,9 +353,9 @@ function createWebChatPipeline(deps) {
       fireWebhook("escalation", { ticketId: ticket.id, memory, source: "topic-escalation" });
     }
 
-    // Topic-guided escalation icin ozel reply: "Sizi aktariyorum"
+    // Special reply for topic-guided escalation: "Connecting you"
     const reply = isTopicEscalation
-      ? "Teşekkür ederim, sizi canlı destek temsilcimize aktarıyorum. Lütfen bekleyiniz."
+      ? "Thank you, I'm connecting you with a live support agent. Please hold on."
       : buildConfirmationMessage(memory);
 
     return webResponse({
@@ -383,11 +383,11 @@ function createWebChatPipeline(deps) {
     if (!conversationContext.escalationTriggered) return null;
 
     const supportAvailability = getSupportAvailability();
-    const CREDENTIAL_WARNING = "Güvenliğiniz için şifre ve kullanıcı bilgilerinizi chat üzerinden paylaşmayınız. Bu bilgiler sistemimizde maskelenmiştir. ";
+    const CREDENTIAL_WARNING = "For your security, please do not share your password or login credentials via chat. This information has been masked in our system. ";
     const isCredentialEscalation = (conversationContext.escalationReason || "").includes("_credentials");
     const escalationReply = isCredentialEscalation
-      ? CREDENTIAL_WARNING + "Sizi canl\u0131 destek temsilcimize aktar\u0131yorum. K\u0131sa s\u00fcrede yard\u0131mc\u0131 olacakt\u0131r."
-      : "Sizi canl\u0131 destek temsilcimize aktar\u0131yorum. K\u0131sa s\u00fcrede yard\u0131mc\u0131 olacakt\u0131r.";
+      ? CREDENTIAL_WARNING + "I'm connecting you with a live support agent. They will assist you shortly."
+      : "I'm connecting you with a live support agent. They will assist you shortly.";
     const aiSummary = await generateEscalationSummary(contents, memory, conversationContext);
     const escalationMemory = {
       ...memory,
@@ -399,7 +399,7 @@ function createWebChatPipeline(deps) {
       chatHistory: chatHistorySnapshot
     });
     updateConversationTicket(sessionId, ticketResult.ticket.id);
-    // Escalation session lock: conversation'a escalationStatus yaz
+    // Escalation session lock: write escalationStatus to conversation
     const escConvData = loadConversations();
     const escConv = escConvData.conversations.find(c => c.sessionId === sessionId);
     if (escConv) {
@@ -434,7 +434,7 @@ function createWebChatPipeline(deps) {
     rawMessages, memory, conversationContext, activeUserMessages,
     hasClosedTicketHistory, chatStartTime, sessionId
   }) {
-    // Deterministic reply artık sadece selamlama + alan sorgulama için çalışır
+    // Deterministic reply now only works for greetings + field collection
     const chatFlowConfig = getChatFlowConfig();
     const deterministicReply = buildDeterministicCollectionReply(
       memory,
@@ -442,7 +442,7 @@ function createWebChatPipeline(deps) {
       hasClosedTicketHistory
     );
     if (!deterministicReply) {
-      logger.info("webChatPipeline:deterministic", "buildDeterministicCollectionReply null dondu, LLM'ye gidilecek");
+      logger.info("webChatPipeline:deterministic", "buildDeterministicCollectionReply returned null, proceeding to LLM");
       return null;
     }
 
@@ -450,11 +450,11 @@ function createWebChatPipeline(deps) {
     const sessionKey = getClarificationKey(rawMessages, sessionId);
     const retryCount = incrementClarificationCount(sessionKey);
     if (retryCount > chatFlowConfig.maxClarificationRetries) {
-      logger.warn("webChatPipeline:deterministic", "Max clarification retries asildi, escalation", { retryCount, max: chatFlowConfig.maxClarificationRetries });
+      logger.warn("webChatPipeline:deterministic", "Max clarification retries exceeded, escalation", { retryCount, max: chatFlowConfig.maxClarificationRetries });
       resetClarificationCount(sessionKey);
       recordAnalyticsEvent({ source: "max-retries", responseTimeMs: Date.now() - chatStartTime });
       return webResponse({
-        reply: "Gerekli bilgileri almakta g\u00fc\u00e7l\u00fck ya\u015f\u0131yorum. Sizi canl\u0131 destek temsilcimize aktar\u0131yorum.",
+        reply: "I'm having difficulty collecting the required information. I'm connecting you with a live support agent.",
         source: "max-retries",
         memory,
         conversationContext,
@@ -475,7 +475,7 @@ function createWebChatPipeline(deps) {
 
     recordAnalyticsEvent({ source: "rule-engine", responseTimeMs: Date.now() - chatStartTime });
 
-    // Audit log — deterministic reply de loglanmali
+    // Audit log — deterministic reply should also be logged
     if (chatAuditLog) {
       chatAuditLog.log({
         sessionId,
@@ -523,7 +523,7 @@ function createWebChatPipeline(deps) {
       });
     }
 
-    // Quality score: onceki turlarin kalitesini oku
+    // Quality score: read quality from previous turns
     let qualityWarning = null;
     if (qualityScorer && sessionId) {
       try {
@@ -532,19 +532,19 @@ function createWebChatPipeline(deps) {
         if (consecutiveLow >= 3) {
           conversationContext.escalationTriggered = true;
           conversationContext.escalationReason = "consecutive-low-quality";
-          logger.warn("webChatPipeline:quality", "3 ardisik dusuk kalite, auto-escalation", { sessionId, consecutiveLow });
+          logger.warn("webChatPipeline:quality", "3 consecutive low quality, auto-escalation", { sessionId, consecutiveLow });
         } else {
           const lastScores = qualityScorer.getRecentScores(sessionId, 1);
           if (lastScores.length > 0 && lastScores[0].faithfulness !== null && lastScores[0].faithfulness < 0.4) {
-            qualityWarning = "## UYARI: SON CEVABIN KALITESI DUSUK (faithfulness: " +
+            qualityWarning = "## WARNING: LAST RESPONSE QUALITY IS LOW (faithfulness: " +
               lastScores[0].faithfulness.toFixed(2) + ")\n" +
-              "- Bu konuda bilgi tabaninda yeterli kaynak YOK olabilir.\n" +
-              "- Emin olmadigin bilgiyi VERME. Tahmin YAPMA.\n" +
-              "- Bilgin yoksa kullaniciyi canli destek temsilcisine yonlendir.";
+              "- There may NOT be sufficient sources in the knowledge base for this topic.\n" +
+              "- Do NOT provide information you are unsure of. Do NOT guess.\n" +
+              "- If you don't have the answer, direct the user to a live support agent.";
           }
         }
       } catch (err) {
-        logger.warn("webChatPipeline:quality", "Skor okuma hatasi", err);
+        logger.warn("webChatPipeline:quality", "Score read error", err);
       }
     }
 
@@ -555,7 +555,7 @@ function createWebChatPipeline(deps) {
       logger.warn("webChatPipeline:loop", "Loop + turn limit, force escalation", { sessionId, turnCount: conversationContext.turnCount });
     }
 
-    // LLM topic classification artik buildConversationContext icinde yapiliyor (classifyTopicWithLLM callback)
+    // LLM topic classification is now done inside buildConversationContext (classifyTopicWithLLM callback)
 
     // Sentiment analysis
     const sentiment = analyzeSentiment(latestUserMessage);
@@ -579,7 +579,7 @@ function createWebChatPipeline(deps) {
           const rewrittenQuery = await cragEvaluator.suggestRewrite(searchQuery, chatHistorySnapshot);
           if (rewrittenQuery && rewrittenQuery !== searchQuery) {
             ragResults = await searchKnowledge(rewrittenQuery);
-            logger.info("webChatPipeline:CRAG", "Query rewrite uygulanmis", {
+            logger.info("webChatPipeline:CRAG", "Query rewrite applied", {
               sessionId, original: searchQuery.slice(0, 80), rewritten: rewrittenQuery.slice(0, 80),
               newResultCount: ragResults.length,
             });
@@ -591,12 +591,12 @@ function createWebChatPipeline(deps) {
           ragResults = [...cragResult.relevant, ...cragResult.partial];
         }
       } catch (cragErr) {
-        logger.warn("webChatPipeline:CRAG", "CRAG evaluator hatasi, orijinal sonuclar kullaniliyor", cragErr);
+        logger.warn("webChatPipeline:CRAG", "CRAG evaluator error, using original results", cragErr);
         // Fail-open: use original results
       }
     }
 
-    logger.info("webChatPipeline:RAG", "KB arama sonucu", {
+    logger.info("webChatPipeline:RAG", "KB search result", {
       sessionId,
       searchQuery: searchQuery.slice(0, 100),
       queryChanged: searchQuery !== latestUserMessage,
@@ -606,7 +606,7 @@ function createWebChatPipeline(deps) {
     });
 
     if (ragResults.length === 0 && latestUserMessage.length > 10) {
-      logger.info("webChatPipeline:RAG", "Content gap kaydedildi", { sessionId, query: latestUserMessage.slice(0, 80) });
+      logger.info("webChatPipeline:RAG", "Content gap recorded", { sessionId, query: latestUserMessage.slice(0, 80) });
       recordContentGap(latestUserMessage);
     }
     const sources = ragResults.map(r => ({
@@ -618,7 +618,7 @@ function createWebChatPipeline(deps) {
 
     const systemPrompt = buildSystemPrompt(memory, conversationContext, ragResults, { qualityWarning });
 
-    logger.info("webChatPipeline", "LLM cagrisi", {
+    logger.info("webChatPipeline", "LLM call", {
       sessionId,
       state: conversationContext?.conversationState,
       topic: conversationContext?.currentTopic || null,
@@ -634,13 +634,13 @@ function createWebChatPipeline(deps) {
       geminiResult = await callLLMWithFallback(contents, systemPrompt, GOOGLE_MAX_OUTPUT_TOKENS * 2, llmOptions);
     }
     if (geminiResult.fallbackUsed) {
-      logger.warn("webChatPipeline", "Fallback model kullanildi", { sessionId });
+      logger.warn("webChatPipeline", "Fallback model used", { sessionId });
       recordLLMError({ message: "Primary model failed, fallback used", status: 429 }, "web-chat-fallback");
     }
 
     let reply = sanitizeAssistantReply(geminiResult.reply);
 
-    logger.info("webChatPipeline", "LLM cevabi", {
+    logger.info("webChatPipeline", "LLM response", {
       sessionId,
       finishReason: geminiResult.finishReason,
       replyLen: reply.length,
@@ -656,24 +656,24 @@ function createWebChatPipeline(deps) {
     ].filter(Boolean);
     const outputCheck = validateOutput(reply, systemFragments);
     if (!outputCheck.safe) {
-      logger.warn("webChatPipeline", "Injection guard tetiklendi, genel cevap", { sessionId });
+      logger.warn("webChatPipeline", "Injection guard triggered, generic reply", { sessionId });
       reply = GENERIC_REPLY;
     }
 
     // Response quality validation
     const qualityCheck = validateBotResponse(reply, sources);
     if (!qualityCheck.valid) {
-      logger.warn("webChatPipeline", "Kalite dogrulama basarisiz", { sessionId, reason: qualityCheck.reason, replyPreview: reply.slice(0, 100) });
+      logger.warn("webChatPipeline", "Quality validation failed", { sessionId, reason: qualityCheck.reason, replyPreview: reply.slice(0, 100) });
       reply = buildMissingFieldsReply(memory, latestUserMessage) || GENERIC_REPLY;
     }
 
     if (!conversationContext.currentTopic && !hasRequiredFields(memory) && CONFIRMATION_PREFIX_REGEX.test(reply)) {
-      logger.warn("webChatPipeline", "LLM onay mesaji uretti ama required fields eksik, fallback", { sessionId, replyPreview: reply.slice(0, 80) });
+      logger.warn("webChatPipeline", "LLM produced confirmation message but required fields missing, fallback", { sessionId, replyPreview: reply.slice(0, 80) });
       reply = buildMissingFieldsReply(memory, latestUserMessage) || GENERIC_REPLY;
     }
 
     if (!reply) {
-      logger.warn("webChatPipeline", "Reply bos, fallback", { sessionId });
+      logger.warn("webChatPipeline", "Reply empty, fallback", { sessionId });
       reply = GENERIC_REPLY;
     }
 
@@ -734,7 +734,7 @@ function createWebChatPipeline(deps) {
       fireWebhook("ticket_created", { ticketId, memory, source: chatSource });
     }
 
-    // Audit log — tam konusma kaydı
+    // Audit log — full conversation record
     if (chatAuditLog) {
       chatAuditLog.log({
         sessionId,
@@ -760,7 +760,7 @@ function createWebChatPipeline(deps) {
       });
     }
 
-    // Async quality scoring (sonraki turda kullanilacak)
+    // Async quality scoring (will be used in the next turn)
     if (jobQueue && !isEscalationReply) {
       jobQueue.add("quality-score", {
         sessionId,

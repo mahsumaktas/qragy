@@ -81,12 +81,12 @@ const state = {
       typingIndicatorEnabled: true,
       inactivityTimeoutMs: 600000,
       nudgeEnabled: true,
-      nudgeAt75Message: "Hala buradayım. Size nasıl yardımcı olabilirim?",
-      nudgeAt90Message: "Son birkaç dakikadır mesaj almadım. Yardımcı olabilir miyim?",
-      inactivityCloseMessage: "Uzun süredir mesaj almadığım için sohbeti sonlandırıyorum. İhtiyacınız olursa tekrar yazabilirsiniz.",
-      welcomeMessage: "Merhaba, Teknik Destek hattına hoş geldiniz. Size nasıl yardımcı olabilirim?",
+      nudgeAt75Message: "I'm still here. How can I help you?",
+      nudgeAt90Message: "I haven't received a message for a few minutes. Can I help?",
+      inactivityCloseMessage: "I'm closing the chat due to inactivity. Feel free to reach out again if you need help.",
+      welcomeMessage: "Hello, welcome to Technical Support. How can I help you?",
       csatEnabled: true,
-      farewellMessage: "İyi günler dilerim! İhtiyacınız olursa tekrar yazabilirsiniz."
+      farewellMessage: "Have a great day! Feel free to reach out again if you need help."
     }
   }
 };
@@ -103,7 +103,7 @@ function saveSession() {
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (_e) {
-    // localStorage dolu veya devre disi
+    // localStorage full or disabled
   }
 }
 
@@ -115,13 +115,13 @@ function loadSession() {
     const data = JSON.parse(raw);
     if (!data || !Array.isArray(data.messages) || !data.messages.length) return false;
 
-    // TTL kontrolu
+    // TTL check
     if (data.savedAt && Date.now() - data.savedAt > SESSION_TTL_MS) {
       clearSession();
       return false;
     }
 
-    // Mesajlari yukle
+    // Load messages
     messages.length = 0;
     for (const msg of data.messages) {
       messages.push(msg);
@@ -130,7 +130,7 @@ function loadSession() {
     state.widgetStarted = Boolean(data.widgetStarted);
     state.lastMessageTime = data.lastMessageTime || 0;
 
-    // Mesajlari DOM'a animasyonsuz render et
+    // Render messages to DOM without animation
     for (const msg of messages) {
       const bubble = document.createElement("div");
       bubble.className = `message ${msg.role} no-animate`;
@@ -166,7 +166,7 @@ function maybeInsertTimestamp() {
     const divider = document.createElement("div");
     divider.className = "timestamp-divider";
     divider.setAttribute("aria-hidden", "true");
-    divider.textContent = new Date(now).toLocaleTimeString("tr-TR", {
+    divider.textContent = new Date(now).toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit"
     });
@@ -240,8 +240,8 @@ function pushMessage(role, content, persist = true) {
 
   chatMessages.appendChild(bubble);
 
-  // User mesaji: her zaman alta in (kullanici gonderdiyse gormek ister)
-  // Assistant mesaji: sadece zaten alttaysa otomatik scroll
+  // User message: always scroll down (user wants to see what they sent)
+  // Assistant message: auto-scroll only if already at bottom
   if (role === "user") {
     scrollToBottom();
   } else if (isNearBottom()) {
@@ -325,9 +325,9 @@ function showWelcomeScreen() {
           <path d="M12 2a9 9 0 0 0-9 9v5a3 3 0 0 0 3 3h1a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H5v-1a7 7 0 1 1 14 0v1h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h1.28A2 2 0 0 1 16 20h-2a1 1 0 1 0 0 2h2a4 4 0 0 0 3.87-3H21a3 3 0 0 0 3-3v-5a9 9 0 0 0-9-9Z"/>
         </svg>
       </div>
-      <div class="welcome-title">QRAGY Teknik Destek</div>
-      <div class="welcome-subtitle">Teknik sorunlariniz icin size yardimci olabiliriz.</div>
-      <button class="welcome-start-btn" type="button" id="welcomeStartBtn">Sohbete Başla</button>
+      <div class="welcome-title">QRAGY Technical Support</div>
+      <div class="welcome-subtitle">We can help you with your technical issues.</div>
+      <button class="welcome-start-btn" type="button" id="welcomeStartBtn">Start Chat</button>
     </div>
   `;
 
@@ -337,7 +337,7 @@ function showWelcomeScreen() {
 function dismissWelcome() {
   chatMessages.innerHTML = "";
   state.widgetStarted = true;
-  const welcomeMsg = state.runtimeConfig.chatFlow?.welcomeMessage || "Merhaba, Teknik Destek hattına hoş geldiniz. Size nasıl yardımcı olabilirim?";
+  const welcomeMsg = state.runtimeConfig.chatFlow?.welcomeMessage || "Hello, welcome to Technical Support. How can I help you?";
   pushMessage("assistant", welcomeMsg);
   chatInput.focus();
 }
@@ -385,7 +385,7 @@ let audioCtx = null;
 
 function playNotificationSound() {
   if (!state.soundEnabled) return;
-  if (document.hasFocus()) return; // Sayfa focus'taysa calma
+  if (document.hasFocus()) return; // Don't play when page is focused
 
   try {
     if (!audioCtx) {
@@ -403,7 +403,7 @@ function playNotificationSound() {
     osc.start(audioCtx.currentTime);
     osc.stop(audioCtx.currentTime + 0.15);
   } catch (_e) {
-    // Ses calinamiyor, sessizce devam et
+    // Cannot play sound, continue silently
   }
 }
 
@@ -430,7 +430,7 @@ function initDarkMode() {
   } else if (saved === "light") {
     document.documentElement.removeAttribute("data-theme");
   } else {
-    // Sistem tercihine bak
+    // Check system preference
     if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
       document.documentElement.setAttribute("data-theme", "dark");
     }
@@ -485,7 +485,7 @@ function resetNudgeTimer() {
     state.nudgeTimer = setTimeout(() => {
       if (state.widgetStarted && !aiWidget.hidden && !state.isSending && !state.nudge75Shown) {
         state.nudge75Shown = true;
-        const msg = chatFlow.nudgeAt75Message || "Hala buradayım. Size nasıl yardımcı olabilirim?";
+        const msg = chatFlow.nudgeAt75Message || "I'm still here. How can I help you?";
         pushMessage("assistant", msg, false);
       }
 
@@ -494,7 +494,7 @@ function resetNudgeTimer() {
       setTimeout(() => {
         if (state.widgetStarted && !aiWidget.hidden && !state.isSending && !state.nudge90Shown) {
           state.nudge90Shown = true;
-          const msg90 = chatFlow.nudgeAt90Message || "Son birkaç dakikadır mesaj almadım. Yardımcı olabilir miyim?";
+          const msg90 = chatFlow.nudgeAt90Message || "I haven't received a message for a few minutes. Can I help?";
           pushMessage("assistant", msg90, false);
         }
       }, remaining10);
@@ -504,7 +504,7 @@ function resetNudgeTimer() {
   // Auto-close at 100% of timeout
   state.inactivityTimer = setTimeout(() => {
     if (state.widgetStarted && !aiWidget.hidden && !state.isSending) {
-      const closeMsg = chatFlow.inactivityCloseMessage || "Uzun süredir mesaj almadığım için sohbeti sonlandırıyorum.";
+      const closeMsg = chatFlow.inactivityCloseMessage || "I'm closing the chat due to inactivity.";
       pushMessage("assistant", closeMsg, false);
       closeChat("inactivity");
     }
@@ -557,7 +557,7 @@ function showCSATSurvey(ticketId) {
 
   const title = document.createElement("div");
   title.className = "csat-title";
-  title.textContent = "Deneyiminizi değerlendirir misiniz?";
+  title.textContent = "Would you rate your experience?";
   container.appendChild(title);
 
   const starsDiv = document.createElement("div");
@@ -568,7 +568,7 @@ function showCSATSurvey(ticketId) {
     star.className = "csat-star";
     star.type = "button";
     star.textContent = "\u2605";
-    star.setAttribute("aria-label", `${i} yıldız`);
+    star.setAttribute("aria-label", `${i} star`);
 
     star.addEventListener("mouseenter", () => {
       const stars = starsDiv.querySelectorAll(".csat-star");
@@ -580,7 +580,7 @@ function showCSATSurvey(ticketId) {
       container.innerHTML = "";
       const thanks = document.createElement("div");
       thanks.className = "csat-thanks";
-      thanks.textContent = "Değerlendirmeniz için teşekkür ederiz!";
+      thanks.textContent = "Thank you for your feedback!";
       container.appendChild(thanks);
     });
 
@@ -604,7 +604,7 @@ async function submitCSATRating(ticketId, rating) {
       body: JSON.stringify({ rating })
     });
   } catch (_e) {
-    // CSAT gonderimi basarisiz olsa da akisi durdurma
+    // Don't block the flow even if CSAT submission fails
   }
 }
 
@@ -618,13 +618,13 @@ function renderFeedbackButtons(bubble, messageIndex) {
   upBtn.className = "feedback-btn";
   upBtn.type = "button";
   upBtn.innerHTML = "&#128077;";
-  upBtn.title = "Faydali";
+  upBtn.title = "Helpful";
 
   const downBtn = document.createElement("button");
   downBtn.className = "feedback-btn";
   downBtn.type = "button";
   downBtn.innerHTML = "&#128078;";
-  downBtn.title = "Faydali degil";
+  downBtn.title = "Not helpful";
 
   const submitFeedback = (rating) => {
     upBtn.classList.toggle("selected", rating === "up");
@@ -656,7 +656,7 @@ function renderCitationSources(bubble, sources) {
   const btn = document.createElement("button");
   btn.className = "citation-toggle";
   btn.type = "button";
-  btn.textContent = `Kaynaklar (${sources.length})`;
+  btn.textContent = `Sources (${sources.length})`;
   btn.addEventListener("click", () => {
     list.hidden = !list.hidden;
     btn.classList.toggle("expanded", !list.hidden);
@@ -698,12 +698,12 @@ function initFileAttach() {
       const maxSize = 5 * 1024 * 1024;
       const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
       if (file.size > maxSize) {
-        pushMessage("assistant", "Dosya boyutu 5MB'dan buyuk olamaz.", false);
+        pushMessage("assistant", "File size cannot exceed 5MB.", false);
         fileInput.value = "";
         return;
       }
       if (!allowedTypes.includes(file.type)) {
-        pushMessage("assistant", "Sadece resim (JPG, PNG, GIF, WebP) ve PDF dosyalari kabul edilir.", false);
+        pushMessage("assistant", "Only image files (JPG, PNG, GIF, WebP) and PDF files are accepted.", false);
         fileInput.value = "";
         return;
       }
@@ -729,17 +729,17 @@ function initFileAttach() {
             imgBubble.appendChild(img);
             chatMessages.appendChild(imgBubble);
             scrollToBottom();
-            messages.push({ role: "user", content: `[Resim: ${file.name}]` });
+            messages.push({ role: "user", content: `[Image: ${file.name}]` });
             saveSession();
           } else {
-            pushMessage("user", `[Dosya: ${file.name}]`);
+            pushMessage("user", `[File: ${file.name}]`);
           }
-          queueUserSegment(`[Kullanici dosya yukledi: ${file.name}]`);
+          queueUserSegment(`[User uploaded file: ${file.name}]`);
         } else {
-          pushMessage("assistant", data.error || "Dosya yuklenemedi.", false);
+          pushMessage("assistant", data.error || "File could not be uploaded.", false);
         }
       } catch (_e) {
-        pushMessage("assistant", "Dosya yukleme sirasinda hata olustu.", false);
+        pushMessage("assistant", "An error occurred while uploading the file.", false);
       }
       fileInput.value = "";
     }
@@ -752,13 +752,13 @@ function exportConversation() {
   if (!messages.length) return;
 
   const lines = [];
-  lines.push("QRAGY Teknik Destek - Sohbet Gecmisi");
-  lines.push("Tarih: " + new Date().toLocaleString("tr-TR"));
+  lines.push("QRAGY Technical Support - Chat History");
+  lines.push("Date: " + new Date().toLocaleString("en-US"));
   lines.push("=".repeat(40));
   lines.push("");
 
   for (const msg of messages) {
-    const label = msg.role === "user" ? "Siz" : "Destek";
+    const label = msg.role === "user" ? "You" : "Support";
     lines.push(`[${label}] ${msg.content}`);
     lines.push("");
   }
@@ -767,7 +767,7 @@ function exportConversation() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `qragy-destek-${new Date().toISOString().slice(0, 10)}.txt`;
+  a.download = `qragy-support-${new Date().toISOString().slice(0, 10)}.txt`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -791,7 +791,7 @@ function endSession() {
 
   const msg = document.createElement("p");
   msg.className = "end-session-text";
-  msg.textContent = "Sohbeti sonlandırmak istediğinize emin misiniz?";
+  msg.textContent = "Are you sure you want to end the session?";
 
   const actions = document.createElement("div");
   actions.className = "end-session-actions";
@@ -799,13 +799,13 @@ function endSession() {
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "end-session-cancel";
   cancelBtn.type = "button";
-  cancelBtn.textContent = "Vazgeç";
+  cancelBtn.textContent = "Cancel";
   cancelBtn.addEventListener("click", () => overlay.remove());
 
   const confirmBtn = document.createElement("button");
   confirmBtn.className = "end-session-confirm";
   confirmBtn.type = "button";
-  confirmBtn.textContent = "Sonlandır";
+  confirmBtn.textContent = "End Session";
   confirmBtn.addEventListener("click", () => {
     overlay.remove();
     performEndSession();
@@ -893,24 +893,24 @@ function showWidget() {
   }
 
   if (!state.widgetStarted && chatMessages.childElementCount === 0) {
-    // Oturumu yuklemeyi dene
+    // Try to load session
     const sessionRestored = loadSession();
 
     if (sessionRestored) {
-      // Server-side session validation: kapaliysa sifirdan basla
+      // Server-side session validation: restart if closed
       validateSessionWithServer().then(isActive => {
         if (!isActive) {
           performEndSession();
           showWidget();
         }
-      }).catch(() => { /* silent — offline durumda mevcut session ile devam */ });
-      // Oturum basariyla yuklendi, mevcut mesajlar gosterildi
+      }).catch(() => { /* silent — continue with current session when offline */ });
+      // Session loaded successfully, existing messages displayed
       removeSkeleton();
     } else {
-      // Ilk acilis: direkt sohbeti baslat (welcome screen yok)
+      // First open: start chat directly (no welcome screen)
       state.widgetStarted = true;
-      // persist=false: sadece UI'da gosterilir, backend'e gitmez (cift karsilama onlenir)
-      const welcomeMsg = state.runtimeConfig.chatFlow?.welcomeMessage || "Merhaba, Teknik Destek hattına hoş geldiniz. Size nasıl yardımcı olabilirim?";
+      // persist=false: only shown in UI, not sent to backend (prevents duplicate greeting)
+      const welcomeMsg = state.runtimeConfig.chatFlow?.welcomeMessage || "Hello, welcome to Technical Support. How can I help you?";
       pushMessage("assistant", welcomeMsg, false);
     }
   } else if (!state.widgetStarted) {
@@ -992,10 +992,10 @@ function updateHeaderStatus(isOpen) {
 
   if (isOpen) {
     statusDot.classList.remove("offline");
-    statusText.textContent = "Aktif";
+    statusText.textContent = "Online";
   } else {
     statusDot.classList.add("offline");
-    statusText.textContent = "Mesai dışı";
+    statusText.textContent = "Outside business hours";
   }
 }
 
@@ -1003,7 +1003,7 @@ function updateHeaderStatus(isOpen) {
 
 function setLoadingState(isLoading) {
   state.isSending = isLoading;
-  sendButton.textContent = isLoading ? "İşleniyor" : "Gönder";
+  sendButton.textContent = isLoading ? "Processing" : "Send";
 }
 
 function setComposeStatus(message) {
@@ -1022,7 +1022,7 @@ function setHandoffStatus(message, isError = false) {
   handoffStatus.textContent = message;
 
   if (state.lastSystemStatus !== message) {
-    pushMessage("assistant", `[Sistem] ${message}`, false);
+    pushMessage("assistant", `[System] ${message}`, false);
     state.lastSystemStatus = message;
   }
 }
@@ -1087,7 +1087,7 @@ function findExistingSupportButton() {
         return false;
       }
 
-      return normalizeText(button.textContent).includes("canli destek");
+      return normalizeText(button.textContent).includes("live support");
     }) || null
   );
 }
@@ -1144,7 +1144,7 @@ async function loadRuntimeConfig() {
       applySiteConfig(payload.site);
     }
   } catch (_error) {
-    // AI katmani tek basina da calissin.
+    // AI layer should work standalone too.
   }
 }
 
@@ -1243,7 +1243,7 @@ async function ensureZendeskWidget() {
       const existing = document.getElementById("ze-snippet");
       if (existing) {
         existing.addEventListener("load", () => resolve(), { once: true });
-        existing.addEventListener("error", () => reject(new Error("Zendesk snippet yüklenemedi.")), {
+        existing.addEventListener("error", () => reject(new Error("Zendesk snippet could not be loaded.")), {
           once: true
         });
         return;
@@ -1256,7 +1256,7 @@ async function ensureZendeskWidget() {
         encodeURIComponent(zendeskConfig.snippetKey);
       script.async = true;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Zendesk snippet yüklenemedi."));
+      script.onerror = () => reject(new Error("Zendesk snippet could not be loaded."));
       document.head.appendChild(script);
     });
   }
@@ -1340,25 +1340,25 @@ async function pushSummaryToZendesk(summary, tags) {
 }
 
 function buildZendeskSummary(memory, payload) {
-  const now = new Date().toLocaleString("tr-TR");
+  const now = new Date().toLocaleString("en-US");
   const lines = [
-    "AI Destek Katmanı - Yeni Talep",
-    `Tarih: ${now}`
+    "AI Support Layer - New Request",
+    `Date: ${now}`
   ];
 
   if (payload?.conversationContext?.currentTopic) {
-    lines.push(`Konu: ${payload.conversationContext.currentTopic}`);
+    lines.push(`Topic: ${payload.conversationContext.currentTopic}`);
   }
 
   if (payload?.handoffReason) {
-    lines.push(`Aktarım sebebi: ${payload.handoffReason}`);
+    lines.push(`Transfer reason: ${payload.handoffReason}`);
   }
 
-  lines.push(`Şube kodu: ${memory.branchCode || "-"}`);
-  lines.push(`Sorun özeti: ${memory.issueSummary || "-"}`);
-  lines.push(`Firma: ${memory.companyName || "-"}`);
-  lines.push(`Ad Soyad: ${memory.fullName || "-"}`);
-  lines.push(`Telefon: ${memory.phone || "-"}`);
+  lines.push(`Account ID: ${memory.branchCode || "-"}`);
+  lines.push(`Issue summary: ${memory.issueSummary || "-"}`);
+  lines.push(`Organization: ${memory.companyName || "-"}`);
+  lines.push(`Full Name: ${memory.fullName || "-"}`);
+  lines.push(`Phone: ${memory.phone || "-"}`);
 
   return lines.join("\n");
 }
@@ -1380,12 +1380,12 @@ async function reportHandoffResult(ticketId, status, detail, meta = {}) {
       })
     });
   } catch (_error) {
-    // Raporlama basarisiz olsa bile kullanici akisina engel olmayalim.
+    // Don't block user flow even if reporting fails.
   }
 }
 
 async function handoffToZendesk(payload) {
-  // Handoff basladiysa nudge'i durdur
+  // Stop nudge if handoff started
   state.nudgeShown = true;
   if (state.nudgeTimer) {
     clearTimeout(state.nudgeTimer);
@@ -1408,21 +1408,21 @@ async function handoffToZendesk(payload) {
 
     if (ticketId) {
       state.handedOffTickets.add(ticketKey);
-      setHandoffStatus("Talebiniz kayda alındı. Temsilci en kısa sürede sizinle iletişime geçecektir.");
-      await reportHandoffResult(ticketId, "success", "Zendesk devre disi, ticket kaydedildi.");
+      setHandoffStatus("Your request has been logged. An agent will contact you shortly.");
+      await reportHandoffResult(ticketId, "success", "Zendesk disabled, ticket saved.");
       showCSATSurvey(ticketId);
     } else {
-      setHandoffStatus("Talebiniz temsilciye iletildi.");
+      setHandoffStatus("Your request has been forwarded to an agent.");
     }
 
-    // Embed modda parent sayfaya Zendesk handoff + widget kapat mesaji gonder
+    // In embed mode, send Zendesk handoff + widget close message to parent page
     if (isEmbedMode) {
       postHandoffToParent(summary, tags, memory);
       setTimeout(() => {
         try { window.parent.postMessage({ type: "QRAGY_CLOSE", source: "qragy-ai-widget" }, "*"); } catch (_e) { /* cross-origin expected */ }
       }, 2500);
     } else {
-      // Standalone modda: sayfadaki Canli Destek butonunu tikla
+      // In standalone mode: click the Live Support button on the page
       await clickExistingSupportButton();
       closeWidgetAfterHandoff(2000);
     }
@@ -1436,27 +1436,27 @@ async function handoffToZendesk(payload) {
   const summary = buildZendeskSummary(memory, payload);
 
   if (!ticketKey || ticketKey === "|") {
-    setHandoffStatus("Temsilciye aktarım için talep bilgisi eksik.", true);
+    setHandoffStatus("Missing request information for agent transfer.", true);
     return;
   }
 
   if (state.handedOffTickets.has(ticketKey)) {
     const reopened = await openZendeskUi();
     if (reopened) {
-      setHandoffStatus("Canlı destek penceresi tekrar açıldı.");
-      await reportHandoffResult(ticketId, "success", "Zendesk penceresi tekrar acildi.");
+      setHandoffStatus("Live support window reopened.");
+      await reportHandoffResult(ticketId, "success", "Zendesk window reopened.");
       closeWidgetAfterHandoff();
       return;
     }
 
     const posted = postHandoffToParent(summary, tags, memory);
     if (posted) {
-      setHandoffStatus("Talep bilgisi sayfaya iletildi. Canlı destek açılıyor.");
-      await reportHandoffResult(ticketId, "parent_posted", "Handoff bilgisi parent sayfaya iletildi.");
+      setHandoffStatus("Request information sent to page. Opening live support.");
+      await reportHandoffResult(ticketId, "parent_posted", "Handoff info posted to parent page.");
       closeWidgetAfterHandoff();
     } else {
-      setHandoffStatus("Canlı destek penceresi tekrar açılamadı.", true);
-      await reportHandoffResult(ticketId, "failed", "Canli destek penceresi tekrar acilamadi.");
+      setHandoffStatus("Live support window could not be reopened.", true);
+      await reportHandoffResult(ticketId, "failed", "Live support window could not be reopened.");
     }
     return;
   }
@@ -1468,7 +1468,7 @@ async function handoffToZendesk(payload) {
   state.handoffInFlight.add(ticketKey);
   manualHandoffButton.disabled = true;
   setHandoffActionVisible(false);
-  setHandoffStatus("Talebiniz temsilciye aktarılıyor...");
+  setHandoffStatus("Transferring your request to an agent...");
 
   try {
     if (typeof window.zE !== "function") {
@@ -1497,17 +1497,17 @@ async function handoffToZendesk(payload) {
       const posted = postHandoffToParent(summary, tags, memory);
       if (posted) {
         state.handedOffTickets.add(ticketKey);
-        setHandoffStatus("Talep bilgisi sayfaya iletildi. Canlı destek açılıyor.");
-        await reportHandoffResult(ticketId, "parent_posted", "Zendesk hazir degildi, parent handoff kullanildi.");
+        setHandoffStatus("Request information sent to page. Opening live support.");
+        await reportHandoffResult(ticketId, "parent_posted", "Zendesk not ready, used parent handoff.");
         closeWidgetAfterHandoff();
         return;
       }
 
       setHandoffStatus(
-        "Zendesk hazır değil. Alan adının Zendesk Trusted Domains listesinde olduğunu kontrol edin.",
+        "Zendesk is not ready. Please verify the domain is in the Zendesk Trusted Domains list.",
         true
       );
-      await reportHandoffResult(ticketId, "failed", "Zendesk hazir degil (trusted domain/snippet kontrolu).");
+      await reportHandoffResult(ticketId, "failed", "Zendesk not ready (trusted domain/snippet check).");
       setHandoffActionVisible(true);
       return;
     }
@@ -1517,17 +1517,17 @@ async function handoffToZendesk(payload) {
       const posted = postHandoffToParent(summary, tags, memory);
       if (posted) {
         state.handedOffTickets.add(ticketKey);
-        setHandoffStatus("Talep bilgisi sayfaya iletildi. Canlı destek açılıyor.");
-        await reportHandoffResult(ticketId, "parent_posted", "Zendesk UI acilamadi, parent handoff kullanildi.");
+        setHandoffStatus("Request information sent to page. Opening live support.");
+        await reportHandoffResult(ticketId, "parent_posted", "Zendesk UI could not open, used parent handoff.");
         closeWidgetAfterHandoff();
         return;
       }
 
       setHandoffStatus(
-        "Zendesk penceresi acilamadi. Canli Destek butonu veya widget ayarini kontrol edin.",
+        "Zendesk window could not be opened. Check the Live Support button or widget settings.",
         true
       );
-      await reportHandoffResult(ticketId, "failed", "Zendesk penceresi acilamadi.");
+      await reportHandoffResult(ticketId, "failed", "Zendesk window could not be opened.");
       setHandoffActionVisible(true);
       return;
     }
@@ -1536,8 +1536,8 @@ async function handoffToZendesk(payload) {
     const summarySent = await pushSummaryToZendesk(summary, tags);
     if (summarySent) {
       state.handedOffTickets.add(ticketKey);
-      setHandoffStatus("Talebiniz temsilciye aktarıldı. Canlı destek penceresi açıldı.");
-      await reportHandoffResult(ticketId, "success", "Zendesk chat ozeti gonderildi.");
+      setHandoffStatus("Your request has been transferred to an agent. Live support window opened.");
+      await reportHandoffResult(ticketId, "success", "Zendesk chat summary sent.");
       if (ticketId) showCSATSurvey(ticketId);
       closeWidgetAfterHandoff();
       return;
@@ -1546,21 +1546,21 @@ async function handoffToZendesk(payload) {
     const posted = postHandoffToParent(summary, tags, memory);
     if (posted) {
       state.handedOffTickets.add(ticketKey);
-      setHandoffStatus("Özet bilgisi sayfaya iletildi. Canlı destek açılıyor.");
-      await reportHandoffResult(ticketId, "parent_posted", "Zendesk acildi ancak ozet parenta iletildi.");
+      setHandoffStatus("Summary information sent to page. Opening live support.");
+      await reportHandoffResult(ticketId, "parent_posted", "Zendesk opened but summary posted to parent.");
       closeWidgetAfterHandoff();
       return;
     }
 
     setHandoffActionVisible(true);
     setHandoffStatus(
-      "Zendesk açıldı ancak özet otomatik gönderilemedi. Lütfen temsilciye sorunu kısaca yazın.",
+      "Zendesk opened but the summary could not be sent automatically. Please briefly describe the issue to the agent.",
       true
     );
-    await reportHandoffResult(ticketId, "opened_no_summary", "Zendesk acildi fakat ozet gonderilemedi.");
+    await reportHandoffResult(ticketId, "opened_no_summary", "Zendesk opened but summary could not be sent.");
   } catch (_error) {
-    setHandoffStatus("Zendesk aktarımında beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.", true);
-    await reportHandoffResult(ticketId, "failed", "Zendesk aktariminda beklenmeyen hata.");
+    setHandoffStatus("An unexpected error occurred during Zendesk transfer. Please try again.", true);
+    await reportHandoffResult(ticketId, "failed", "Unexpected error during Zendesk transfer.");
     setHandoffActionVisible(true);
   } finally {
     manualHandoffButton.disabled = false;
@@ -1595,7 +1595,7 @@ async function validateSessionWithServer() {
     const data = await resp.json();
     return data.active === true;
   } catch (_e) {
-    return true; // offline durumda mevcut session ile devam
+    return true; // continue with current session when offline
   }
 }
 
@@ -1617,11 +1617,11 @@ async function diagnoseError() {
     const { payload } = await fetchJSON("api/health", {
       headers: { "Bypass-Tunnel-Reminder": "true" }
     });
-    if (!payload.hasApiKey) return "API anahtari tanimli degil. Lutfen admin panelden API anahtarini girin.";
-    if (!payload.llmStatus?.ok) return "LLM servisi su an calismıyor. Lutfen biraz sonra tekrar deneyin.";
-    return "Gecici bir sorun olustu. Lutfen tekrar deneyin.";
+    if (!payload.hasApiKey) return "API key is not configured. Please enter the API key from the admin panel.";
+    if (!payload.llmStatus?.ok) return "LLM service is currently unavailable. Please try again later.";
+    return "A temporary issue occurred. Please try again.";
   } catch {
-    return "Sunucuya ulasilamiyor. Lutfen biraz sonra tekrar deneyin.";
+    return "Cannot reach the server. Please try again later.";
   }
 }
 
@@ -1639,27 +1639,27 @@ async function sendToBackend() {
     }
     if (!response.ok) {
       if (response.status === 429) {
-        throw new Error(payload?.error || "Cok fazla istek gonderdiniz. Lutfen biraz bekleyin.");
+        throw new Error(payload?.error || "Too many requests. Please wait a moment.");
       }
-      throw new Error(payload?.error || "Sunucu hatasi.");
+      throw new Error(payload?.error || "Server error.");
     }
     return payload;
   }
 
-  // 1. ilk deneme
+  // 1. first attempt
   try {
     return await attemptRequest();
   } catch (firstError) {
-    // 429 (rate limit) ve normal API hatalari icin tekrar deneme
+    // 429 (rate limit) and normal API errors — no retry
     if (!firstError.nonJson && firstError.message !== "Failed to fetch") throw firstError;
   }
 
-  // 2. 1.5sn bekle, tekrar dene
+  // 2. wait 1.5s, retry
   await sleep(1500);
   try {
     return await attemptRequest();
   } catch {
-    // 3. ikisi de basarisiz — teshis et
+    // 3. both failed — diagnose
     const message = await diagnoseError();
     throw new Error(message);
   }
@@ -1670,7 +1670,7 @@ function scheduleUserFlush() {
     window.clearTimeout(state.flushTimer);
   }
 
-  setComposeStatus("Yazıyorsunuz...");
+  setComposeStatus("Typing...");
   const aggregationMs = state.runtimeConfig.chatFlow?.messageAggregationWindowMs || USER_BUFFER_WINDOW_MS;
   state.flushTimer = window.setTimeout(() => {
     state.flushTimer = null;
@@ -1738,7 +1738,7 @@ async function flushPendingUserSegments() {
   setLoadingState(true);
   const typingBubble = showTypingIndicator();
   const longWaitTimer = setTimeout(() => {
-    setComposeStatus("Yazıyor...");
+    setComposeStatus("Thinking...");
   }, 3000);
 
   try {
@@ -1795,7 +1795,7 @@ async function flushPendingUserSegments() {
     if (payload?.queuePosition && payload.queuePosition > 0) {
       const queueEl = document.createElement("div");
       queueEl.className = "queue-position";
-      queueEl.textContent = `Sırada ${payload.queuePosition}. sıradasınız`;
+      queueEl.textContent = `You are #${payload.queuePosition} in queue`;
       chatMessages.appendChild(queueEl);
       scrollToBottom();
     }
@@ -1809,7 +1809,7 @@ async function flushPendingUserSegments() {
         setHandoffActionVisible(false);
         setHandoffStatus(
           payload?.handoffMessage ||
-            "Canlı destek şu an mesai dışındadır. Talebiniz kayda alındı."
+            "Live support is currently outside business hours. Your request has been recorded."
         );
         if (payload?.ticketId) {
           showCSATSurvey(payload.ticketId);
@@ -1826,14 +1826,14 @@ async function flushPendingUserSegments() {
     if (!navigator.onLine) {
       showConnectionBanner();
       queueOfflineMessage(combinedUserMessage);
-      // Mesajlar array'inden cikart (tekrar gonderilecek)
+      // Remove from messages array (will be retried)
       if (messages.length && messages[messages.length - 1].content === combinedUserMessage) {
         messages.pop();
         saveSession();
       }
     } else {
       showConnectionBanner();
-      pushMessage("assistant", `İşlem sırasında hata oluştu: ${error.message}`, false);
+      pushMessage("assistant", `An error occurred: ${error.message}`, false);
     }
   } finally {
     clearTimeout(longWaitTimer);
@@ -1853,11 +1853,11 @@ function maybeVirtualizeMessages() {
   const allMessages = chatMessages.querySelectorAll(".message:not(.typing-indicator)");
   if (allMessages.length < 100) return;
 
-  // Sadece gorunmeyen mesajlari gizle (basit yaklasin)
+  // Hide non-visible messages (simple approach)
   const chatRect = chatMessages.getBoundingClientRect();
 
   allMessages.forEach((msg, idx) => {
-    // Son 20 mesaj her zaman gorunur
+    // Last 20 messages are always visible
     if (idx >= allMessages.length - 20) {
       msg.style.display = "";
       return;
@@ -1872,7 +1872,7 @@ function maybeVirtualizeMessages() {
   });
 }
 
-// Virtualization sadece buyuk konusmalarda aktif
+// Virtualization only active for large conversations
 let virtTimer = null;
 chatMessages.addEventListener("scroll", () => {
   if (virtTimer) return;
@@ -1891,11 +1891,11 @@ async function initPushNotifications() {
     const reg = await navigator.serviceWorker.register("sw.js");
 
     if (Notification.permission === "default") {
-      // Izin isteme: kullanici bir mesaj gonderdikten sonra
-      // (ilk acilista spam yapma)
+      // Request permission: after user sends a message
+      // (don't spam on first open)
     }
   } catch (_e) {
-    // SW desteklenmiyor veya kayit basarisiz
+    // SW not supported or registration failed
   }
 }
 
@@ -1929,7 +1929,7 @@ chatForm.addEventListener("submit", (event) => {
   pushMessage("user", content, false);
   chatInput.value = "";
 
-  // Offline ise queue'ya ekle
+  // Queue if offline
   if (!navigator.onLine) {
     showConnectionBanner();
     queueOfflineMessage(content);
@@ -1941,7 +1941,7 @@ chatForm.addEventListener("submit", (event) => {
   chatInput.focus();
   resetNudgeTimer();
 
-  // Ilk mesajda bildirim izni iste
+  // Request notification permission on first message
   requestNotificationPermission();
 });
 
@@ -1982,7 +1982,7 @@ closeWidgetButton.addEventListener("click", () => {
 
 manualHandoffButton.addEventListener("click", async () => {
   if (!state.lastHandoffPayload) {
-    setHandoffStatus("Aktarım için hazır bir talep bulunamadı.", true);
+    setHandoffStatus("No pending handoff request found.", true);
     return;
   }
 
@@ -2014,7 +2014,7 @@ initPushNotifications();
 
 state.runtimeConfigLoadPromise = loadRuntimeConfig();
 
-// Embed modda olmayan sayfalarda FAB'i goster
+// Show FAB on non-embed pages
 if (!isEmbedMode) {
   fabLauncher.hidden = false;
 }

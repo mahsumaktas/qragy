@@ -3,36 +3,36 @@
 /**
  * Corrective RAG (CRAG) Evaluator
  *
- * LLM tabanli sonuc degerlendirme ve sorgu yeniden yazma.
- * Her arama sonucunu RELEVANT / PARTIAL / IRRELEVANT olarak siniflandirir.
- * Yetersiz sonuclarda alternatif sorgu onerisi uretir.
+ * LLM-based result evaluation and query rewriting.
+ * Classifies each search result as RELEVANT / PARTIAL / IRRELEVANT.
+ * Generates alternative query suggestions for insufficient results.
  *
  * Factory pattern: createCragEvaluator(deps)
  */
 
 const MAX_REWRITE_ATTEMPTS = 2;
 
-const EVALUATE_SYSTEM_PROMPT = `Sen bir bilgi degerlendirme asistanisin. Kullanicinin sorusu ve arama sonuclari verilecek.
-Her sonucu asagidaki kriterlerle degerlendir:
-- RELEVANT: Soruyu dogrudan cevapliyor
-- PARTIAL: Kismen ilgili ama tam cevap degil
-- IRRELEVANT: Soruyla alakasiz
+const EVALUATE_SYSTEM_PROMPT = `You are a knowledge evaluation assistant. You will be given a user question and search results.
+Evaluate each result using these criteria:
+- RELEVANT: Directly answers the question
+- PARTIAL: Somewhat relevant but incomplete answer
+- IRRELEVANT: Unrelated to the question
 
-JSON formatinda cevap ver. Baska bir sey yazma.
+Respond in JSON format. Do not write anything else.
 Format: [{"index": 0, "verdict": "RELEVANT"}, ...]`;
 
-const REWRITE_SYSTEM_PROMPT = `Sen bir arama sorgusu iyilestirme asistanisin.
-Kullanicinin orijinal sorgusunu daha etkili bir arama sorgusuna donustur.
-Sadece yeni sorguyu yaz, baska bir sey ekleme.
-Turkce yaz.`;
+const REWRITE_SYSTEM_PROMPT = `You are a search query improvement assistant.
+Transform the user's original query into a more effective search query.
+Only write the new query, do not add anything else.
+Write in Turkish.`;
 
 function createCragEvaluator(deps) {
   const { callLLM, getProviderConfig, logger } = deps;
 
   /**
-   * LLM ile arama sonuclarini degerlendir.
-   * @param {string} query - Kullanici sorusu
-   * @param {Array} results - Arama sonuclari [{question, answer, ...}]
+   * Evaluate search results with LLM.
+   * @param {string} query - User question
+   * @param {Array} results - Search results [{question, answer, ...}]
    * @returns {{ relevant: Array, partial: Array, irrelevant: Array, insufficient: boolean }}
    */
   async function evaluate(query, results) {
@@ -47,7 +47,7 @@ function createCragEvaluator(deps) {
         answer: (r.answer || "").slice(0, 300),
       }));
 
-      const userMessage = `Kullanici Sorusu: ${query}\n\nArama Sonuclari:\n${JSON.stringify(resultsSummary, null, 2)}`;
+      const userMessage = `User Question: ${query}\n\nSearch Results:\n${JSON.stringify(resultsSummary, null, 2)}`;
 
       const messages = [{ role: "user", parts: [{ text: userMessage }] }];
       const providerConfig = getProviderConfig();
@@ -84,7 +84,7 @@ function createCragEvaluator(deps) {
 
       const insufficient = relevant.length === 0 && partial.length === 0;
 
-      logger.info("cragEvaluator", "Degerlendirme tamamlandi", {
+      logger.info("cragEvaluator", "Evaluation completed", {
         query: query.slice(0, 80),
         totalResults: results.length,
         relevant: relevant.length,
@@ -96,29 +96,29 @@ function createCragEvaluator(deps) {
 
       return { relevant, partial, irrelevant, insufficient };
     } catch (err) {
-      logger.warn("cragEvaluator", "LLM degerlendirme hatasi, tum sonuclar relevant kabul ediliyor", err);
+      logger.warn("cragEvaluator", "LLM evaluation error, all results treated as relevant", err);
       // Safe fallback: treat all results as relevant
       return { relevant: [...results], partial: [], irrelevant: [], insufficient: false };
     }
   }
 
   /**
-   * Alternatif arama sorgusu onerisi uret.
-   * @param {string} query - Orijinal sorgu
-   * @param {Array} chatHistory - Sohbet gecmisi
-   * @returns {string} Yeniden yazilmis sorgu
+   * Generate alternative search query suggestion.
+   * @param {string} query - Original query
+   * @param {Array} chatHistory - Chat history
+   * @returns {string} Rewritten query
    */
   async function suggestRewrite(query, chatHistory = []) {
     try {
       let contextText = "";
       if (chatHistory.length > 0) {
         const recent = chatHistory.slice(-4);
-        contextText = "\n\nSohbet Gecmisi:\n" + recent
-          .map(m => `${m.role === "user" ? "Kullanici" : "Bot"}: ${m.content}`)
+        contextText = "\n\nChat History:\n" + recent
+          .map(m => `${m.role === "user" ? "User" : "Bot"}: ${m.content}`)
           .join("\n");
       }
 
-      const userMessage = `Orijinal Sorgu: ${query}${contextText}\n\nIyilestirilmis Arama Sorgusu:`;
+      const userMessage = `Original Query: ${query}${contextText}\n\nImproved Search Query:`;
       const messages = [{ role: "user", parts: [{ text: userMessage }] }];
       const providerConfig = getProviderConfig();
       const response = await callLLM(messages, REWRITE_SYSTEM_PROMPT, 256, providerConfig);
@@ -127,14 +127,14 @@ function createCragEvaluator(deps) {
       // Strip quotes from LLM reply
       rewritten = rewritten.replace(/^["']+|["']+$/g, "");
 
-      logger.info("cragEvaluator", "Sorgu yeniden yazildi", {
+      logger.info("cragEvaluator", "Query rewritten", {
         original: query.slice(0, 80),
         rewritten: (rewritten || query).slice(0, 80),
       });
 
       return rewritten || query;
     } catch (err) {
-      logger.warn("cragEvaluator", "Sorgu yeniden yazma hatasi, orijinal sorgu kullaniliyor", err);
+      logger.warn("cragEvaluator", "Query rewrite error, using original query", err);
       return query;
     }
   }

@@ -1,5 +1,5 @@
 <script>
-  let { message = "Veri bulunamadi", icon = "" } = $props();
+  let { message = "No data found", icon = "" } = $props();
 </script>
 
 <div class="empty-state">

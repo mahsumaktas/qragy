@@ -9,15 +9,15 @@
  */
 
 const CORE_MEMORY_TOKEN_BUDGET = 500;
-const CHARS_PER_TOKEN = 2.5; // Turkish text averages ~2.5 chars per token
+const CHARS_PER_TOKEN = 2.5; // Average ~2.5 chars per token
 const MAX_RECENT_MESSAGES = 10;
 
-const EXTRACTION_SYSTEM_PROMPT = `Sen bir kullanici profili cikarma asistanisin.
-Verilen konusma gecmisinden kullanici hakkinda profil bilgilerini JSON olarak cikar.
-Sadece acikca belirtilen bilgileri cikar, tahminde bulunma.
-Cikarilacak alanlar: name, branch, phone, company, issue_history, preferences
-Bos alanlari dahil etme. Sadece JSON don, baska bir sey yazma.
-Ornek cikti: {"name": "Ahmet", "company": "ABC Ltd"}`;
+const EXTRACTION_SYSTEM_PROMPT = `You are a user profile extraction assistant.
+Extract user profile information from the given conversation history as JSON.
+Extract only explicitly stated information, do not make assumptions.
+Fields to extract: name, branch, phone, company, issue_history, preferences
+Do not include empty fields. Return only JSON, write nothing else.
+Example output: {"name": "John", "company": "ABC Ltd"}`;
 
 const MAX_EXTRACT_TOKENS = 512;
 
@@ -119,7 +119,7 @@ function createCoreMemory(deps) {
 
     if (entries.length === 0) return "";
 
-    const header = "--- KULLANICI PROFILI ---\n";
+    const header = "--- USER PROFILE ---\n";
     const maxChars = Math.floor(maxTokens * CHARS_PER_TOKEN);
     let result = header;
 

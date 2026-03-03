@@ -29,12 +29,12 @@ function createMemoryEngine(deps) {
       recallContext = await recallMemory.formatForPrompt(query, userId, RECALL_TOKEN_BUDGET);
     }
 
-    logger.info("memoryEngine", "Hafiza yuklendi", {
+    logger.info("memoryEngine", "Memory loaded", {
       userId: userId ? userId.slice(0, 12) : "N/A",
       coreLen: coreContext ? coreContext.length : 0,
       recallLen: recallContext ? recallContext.length : 0,
       requiresMemory: !!analysisResult.requiresMemory,
-      corePreview: coreContext ? coreContext.slice(0, 100) : "(bos)",
+      corePreview: coreContext ? coreContext.slice(0, 100) : "(empty)",
     });
 
     return { coreMemory: coreContext, recallMemory: recallContext };
@@ -55,7 +55,7 @@ function createMemoryEngine(deps) {
       if (summary) {
         await recallMemory.save(userId, sessionId, summary);
       }
-      logger.info("memoryEngine", "Konusma sonrasi hafiza guncellendi", {
+      logger.info("memoryEngine", "Post-conversation memory updated", {
         userId: userId ? userId.slice(0, 12) : "N/A",
         sessionId,
         historyLen: chatHistory ? chatHistory.length : 0,

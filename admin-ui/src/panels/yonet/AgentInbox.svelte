@@ -47,7 +47,7 @@
       pending = res.pending || [];
       active = res.active || [];
     } catch (e) {
-      showToast("Inbox yuklenemedi: " + e.message, "error");
+      showToast("Failed to load inbox: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -71,21 +71,21 @@
   async function claimItem(id) {
     try {
       await api.post("admin/inbox/" + id + "/claim", { agentName: "admin" });
-      showToast("Talep alindi", "success");
+      showToast("Claimed", "success");
       await loadInbox();
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 
   async function releaseItem(id) {
     try {
       await api.post("admin/inbox/" + id + "/release", {});
-      showToast("Talep serbest birakildi", "success");
+      showToast("Released", "success");
       selectedId = null;
       await loadInbox();
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 
@@ -95,7 +95,7 @@
       await api.post("admin/inbox/" + selected.id + "/message", { message: text });
       await loadChat(selectedId);
     } catch (e) {
-      showToast("Mesaj gonderilemedi: " + e.message, "error");
+      showToast("Failed to send message: " + e.message, "error");
     }
   }
 </script>
@@ -103,43 +103,43 @@
 <div class="page-header">
   <div>
     <h1>Agent Inbox</h1>
-    <p>Insan temsilci kuyruğu</p>
+    <p>Human agent queue</p>
   </div>
-  <Button onclick={loadInbox} variant="ghost" size="sm">Yenile</Button>
+  <Button onclick={loadInbox} variant="ghost" size="sm">Refresh</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="inbox-layout">
     <!-- Queue List -->
     <div class="queue-panel">
       {#if pending.length}
-        <div class="queue-group">Bekleyen ({pending.length})</div>
+        <div class="queue-group">Pending ({pending.length})</div>
         {#each pending as item}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div class="queue-item" class:active={selectedId === item.sessionId} onclick={() => selectItem(item.sessionId)}>
             <div class="qi-top">
-              <span class="qi-name">{item.customerName || "Misafir"}</span>
-              <Badge variant="yellow">bekliyor</Badge>
+              <span class="qi-name">{item.customerName || "Guest"}</span>
+              <Badge variant="yellow">waiting</Badge>
             </div>
             <div class="qi-topic">{item.topic || item.summary || "..."}</div>
             <div class="qi-meta">{fmtRelative(item.createdAt)}</div>
-            <Button onclick={(e) => { e.stopPropagation(); claimItem(item.id); }} variant="primary" size="sm">Talep Al</Button>
+            <Button onclick={(e) => { e.stopPropagation(); claimItem(item.id); }} variant="primary" size="sm">Claim</Button>
           </div>
         {/each}
       {/if}
 
       {#if active.length}
-        <div class="queue-group">Aktif ({active.length})</div>
+        <div class="queue-group">Active ({active.length})</div>
         {#each active as item}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div class="queue-item" class:active={selectedId === item.sessionId} onclick={() => selectItem(item.sessionId)}>
             <div class="qi-top">
-              <span class="qi-name">{item.customerName || "Misafir"}</span>
-              <Badge variant="green">aktif</Badge>
+              <span class="qi-name">{item.customerName || "Guest"}</span>
+              <Badge variant="green">active</Badge>
             </div>
             <div class="qi-topic">{item.topic || item.summary || "..."}</div>
             <div class="qi-meta">{item.assignedTo || "admin"} &middot; {fmtRelative(item.createdAt)}</div>
@@ -148,7 +148,7 @@
       {/if}
 
       {#if !pending.length && !active.length}
-        <div class="queue-empty">Kuyruk bos</div>
+        <div class="queue-empty">Queue is empty</div>
       {/if}
     </div>
 
@@ -157,25 +157,25 @@
       {#if selected}
         <div class="chat-header">
           <div>
-            <strong>{selected.customerName || "Misafir"}</strong>
+            <strong>{selected.customerName || "Guest"}</strong>
             <span class="chat-meta">{selected.topic || ""}</span>
           </div>
           {#if selected.assignedTo}
-            <Button onclick={() => releaseItem(selected.id)} variant="ghost" size="sm">Serbest Birak</Button>
+            <Button onclick={() => releaseItem(selected.id)} variant="ghost" size="sm">Release</Button>
           {/if}
         </div>
         <div class="chat-body">
           {#each chatMessages as msg}
             <ChatBubble sender={msg.role === "user" ? "user" : "bot"} message={msg.content || ""} />
           {:else}
-            <div class="empty-chat">Mesaj yok</div>
+            <div class="empty-chat">No messages</div>
           {/each}
         </div>
         {#if selected.assignedTo}
           <ChatInput onsend={sendMessage} />
         {/if}
       {:else}
-        <div class="no-selection">Bir talep secin</div>
+        <div class="no-selection">Select a request</div>
       {/if}
     </div>
   </div>

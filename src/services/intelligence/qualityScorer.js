@@ -3,37 +3,37 @@
 /**
  * RAGAS-inspired Quality Scorer
  *
- * RAG cevap kalitesini olcer: faithfulness, relevancy, confidence.
- * LLM ile faithfulness/relevancy degerlendirir, ragResults'tan confidence hesaplar.
+ * Scores RAG answer quality: faithfulness, relevancy, confidence.
+ * Evaluates faithfulness/relevancy with LLM, calculates confidence from ragResults.
  *
  * Factory pattern: createQualityScorer(deps)
  */
 
 const LOW_QUALITY_THRESHOLD = 0.5;
 
-const SCORE_SYSTEM_PROMPT = `Sen bir cevap kalite degerlendirme asistanisin.
-Kullanicinin sorusu, verilen cevap ve kaynak dokumanlari inceleyerek iki metrik hesapla:
+const SCORE_SYSTEM_PROMPT = `You are a response quality evaluation assistant.
+Examine the user question, the provided answer, and the source documents to calculate two metrics:
 
-1. faithfulness (0-1): Cevap kaynak dokumanlara sadik mi? Uydurma bilgi var mi?
-   - 1.0 = Tamamen kaynaklara dayali
-   - 0.0 = Kaynaklarla hic uyusmuyor
+1. faithfulness (0-1): Is the answer faithful to the source documents? Are there hallucinations?
+   - 1.0 = Completely based on sources
+   - 0.0 = Does not match sources at all
 
-2. relevancy (0-1): Cevap kullanicinin sorusunu karsiliyor mu?
-   - 1.0 = Soruyu tam karsilik veriyor
-   - 0.0 = Soruyla hic alakasi yok
+2. relevancy (0-1): Does the answer address the user's question?
+   - 1.0 = Fully addresses the question
+   - 0.0 = No relevance to the question
 
-JSON formatinda cevap ver. Baska bir sey yazma.
+Respond in JSON format. Write nothing else.
 Format: {"faithfulness": 0.85, "relevancy": 0.9}`;
 
 function createQualityScorer(deps) {
   const { callLLM, getProviderConfig, sqliteDb, logger } = deps;
 
   /**
-   * RAG cevap kalitesini skorla.
+   * Score RAG answer quality.
    * @param {Object} params
-   * @param {string} params.query - Kullanici sorusu
-   * @param {string} params.answer - Bot cevabi
-   * @param {Array} params.ragResults - RAG arama sonuclari [{_rerankScore, answer, ...}]
+   * @param {string} params.query - User question
+   * @param {string} params.answer - Bot answer
+   * @param {Array} params.ragResults - RAG search results [{_rerankScore, answer, ...}]
    * @param {string} params.sessionId
    * @param {string} params.messageId
    * @returns {{ sessionId, messageId, faithfulness, relevancy, confidence, ragResultCount, avgRerankScore, isLowQuality }}
@@ -68,9 +68,9 @@ function createQualityScorer(deps) {
         .join("\n");
 
       const userMessage = [
-        `Soru: ${query}`,
-        `Cevap: ${answer}`,
-        `\nKaynak Dokumanlar:\n${contextText || "(kaynak yok)"}`,
+        `Question: ${query}`,
+        `Answer: ${answer}`,
+        `\nSource Documents:\n${contextText || "(no sources)"}`,
       ].join("\n");
 
       const messages = [{ role: "user", parts: [{ text: userMessage }] }];
@@ -88,7 +88,7 @@ function createQualityScorer(deps) {
       relevancy = typeof parsed.relevancy === "number" ? parsed.relevancy : null;
     } catch (err) {
       // 7. LLM failure: null scores, isLowQuality=false
-      logger.warn("qualityScorer", "LLM skor hatasi, faithfulness/relevancy null", err);
+      logger.warn("qualityScorer", "LLM scoring error, faithfulness/relevancy null", err);
     }
 
     // 4. isLowQuality: average of non-null scores < threshold
@@ -123,7 +123,7 @@ function createQualityScorer(deps) {
         avgRerankScore,
       });
     } catch (err) {
-      logger.warn("qualityScorer", "SQLite kayit hatasi", err);
+      logger.warn("qualityScorer", "SQLite save error", err);
     }
 
     return result;
@@ -133,7 +133,7 @@ function createQualityScorer(deps) {
     try {
       return sqliteDb.getRecentQualityScores(sessionId, limit);
     } catch (err) {
-      logger.warn("qualityScorer", "getRecentScores hatasi", err);
+      logger.warn("qualityScorer", "getRecentScores error", err);
       return [];
     }
   }

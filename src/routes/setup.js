@@ -28,16 +28,16 @@ function mount(app, deps) {
 
     // Validate required fields
     if (!body || !body.companyName || typeof body.companyName !== "string" || !body.companyName.trim()) {
-      return res.status(400).json({ error: "companyName zorunludur." });
+      return res.status(400).json({ error: "companyName is required." });
     }
 
     const companyName = body.companyName.trim();
-    const sector = (body.sector || "diger").trim();
+    const sector = (body.sector || "other").trim();
 
     // Update site config
     const siteUpdates = {
-      heroTitle: companyName + " Destek",
-      headerTitle: companyName + " Destek",
+      heroTitle: companyName + " Support",
+      headerTitle: companyName + " Support",
     };
     if (body.logoUrl && typeof body.logoUrl === "string") {
       siteUpdates.logoUrl = body.logoUrl.trim();
@@ -52,7 +52,7 @@ function mount(app, deps) {
 
     // Update chatFlow config with welcome message
     saveChatFlowConfig({
-      welcomeMessage: `Merhaba, ${companyName} Destek hattina hos geldiniz. Size nasil yardimci olabilirim?`,
+      welcomeMessage: `Hello, welcome to ${companyName} Support. How can I help you?`,
     });
 
     // Load sector template if available
@@ -64,7 +64,7 @@ function mount(app, deps) {
         // Write persona.md
         if (sectorTemplate.persona) {
           const personaPath = require("path").join(agentDir, "persona.md");
-          const personaContent = `# ${companyName} Bot Kisiligi\n\n${sectorTemplate.persona}\n`;
+          const personaContent = `# ${companyName} Bot Persona\n\n${sectorTemplate.persona}\n`;
           fsModule.writeFileSync(personaPath, personaContent, "utf8");
         }
 
@@ -88,11 +88,11 @@ function mount(app, deps) {
             jobQueue.add("kb-reingest", {}, { priority: -1, maxAttempts: 3 });
           } else if (reingestKnowledgeBase) {
             Promise.resolve().then(() => reingestKnowledgeBase())
-              .catch(err => { if (log) log.warn("setup", "reingest hatasi", err); });
+              .catch(err => { if (log) log.warn("setup", "reingest error", err); });
           }
         }
       } catch (err) {
-        if (log) log.warn("setup", "Template uygulama hatasi", err);
+        if (log) log.warn("setup", "Template application error", err);
       }
     }
 

@@ -40,7 +40,7 @@ function createChatPipeline(deps) {
   async function standardPath(query, knowledgeBase, kbSize) {
     const searchResults = await searchEngine.hybridSearch(query, { knowledgeBase, kbSize });
     if (searchResults.length === 0) {
-      logger.info("chatPipeline:STANDARD", "Arama sonucu yok", { query: query.slice(0, 100) });
+      logger.info("chatPipeline:STANDARD", "No search results", { query: query.slice(0, 100) });
       return { ragResults: [], citations: [] };
     }
 
@@ -51,7 +51,7 @@ function createChatPipeline(deps) {
     const filtered = reranked.filter(r => (r._rerankScore || 0) >= MIN_RERANK_SCORE);
     const finalResults = filtered.length > 0 ? filtered : reranked.slice(0, 1);
 
-    logger.info("chatPipeline:STANDARD", "RAG tamamlandi", {
+    logger.info("chatPipeline:STANDARD", "RAG completed", {
       searchHits: searchResults.length,
       afterRerank: reranked.length,
       afterFilter: finalResults.length,
@@ -77,20 +77,20 @@ function createChatPipeline(deps) {
 
       if (searchResults.length === 0 && attempt < maxRetries) {
         const rewritten = await cragEvaluator.suggestRewrite(currentQuery);
-        logger.info("chatPipeline:DEEP", "Sonuc yok, sorgu yeniden yazildi", { attempt, original: currentQuery.slice(0, 80), rewritten: rewritten.slice(0, 80) });
+        logger.info("chatPipeline:DEEP", "No results, query rewritten", { attempt, original: currentQuery.slice(0, 80), rewritten: rewritten.slice(0, 80) });
         currentQuery = rewritten;
         continue;
       }
 
       if (searchResults.length === 0) {
-        logger.info("chatPipeline:DEEP", "Tum denemelerde sonuc yok", { attempts: attempt + 1 });
+        logger.info("chatPipeline:DEEP", "No results after all retries", { attempts: attempt + 1 });
         return { ragResults: [], citations: [] };
       }
 
       const reranked = await reranker.rerank(currentQuery, searchResults);
       const evaluation = await cragEvaluator.evaluate(currentQuery, reranked);
 
-      logger.info("chatPipeline:DEEP", "CRAG degerlendirme", {
+      logger.info("chatPipeline:DEEP", "CRAG evaluation", {
         attempt,
         searchHits: searchResults.length,
         relevant: evaluation.relevant?.length || 0,
@@ -106,7 +106,7 @@ function createChatPipeline(deps) {
       }
 
       const rewritten = await cragEvaluator.suggestRewrite(currentQuery);
-      logger.info("chatPipeline:DEEP", "Yetersiz, sorgu yeniden yaziliyor", { rewritten: rewritten.slice(0, 80) });
+      logger.info("chatPipeline:DEEP", "Insufficient, query rewritten", { rewritten: rewritten.slice(0, 80) });
       currentQuery = rewritten;
     }
 
@@ -145,13 +145,13 @@ function createChatPipeline(deps) {
     const analysis = await queryAnalyzer.analyze(userMessage, chatHistory);
     const { route, standaloneQuery } = analysis;
 
-    logger.info("chatPipeline", "Sorgu analizi", {
+    logger.info("chatPipeline", "Query analysis", {
       sessionId,
       route,
       intent: analysis.intent,
       complexity: analysis.complexity,
       userMsg: userMessage.slice(0, 100),
-      standalone: standaloneQuery !== userMessage ? standaloneQuery.slice(0, 100) : "(ayni)",
+      standalone: standaloneQuery !== userMessage ? standaloneQuery.slice(0, 100) : "(same)",
       historyLen: chatHistory.length,
       subQueries: analysis.subQueries?.length || 0,
     });
@@ -159,7 +159,7 @@ function createChatPipeline(deps) {
     // 2. Load memory context
     const memoryContext = await memoryEngine.loadContext(userId, standaloneQuery, analysis);
 
-    logger.info("chatPipeline", "Memory context yuklendi", {
+    logger.info("chatPipeline", "Memory context loaded", {
       sessionId,
       coreLen: memoryContext.coreMemory ? memoryContext.coreMemory.length : 0,
       recallLen: memoryContext.recallMemory ? memoryContext.recallMemory.length : 0,
@@ -170,7 +170,7 @@ function createChatPipeline(deps) {
     let citations = [];
 
     if (route === "FAST") {
-      logger.info("chatPipeline", "FAST route — retrieval atlanildi", { sessionId });
+      logger.info("chatPipeline", "FAST route — retrieval skipped", { sessionId });
     } else if (route === "DEEP") {
       // Process subQueries in parallel if available
       const subQueries = Array.isArray(analysis.subQueries) && analysis.subQueries.length > 0
@@ -178,7 +178,7 @@ function createChatPipeline(deps) {
         : null;
 
       if (subQueries) {
-        logger.info("chatPipeline:DEEP", "Sub-query paralel arama", {
+        logger.info("chatPipeline:DEEP", "Sub-query parallel search", {
           sessionId,
           mainQuery: standaloneQuery.slice(0, 80),
           subQueryCount: subQueries.length,
@@ -205,7 +205,7 @@ function createChatPipeline(deps) {
         }
         const mergedResults = [...seen.values()];
 
-        logger.info("chatPipeline:DEEP", "Sub-query merge sonucu", {
+        logger.info("chatPipeline:DEEP", "Sub-query merge result", {
           sessionId,
           perQueryHits: allSearches.map(r => r.length),
           totalBeforeDedup: allSearches.reduce((s, r) => s + r.length, 0),
@@ -271,7 +271,7 @@ function createChatPipeline(deps) {
     const cfg = getProviderConfig();
     const maxTokens = cfg.maxOutputTokens || 2048;
 
-    logger.info("chatPipeline", "LLM cagrisi", {
+    logger.info("chatPipeline", "LLM call", {
       sessionId,
       model: cfg.model,
       provider: cfg.provider,
@@ -286,7 +286,7 @@ function createChatPipeline(deps) {
     let { reply } = llmResult;
     const { finishReason } = llmResult;
 
-    logger.info("chatPipeline", "LLM cevabi", {
+    logger.info("chatPipeline", "LLM response", {
       sessionId,
       finishReason,
       replyLen: reply.length,
@@ -303,7 +303,7 @@ function createChatPipeline(deps) {
       });
 
       if (scoreResult) {
-        logger.info("chatPipeline", "Kalite skoru", {
+        logger.info("chatPipeline", "Quality score", {
           sessionId,
           faithfulness: scoreResult.faithfulness,
           relevancy: scoreResult.relevancy,
@@ -314,10 +314,10 @@ function createChatPipeline(deps) {
       }
 
       if (scoreResult && scoreResult.isLowQuality) {
-        reply += "\n\n(Bu cevap yetersiz olabilir. Detayli bilgi icin canli destek temsilcimize baglayabilirim.)";
+        reply += "\n\n(This answer may be insufficient. I can connect you with a live support agent for more details.)";
       }
     } catch (err) {
-      logger.warn("chatPipeline", "qualityScorer hatasi", err);
+      logger.warn("chatPipeline", "qualityScorer error", err);
     }
 
     // 9. Fire-and-forget async post-processing
@@ -327,7 +327,7 @@ function createChatPipeline(deps) {
       Promise.resolve().then(() =>
         memoryEngine.updateAfterConversation(userId, sessionId, chatHistory, reply),
       ).catch((err) => {
-        logger.warn("chatPipeline", "memoryEngine async hatasi", err);
+        logger.warn("chatPipeline", "memoryEngine async error", err);
       });
     }
 

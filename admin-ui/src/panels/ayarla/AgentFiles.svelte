@@ -16,7 +16,7 @@
       const res = await api.get("admin/agent/files");
       files = res.files || res || [];
     } catch (e) {
-      showToast("Agent dosyalari yuklenemedi: " + e.message, "error");
+      showToast("Failed to load agent files: " + e.message, "error");
     } finally {
       loading = false;
     }
@@ -28,7 +28,7 @@
       const res = await api.get("admin/agent/files/" + encodeURIComponent(filename));
       fileContent = res.content || "";
     } catch (e) {
-      showToast("Dosya okunamadi: " + e.message, "error");
+      showToast("Failed to read file: " + e.message, "error");
       fileContent = "";
     }
   }
@@ -38,9 +38,9 @@
     saving = true;
     try {
       await api.put("admin/agent/files/" + encodeURIComponent(selectedFile), { content: fileContent });
-      showToast(selectedFile + " kaydedildi", "success");
+      showToast(selectedFile + " saved", "success");
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     } finally {
       saving = false;
     }
@@ -49,23 +49,23 @@
   async function reloadAgent() {
     try {
       await api.post("admin/agent/reload", {});
-      showToast("Agent dosyalari yeniden yuklendi", "success");
+      showToast("Agent files reloaded", "success");
     } catch (e) {
-      showToast("Hata: " + e.message, "error");
+      showToast("Error: " + e.message, "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>Agent Dosyalari</h1><p>Bot yapilndirma dosyalari</p></div>
+  <div><h1>Agent Files</h1><p>Bot configuration files</p></div>
   <div class="actions">
-    <Button onclick={reloadAgent} variant="secondary" size="sm">Agent'i Yenile</Button>
-    <Button onclick={saveFile} variant="primary" size="sm" disabled={!selectedFile || saving}>{saving ? "Kaydediliyor..." : "Kaydet"}</Button>
+    <Button onclick={reloadAgent} variant="secondary" size="sm">Reload Agent</Button>
+    <Button onclick={saveFile} variant="primary" size="sm" disabled={!selectedFile || saving}>{saving ? "Saving..." : "Save"}</Button>
   </div>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Yukleniyor..." />
+  <LoadingSpinner message="Loading..." />
 {:else}
   <div class="split-layout">
     <div class="file-list">
@@ -77,7 +77,7 @@
           <span>{f.name || f}</span>
         </div>
       {:else}
-        <div class="empty-list">Dosya yok</div>
+        <div class="empty-list">No files</div>
       {/each}
     </div>
     <div class="editor-panel">
@@ -87,7 +87,7 @@
         </div>
         <textarea class="mono-editor" bind:value={fileContent} spellcheck="false"></textarea>
       {:else}
-        <div class="no-file">Bir dosya secin</div>
+        <div class="no-file">Select a file</div>
       {/if}
     </div>
   </div>

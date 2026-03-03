@@ -64,21 +64,21 @@ function mount(app, deps) {
       const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
       const isLocalEval = req.headers["x-eval-mode"] === "true" && /^(127\.|::1|localhost)/.test(clientIp);
       if (!isLocalEval && !checkRateLimit(clientIp)) {
-        return res.status(429).json({ error: "Cok fazla istek gonderdiniz. Lutfen biraz bekleyin.", retryAfterMs: RATE_LIMIT_WINDOW_MS });
+        return res.status(429).json({ error: "Too many requests. Please wait a moment.", retryAfterMs: RATE_LIMIT_WINDOW_MS });
       }
 
       const rawMessages = Array.isArray(req.body?.messages) ? req.body.messages : [];
       const sessionId = String(req.body?.sessionId || "").trim() || ("auto-" + clientIp + "-" + Date.now().toString(36));
 
       if (!rawMessages.length) {
-        return res.status(400).json({ error: "messages alani bos olamaz." });
+        return res.status(400).json({ error: "messages field cannot be empty." });
       }
 
       // Message length limit
       const MAX_MESSAGE_LENGTH = 1000;
       const latestUserMsg = rawMessages[rawMessages.length - 1];
       if (latestUserMsg && latestUserMsg.role === "user" && typeof latestUserMsg.content === "string" && latestUserMsg.content.length > MAX_MESSAGE_LENGTH) {
-        return res.status(400).json({ error: `Mesaj cok uzun. Maksimum ${MAX_MESSAGE_LENGTH} karakter gonderilebilir.` });
+        return res.status(400).json({ error: `Message too long. Maximum ${MAX_MESSAGE_LENGTH} characters allowed.` });
       }
 
       // Injection Guard — Layer 1 (input sanitization)
@@ -137,7 +137,7 @@ function mount(app, deps) {
         }));
 
       if (!contents.length) {
-        return res.status(400).json({ error: "Ge\u00e7erli mesaj bulunamad\u0131." });
+        return res.status(400).json({ error: "No valid messages found." });
       }
 
       const chatHistorySnapshot = activeMessages
@@ -161,13 +161,13 @@ function mount(app, deps) {
       const topicConvData = loadConversations();
       const topicConv = topicConvData.conversations.find(c => c.sessionId === sessionId);
       if (conversationContext.currentTopic) {
-        // Topic bulundu — kaydet
+        // Topic found — save
         if (topicConv) {
           topicConv.lastDetectedTopic = conversationContext.currentTopic;
           saveConversations(topicConvData);
         }
       } else if (topicConv?.lastDetectedTopic && latestUserMessage.split(/\s+/).length < 8) {
-        // Topic bulunamadi ama onceki topic var + kisa cevap → eski topic'i koru
+        // Topic not found but previous topic exists + short reply → preserve old topic
         conversationContext.currentTopic = topicConv.lastDetectedTopic;
         conversationContext.topicConfidence = 0.6;
         conversationContext.conversationState = "topic_guided_support";
@@ -197,7 +197,7 @@ function mount(app, deps) {
       });
       if (deterministicResult) return res.json(deterministicResult);
 
-      // Relevance guardrail — off-topic mesajlari LLM ile yakala (sadece ilk turda ve konu tespit edilemediginde)
+      // Relevance guardrail — catch off-topic messages via LLM (only on first turn when no topic detected)
       if (!conversationContext.currentTopic && activeUserMessages.length <= 1 && typeof checkRelevanceLLM === "function" && callLLM) {
         const relevanceCheck = await checkRelevanceLLM(latestUserMessage, callLLM);
         if (!relevanceCheck.relevant) {
@@ -296,12 +296,12 @@ function mount(app, deps) {
           hasClosedTicketHistory,
           handoffReady: false,
           support: supportAvailability,
-          warning: error?.message || "Beklenmeyen bir hata olustu."
+          warning: error?.message || "An unexpected error occurred."
         });
       }
 
       return res.status(statusCode).json({
-        error: error?.message || "Beklenmeyen bir hata olustu."
+        error: error?.message || "An unexpected error occurred."
       });
     }
   });
