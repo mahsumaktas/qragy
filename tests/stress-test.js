@@ -48,7 +48,7 @@ function sendChat(sessionId, message, category, label) {
       res.on("data", (chunk) => { data += chunk; });
       res.on("end", () => {
         const elapsed = Date.now() - startTime;
-        let reply = "", source = "", handoff = "", error = "";
+        let reply, source, handoff, error;
         let status = "PASS";
 
         try {
@@ -64,19 +64,18 @@ function sendChat(sessionId, message, category, label) {
             status = "FAIL";
             error = `HTTP_${res.statusCode}`;
           } else if (res.statusCode === 400) {
-            // Beklenen: injection guard, validation error
             source = "validation-" + (json.error || "").substring(0, 30);
           } else if (!json.reply && res.statusCode === 200) {
             status = "FAIL";
             error = "EMPTY_REPLY";
           }
-        } catch (e) {
+        } catch (_e) {
           status = "FAIL";
           error = "JSON_PARSE_ERROR";
           reply = data.substring(0, 100);
         }
 
-        resolve({ status, httpCode: res.statusCode, reply, source, handoff, error, elapsed, category, label });
+        resolve({ status, httpCode: res.statusCode, reply: reply || "", source: source || "", handoff: handoff || "", error, elapsed, category, label });
       });
     });
 

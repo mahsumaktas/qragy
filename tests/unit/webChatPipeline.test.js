@@ -252,7 +252,7 @@ describe("webChatPipeline", () => {
     ]);
     pipeline = createWebChatPipeline(deps);
 
-    const result = await pipeline.generateAIResponse({
+    const _result = await pipeline.generateAIResponse({
       contents: [{ role: "user", parts: [{ text: "yazicim calismiyor" }] }],
       latestUserMessage: "yazicim calismiyor",
       memory: { branchCode: "EST01" },
@@ -294,7 +294,7 @@ describe("webChatPipeline", () => {
     });
     pipeline = createWebChatPipeline(deps);
 
-    const result = await pipeline.generateAIResponse({
+    const _result = await pipeline.generateAIResponse({
       contents: [{ role: "user", parts: [{ text: "test query" }] }],
       latestUserMessage: "test query",
       memory: {},

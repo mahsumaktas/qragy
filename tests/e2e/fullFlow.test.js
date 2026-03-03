@@ -246,7 +246,7 @@ describe("E2E Full Flow Tests", () => {
         maskCredentials: vi.fn(t => t),
       }));
 
-      const res = await request(app)
+      await request(app)
         .post("/api/chat")
         .send({ messages: [{ role: "user", content: "test" }], sessionId: "err-test" });
 

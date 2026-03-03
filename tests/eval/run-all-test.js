@@ -22,7 +22,7 @@ async function main() {
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let passed = 0, failed = 0, total = 0;
+  let _passed = 0, _failed = 0, total = 0;
   const failures = [];
 
   while (true) {
@@ -46,9 +46,9 @@ async function main() {
         const icon = data.pass ? "+" : "X";
         console.log(`[${icon}] ${total}/85 ${data.scenarioId}: ${status}${consensus}`);
 
-        if (data.pass) passed++;
+        if (data.pass) _passed++;
         else {
-          failed++;
+          _failed++;
           failures.push({
             id: data.scenarioId,
             consensus: data.consensus,
