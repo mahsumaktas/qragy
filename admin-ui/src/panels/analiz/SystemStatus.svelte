@@ -13,6 +13,21 @@
   let sla = $state(null);
   let auditLog = $state([]);
 
+  function fmtUptime(sec) {
+    if (!sec) return "-";
+    const d = Math.floor(sec / 86400);
+    const h = Math.floor((sec % 86400) / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  }
+
+  function fmtMemory(bytes) {
+    if (!bytes) return "-";
+    return (bytes / 1024 / 1024).toFixed(1) + " MB";
+  }
+
   onMount(() => load());
 
   async function load() {
@@ -56,12 +71,12 @@
       <div class="card">
         <h2>{t("systemStatus.system")}</h2>
         <div class="info-rows">
-          <div class="info-row"><span>{t("systemStatus.status")}</span><Badge variant={system.status === "ok" || system.healthy ? "green" : "red"}>{system.status || (system.healthy ? t("systemStatus.healthy") : t("systemStatus.unhealthy"))}</Badge></div>
-          <div class="info-row"><span>{t("systemStatus.uptime")}</span><span>{system.uptime || "-"}</span></div>
+          <div class="info-row"><span>{t("systemStatus.status")}</span><Badge variant={system.ok || system.status === "ok" || system.healthy ? "green" : "red"}>{system.status || (system.ok || system.healthy ? t("systemStatus.healthy") : t("systemStatus.unhealthy"))}</Badge></div>
+          <div class="info-row"><span>{t("systemStatus.uptime")}</span><span>{fmtUptime(system.uptime)}</span></div>
           <div class="info-row"><span>{t("systemStatus.node")}</span><span>{system.nodeVersion || "-"}</span></div>
-          <div class="info-row"><span>{t("systemStatus.memory")}</span><span>{system.memoryUsage || "-"}</span></div>
-          <div class="info-row"><span>{t("systemStatus.llm")}</span><Badge variant={system.llmStatus === "ok" ? "green" : "yellow"}>{system.llmStatus || system.llm || "-"}</Badge></div>
-          <div class="info-row"><span>{t("systemStatus.embedding")}</span><Badge variant={system.embeddingStatus === "ok" ? "green" : "yellow"}>{system.embeddingStatus || "-"}</Badge></div>
+          <div class="info-row"><span>{t("systemStatus.memory")}</span><span>{fmtMemory(system.memory?.rss)}</span></div>
+          <div class="info-row"><span>{t("systemStatus.llm")}</span><Badge variant={system.llmHealth?.ok ? "green" : "yellow"}>{system.llmHealth?.ok ? "OK" : system.llmHealth?.error || "-"} ({system.model || "-"})</Badge></div>
+          <div class="info-row"><span>{t("systemStatus.embedding")}</span><Badge variant={system.knowledgeBase?.loaded ? "green" : "yellow"}>{system.knowledgeBase?.loaded ? `OK (${system.knowledgeBase.recordCount} records)` : "-"}</Badge></div>
         </div>
       </div>
     {/if}
