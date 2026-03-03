@@ -951,29 +951,29 @@ app.get("*", (_req, res) => {
   setInterval(() => sqliteDb.backupDatabase(), MS_PER_DAY);
 
   const server = app.listen(PORT, () => {
-    logger.info("startup", `${BOT_NAME} ${PORT} portunda hazir`);
+    logger.info("startup", `${BOT_NAME} ready on port ${PORT}`);
     if (USE_ADAPTIVE_PIPELINE) {
-      logger.info("startup", "Adaptive RAG pipeline AKTIF (FAST/STANDARD/DEEP routing)");
+      logger.info("startup", "Adaptive RAG pipeline ACTIVE (FAST/STANDARD/DEEP routing)");
     }
     telegramIntegration.startTelegramPolling();
 
     // Job queue worker
     jobQueue.start({ pollIntervalMs: 2000 });
 
-    // LLM health check: ilk kontrol 10s sonra, sonra her 5dk'da bir
+    // LLM health check: first check after 10s, then every 5min
     setTimeout(() => llmHealth.checkLLMHealth(), LLM_HEALTH_INITIAL_DELAY_MS);
     setInterval(() => llmHealth.checkLLMHealth(), LLM_HEALTH_INTERVAL_MS);
   });
 
   // ── Graceful Shutdown ──────────────────────────────────────────────────
   function gracefulShutdown(signal) {
-    logger.info("shutdown", `${signal} Kapatiliyor...`);
+    logger.info("shutdown", `${signal} Shutting down...`);
     server.close(async () => {
-      logger.info("shutdown", "HTTP server kapatildi");
+      logger.info("shutdown", "HTTP server closed");
       await jobQueue.stop();
       saveAnalyticsData();
       sqliteDb.closeDb();
-      logger.info("shutdown", "Temiz cikis");
+      logger.info("shutdown", "Clean exit");
       process.exit(0);
     });
     // Force exit after 10s
