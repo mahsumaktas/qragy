@@ -2,6 +2,7 @@
   import ChatThread from "../../components/chat/ChatThread.svelte";
   import ChatInput from "../../components/chat/ChatInput.svelte";
   import Button from "../../components/ui/Button.svelte";
+  import { t } from "../../lib/i18n.svelte.js";
 
   let sessions = $state([{ id: 1, messages: [], sessionId: crypto.randomUUID() }]);
   let nextId = 2;
@@ -36,7 +37,7 @@
       const data = await res.json();
       session.messages = [...session.messages, { role: "assistant", content: data.reply || data.message || "...", sender: "bot" }];
     } catch {
-      session.messages = [...session.messages, { role: "assistant", content: "An error occurred", sender: "system" }];
+      session.messages = [...session.messages, { role: "assistant", content: t("botTest.errorOccurred"), sender: "system" }];
     } finally {
       sending[session.id] = false;
     }
@@ -50,21 +51,21 @@
 
 <div class="page-header">
   <div>
-    <h1>Bot Test</h1>
-    <p>Live bot testing — multi-session</p>
+    <h1>{t("botTest.title")}</h1>
+    <p>{t("botTest.subtitle")}</p>
   </div>
-  <Button onclick={addSession} variant="primary" size="sm" disabled={sessions.length >= 4}>+ Add Session</Button>
+  <Button onclick={addSession} variant="primary" size="sm" disabled={sessions.length >= 4}>{t("botTest.addSession")}</Button>
 </div>
 
 <div class="test-grid" class:single={sessions.length === 1} class:double={sessions.length === 2}>
   {#each sessions as session (session.id)}
     <div class="test-card">
       <div class="test-header">
-        <span class="test-label">Session #{session.id}</span>
+        <span class="test-label">{t("botTest.session", { id: session.id })}</span>
         <div class="test-actions">
-          <Button onclick={() => clearSession(session)} variant="ghost" size="sm">Clear</Button>
+          <Button onclick={() => clearSession(session)} variant="ghost" size="sm">{t("botTest.clear")}</Button>
           {#if sessions.length > 1}
-            <Button onclick={() => removeSession(session.id)} variant="ghost" size="sm">Close</Button>
+            <Button onclick={() => removeSession(session.id)} variant="ghost" size="sm">{t("common.close")}</Button>
           {/if}
         </div>
       </div>

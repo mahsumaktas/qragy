@@ -3,6 +3,7 @@
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
   import { showConfirm } from "../../lib/confirm.svelte.js";
+  import { t } from "../../lib/i18n.svelte.js";
   import Button from "../../components/ui/Button.svelte";
   import Modal from "../../components/ui/Modal.svelte";
   import Tag from "../../components/ui/Tag.svelte";
@@ -26,7 +27,7 @@
       const res = await api.get("admin/agent/topics");
       topics = res.topics || res || [];
     } catch (e) {
-      showToast("Failed to load topics: " + e.message, "error");
+      showToast(t("topics.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -39,18 +40,18 @@
     editOpen = true;
   }
 
-  function openEdit(t) {
-    editId = t.id || t._id;
+  function openEdit(topic) {
+    editId = topic.id || topic._id;
     editTopic = {
-      title: t.title,
-      description: t.description || "",
-      keywords: [...(t.keywords || [])],
-      enabled: t.enabled !== false,
-      requiresEscalation: t.requiresEscalation || false,
-      canResolveDirectly: t.canResolveDirectly !== false,
-      requiredInfo: [...(t.requiredInfo || [])]
+      title: topic.title,
+      description: topic.description || "",
+      keywords: [...(topic.keywords || [])],
+      enabled: topic.enabled !== false,
+      requiresEscalation: topic.requiresEscalation || false,
+      canResolveDirectly: topic.canResolveDirectly !== false,
+      requiredInfo: [...(topic.requiredInfo || [])]
     };
-    requiredInfoText = (t.requiredInfo || []).join(", ");
+    requiredInfoText = (topic.requiredInfo || []).join(", ");
     editOpen = true;
   }
 
@@ -60,27 +61,27 @@
     try {
       if (editId) {
         await api.put("admin/agent/topics/" + editId, editTopic);
-        showToast("Updated", "success");
+        showToast(t("common.updated"), "success");
       } else {
         await api.post("admin/agent/topics", editTopic);
-        showToast("Created", "success");
+        showToast(t("common.created"), "success");
       }
       editOpen = false;
       await loadTopics();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
   async function deleteTopic(id) {
-    const ok = await showConfirm({ title: "Delete Topic", message: "This topic will be deleted. Are you sure?", confirmText: "Delete", danger: true });
+    const ok = await showConfirm({ title: t("topics.deleteTitle"), message: t("topics.deleteMsg"), confirmText: t("common.delete"), danger: true });
     if (!ok) return;
     try {
       await api.delete("admin/agent/topics/" + id);
-      showToast("Deleted", "success");
+      showToast(t("common.deleted"), "success");
       await loadTopics();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
@@ -103,83 +104,83 @@
       const suggested = res.keywords || [];
       const merged = [...new Set([...editTopic.keywords, ...suggested])];
       editTopic.keywords = merged;
-      showToast(suggested.length + " keywords suggested", "info");
+      showToast(t("topics.keywordsSuggested", { n: suggested.length }), "info");
     } catch (e) {
-      showToast("Suggestion error: " + e.message, "error");
+      showToast(t("topics.suggestError", { msg: e.message }), "error");
     }
   }
 </script>
 
 <div class="page-header">
   <div>
-    <h1>Topics <Badge variant="blue">{topics.length}</Badge></h1>
-    <p>Bot knowledge topics</p>
+    <h1>{t("topics.title")} <Badge variant="blue">{topics.length}</Badge></h1>
+    <p>{t("topics.subtitle")}</p>
   </div>
-  <Button onclick={openNew} variant="primary" size="sm">+ New Topic</Button>
+  <Button onclick={openNew} variant="primary" size="sm">{t("topics.newTopic")}</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="topics-grid">
-    {#each topics as t}
+    {#each topics as topic}
       <div class="topic-card">
         <div class="topic-header">
-          <h3>{t.title}</h3>
-          <Badge variant={t.enabled !== false ? "green" : "gray"}>{t.enabled !== false ? "active" : "inactive"}</Badge>
+          <h3>{topic.title}</h3>
+          <Badge variant={topic.enabled !== false ? "green" : "gray"}>{topic.enabled !== false ? t("topics.active") : t("topics.inactive")}</Badge>
         </div>
-        {#if t.description}
-          <p class="topic-desc">{t.description}</p>
+        {#if topic.description}
+          <p class="topic-desc">{topic.description}</p>
         {/if}
         <div class="topic-meta">
-          {#if t.requiresEscalation}
-            <Badge variant="orange">Escalation</Badge>
+          {#if topic.requiresEscalation}
+            <Badge variant="orange">{t("topics.escalation")}</Badge>
           {/if}
-          {#if t.canResolveDirectly !== false}
-            <Badge variant="blue">Direct resolution</Badge>
+          {#if topic.canResolveDirectly !== false}
+            <Badge variant="blue">{t("topics.directResolution")}</Badge>
           {/if}
         </div>
-        {#if t.requiredInfo?.length}
-          <p class="topic-info">Required: {t.requiredInfo.join(", ")}</p>
+        {#if topic.requiredInfo?.length}
+          <p class="topic-info">{t("topics.required", { info: topic.requiredInfo.join(", ") })}</p>
         {/if}
-        {#if t.keywords?.length}
+        {#if topic.keywords?.length}
           <div class="topic-tags">
-            {#each t.keywords.slice(0, 5) as kw}
+            {#each topic.keywords.slice(0, 5) as kw}
               <Tag>{kw}</Tag>
             {/each}
-            {#if t.keywords.length > 5}
-              <span class="more">+{t.keywords.length - 5}</span>
+            {#if topic.keywords.length > 5}
+              <span class="more">+{topic.keywords.length - 5}</span>
             {/if}
           </div>
         {/if}
         <div class="topic-actions">
-          <Button onclick={() => openEdit(t)} variant="ghost" size="sm">Edit</Button>
-          <Button onclick={() => deleteTopic(t.id || t._id)} variant="ghost" size="sm">Delete</Button>
+          <Button onclick={() => openEdit(topic)} variant="ghost" size="sm">{t("common.edit")}</Button>
+          <Button onclick={() => deleteTopic(topic.id || topic._id)} variant="ghost" size="sm">{t("common.delete")}</Button>
         </div>
       </div>
     {:else}
-      <div class="empty-state">No topics yet</div>
+      <div class="empty-state">{t("topics.empty")}</div>
     {/each}
   </div>
 {/if}
 
-<Modal bind:open={editOpen} title={editId ? "Edit Topic" : "New Topic"}>
+<Modal bind:open={editOpen} title={editId ? t("topics.editTopic") : t("topics.newTopicTitle")}>
   <div class="form-group">
-    <label>Title
-      <input class="input" bind:value={editTopic.title} placeholder="Topic title" />
+    <label>{t("topics.topicTitle")}
+      <input class="input" bind:value={editTopic.title} placeholder={t("topics.titlePlaceholder")} />
     </label>
   </div>
   <div class="form-group">
-    <label>Description
-      <textarea class="textarea" bind:value={editTopic.description} rows="3" placeholder="Topic description..."></textarea>
+    <label>{t("topics.description")}
+      <textarea class="textarea" bind:value={editTopic.description} rows="3" placeholder={t("topics.descPlaceholder")}></textarea>
     </label>
   </div>
   <div class="form-group">
-    <label>Keywords
+    <label>{t("topics.keywords")}
       <div class="kw-input-row">
-        <input class="input" bind:value={newKeyword} placeholder="Add keyword..." onkeydown={(e) => { if (e.key === "Enter") { e.preventDefault(); addKeyword(); } }} />
-        <Button onclick={addKeyword} variant="secondary" size="sm">Add</Button>
-        <Button onclick={suggestKeywords} variant="ghost" size="sm">AI Suggest</Button>
+        <input class="input" bind:value={newKeyword} placeholder={t("topics.keywordPlaceholder")} onkeydown={(e) => { if (e.key === "Enter") { e.preventDefault(); addKeyword(); } }} />
+        <Button onclick={addKeyword} variant="secondary" size="sm">{t("common.add")}</Button>
+        <Button onclick={suggestKeywords} variant="ghost" size="sm">{t("topics.aiSuggest")}</Button>
       </div>
     </label>
     <div class="kw-tags">
@@ -189,23 +190,23 @@
     </div>
   </div>
   <div class="form-group">
-    <label>Required Information (comma separated)
-      <input class="input" bind:value={requiredInfoText} placeholder="full name, phone, order no..." />
+    <label>{t("topics.requiredInfo")}
+      <input class="input" bind:value={requiredInfoText} placeholder={t("topics.requiredPlaceholder")} />
     </label>
   </div>
   <div class="form-row">
-    <label>Requires Escalation
+    <label>{t("topics.requiresEscalation")}
       <Toggle bind:checked={editTopic.requiresEscalation} />
     </label>
   </div>
   <div class="form-row">
-    <label>Can Resolve Directly
+    <label>{t("topics.canResolve")}
       <Toggle bind:checked={editTopic.canResolveDirectly} />
     </label>
   </div>
   <div class="modal-actions">
-    <Button onclick={() => (editOpen = false)} variant="secondary">Cancel</Button>
-    <Button onclick={save} variant="primary">Save</Button>
+    <Button onclick={() => (editOpen = false)} variant="secondary">{t("common.cancel")}</Button>
+    <Button onclick={save} variant="primary">{t("common.save")}</Button>
   </div>
 </Modal>
 

@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
+  import { t } from "../../lib/i18n.svelte.js";
   import { fmtRelative, truncate } from "../../lib/format.js";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
   import Badge from "../../components/ui/Badge.svelte";
@@ -21,7 +22,7 @@
       const res = await api.get("admin/conversations");
       conversations = (res.conversations || []).filter((c) => c.status === "closed");
     } catch (e) {
-      showToast("Failed to load closed chats: " + e.message, "error");
+      showToast(t("closedChats.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -30,24 +31,24 @@
 
 <div class="page-header">
   <div>
-    <h1>Closed Chats <Badge variant="gray">{conversations.length}</Badge></h1>
-    <p>Closed conversation history</p>
+    <h1>{t("closedChats.title")} <Badge variant="gray">{conversations.length}</Badge></h1>
+    <p>{t("closedChats.subtitle")}</p>
   </div>
-  <Button onclick={loadClosed} variant="ghost" size="sm">Refresh</Button>
+  <Button onclick={loadClosed} variant="ghost" size="sm">{t("common.refresh")}</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else if !selected}
   <div class="card">
     <table>
       <thead>
         <tr>
-          <th>Session</th>
-          <th>Messages</th>
-          <th>Source</th>
-          <th>Last Message</th>
-          <th>Closed At</th>
+          <th>{t("closedChats.session")}</th>
+          <th>{t("closedChats.messages")}</th>
+          <th>{t("closedChats.source")}</th>
+          <th>{t("closedChats.lastMessage")}</th>
+          <th>{t("closedChats.closedAt")}</th>
           <th></th>
         </tr>
       </thead>
@@ -64,14 +65,14 @@
             </td>
           </tr>
         {:else}
-          <tr><td colspan="6" class="empty-row">No closed chats</td></tr>
+          <tr><td colspan="6" class="empty-row">{t("closedChats.noChats")}</td></tr>
         {/each}
       </tbody>
     </table>
   </div>
 {:else}
   <div class="detail-view">
-    <Button onclick={() => (selectedId = null)} variant="ghost" size="sm">← Back to List</Button>
+    <Button onclick={() => (selectedId = null)} variant="ghost" size="sm">{t("common.back")}</Button>
 
     <div class="detail-header">
       <h2>{selected.sessionId?.slice(-8)}</h2>
@@ -86,7 +87,7 @@
 
     {#if selected.memory && Object.keys(selected.memory).length}
       <div class="memory-card">
-        <h3>Memory</h3>
+        <h3>{t("closedChats.memory")}</h3>
         {#each Object.entries(selected.memory) as [k, v]}
           {#if v}
             <div class="memory-row">
@@ -99,11 +100,11 @@
     {/if}
 
     <div class="chat-card">
-      <h3>Messages</h3>
+      <h3>{t("closedChats.messagesTitle")}</h3>
       {#each selected.chatHistory || [] as msg}
         <ChatBubble sender={msg.role === "user" ? "user" : "bot"} message={msg.content || ""} />
       {:else}
-        <p class="no-msg">No message history</p>
+        <p class="no-msg">{t("closedChats.noHistory")}</p>
       {/each}
     </div>
   </div>

@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
+  import { t } from "../../lib/i18n.svelte.js";
   import Button from "../../components/ui/Button.svelte";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
 
@@ -16,7 +17,7 @@
       const res = await api.get("admin/agent/files");
       files = res.files || res || [];
     } catch (e) {
-      showToast("Failed to load agent files: " + e.message, "error");
+      showToast(t("agentFiles.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -28,7 +29,7 @@
       const res = await api.get("admin/agent/files/" + encodeURIComponent(filename));
       fileContent = res.content || "";
     } catch (e) {
-      showToast("Failed to read file: " + e.message, "error");
+      showToast(t("agentFiles.readError", { msg: e.message }), "error");
       fileContent = "";
     }
   }
@@ -38,9 +39,9 @@
     saving = true;
     try {
       await api.put("admin/agent/files/" + encodeURIComponent(selectedFile), { content: fileContent });
-      showToast(selectedFile + " saved", "success");
+      showToast(t("common.saved", { name: selectedFile }), "success");
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     } finally {
       saving = false;
     }
@@ -49,23 +50,23 @@
   async function reloadAgent() {
     try {
       await api.post("admin/agent/reload", {});
-      showToast("Agent files reloaded", "success");
+      showToast(t("agentFiles.agentReloaded"), "success");
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>Agent Files</h1><p>Bot configuration files</p></div>
+  <div><h1>{t("agentFiles.title")}</h1><p>{t("agentFiles.subtitle")}</p></div>
   <div class="actions">
-    <Button onclick={reloadAgent} variant="secondary" size="sm">Reload Agent</Button>
-    <Button onclick={saveFile} variant="primary" size="sm" disabled={!selectedFile || saving}>{saving ? "Saving..." : "Save"}</Button>
+    <Button onclick={reloadAgent} variant="secondary" size="sm">{t("agentFiles.reloadAgent")}</Button>
+    <Button onclick={saveFile} variant="primary" size="sm" disabled={!selectedFile || saving}>{saving ? t("common.saving") : t("common.save")}</Button>
   </div>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="split-layout">
     <div class="file-list">
@@ -77,7 +78,7 @@
           <span>{f.name || f}</span>
         </div>
       {:else}
-        <div class="empty-list">No files</div>
+        <div class="empty-list">{t("common.noFiles")}</div>
       {/each}
     </div>
     <div class="editor-panel">
@@ -87,7 +88,7 @@
         </div>
         <textarea class="mono-editor" bind:value={fileContent} spellcheck="false"></textarea>
       {:else}
-        <div class="no-file">Select a file</div>
+        <div class="no-file">{t("agentFiles.selectFile")}</div>
       {/if}
     </div>
   </div>

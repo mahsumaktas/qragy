@@ -6,6 +6,9 @@
     <title>Qragy Admin</title>
     <link rel="icon" type="image/jpeg" href="qragy_logo.jpg" />
     <link rel="stylesheet" href="admin.css?v=20260222b" />
+    <script src="i18n/en.js"></script>
+    <script src="i18n/tr.js"></script>
+    <script src="i18n.js"></script>
   </head>
   <body>
     <main class="admin-shell">
@@ -14,8 +17,9 @@
       <header class="admin-header">
         <div style="display:flex;align-items:center;gap:12px">
           <img src="qragy_logo.jpg" alt="Qragy" style="width:36px;height:36px;object-fit:contain;border-radius:8px" />
-          <h1>Qragy Admin</h1>
+          <h1 data-i18n="header.title">Qragy Admin</h1>
         </div>
+        <button id="langToggleBtn" onclick="setLocale(getLocale() === 'en' ? 'tr' : 'en')" style="margin-left:auto;padding:4px 12px;border:1px solid var(--border,#333);border-radius:6px;background:transparent;color:var(--text,#fff);font-weight:700;font-size:12px;cursor:pointer;letter-spacing:0.5px">TR</button>
       </header>
 
       <!-- Sidebar + Content Layout -->
@@ -27,7 +31,7 @@
           <!-- Admin Token (moved into sidebar) -->
           <div class="sidebar-token">
             <label>
-              <span>Admin Token</span>
+              <span data-i18n="common.adminToken">Admin Token</span>
               <input id="adminToken" type="password" placeholder="x-admin-token" />
             </label>
           </div>
@@ -35,46 +39,46 @@
           <nav class="sidebar-nav">
             <!-- TALEPLER group -->
             <div class="nav-group">
-              <div class="nav-group-label">REQUESTS</div>
-              <a class="nav-item active" data-panel="panelSummary">Summary</a>
-              <a class="nav-item" data-panel="panelLiveChats">Live Chats <span id="convCount" class="nav-badge">0</span></a>
-              <a class="nav-item" data-panel="panelClosedChats">Closed Chats</a>
-              <a class="nav-item" data-panel="panelSearch">Search</a>
-              <a class="nav-item" data-panel="panelInbox">Agent Inbox <span id="inboxCount" class="nav-badge">0</span></a>
+              <div class="nav-group-label" data-i18n="nav.requests">REQUESTS</div>
+              <a class="nav-item active" data-panel="panelSummary"><span data-i18n="nav.summary">Summary</span></a>
+              <a class="nav-item" data-panel="panelLiveChats"><span data-i18n="nav.liveChats">Live Chats</span> <span id="convCount" class="nav-badge">0</span></a>
+              <a class="nav-item" data-panel="panelClosedChats"><span data-i18n="nav.closedChats">Closed Chats</span></a>
+              <a class="nav-item" data-panel="panelSearch"><span data-i18n="nav.search">Search</span></a>
+              <a class="nav-item" data-panel="panelInbox"><span data-i18n="nav.agentInbox">Agent Inbox</span> <span id="inboxCount" class="nav-badge">0</span></a>
             </div>
 
             <!-- DUZENLEMELER group -->
             <div class="nav-group">
-              <div class="nav-group-label">SETTINGS</div>
-              <a class="nav-item" data-panel="panelBotSetup">Bot Settings</a>
-              <a class="nav-item" data-panel="panelBotTest">Bot Test</a>
-              <a class="nav-item" data-panel="panelKB">Knowledge Base</a>
-              <a class="nav-item" data-panel="panelTopics">Topics</a>
-              <a class="nav-item" data-panel="panelChatFlow">Chat Flow</a>
-              <a class="nav-item" data-panel="panelEval">Eval Management</a>
-              <a class="nav-item" data-panel="panelSiteConfig">Site Settings</a>
+              <div class="nav-group-label" data-i18n="nav.settings">SETTINGS</div>
+              <a class="nav-item" data-panel="panelBotSetup"><span data-i18n="nav.botSettings">Bot Settings</span></a>
+              <a class="nav-item" data-panel="panelBotTest"><span data-i18n="nav.botTest">Bot Test</span></a>
+              <a class="nav-item" data-panel="panelKB"><span data-i18n="nav.knowledgeBase">Knowledge Base</span></a>
+              <a class="nav-item" data-panel="panelTopics"><span data-i18n="nav.topics">Topics</span></a>
+              <a class="nav-item" data-panel="panelChatFlow"><span data-i18n="nav.chatFlow">Chat Flow</span></a>
+              <a class="nav-item" data-panel="panelEval"><span data-i18n="nav.eval">Eval Management</span></a>
+              <a class="nav-item" data-panel="panelSiteConfig"><span data-i18n="nav.siteSettings">Site Settings</span></a>
             </div>
 
             <!-- ENTEGRASYONLAR group -->
             <div class="nav-group">
-              <div class="nav-group-label">INTEGRATIONS</div>
-              <a class="nav-item" data-panel="panelSunshine">CRM Integration</a>
-              <a class="nav-item" data-panel="panelWhatsApp">WhatsApp</a>
+              <div class="nav-group-label" data-i18n="nav.integrations">INTEGRATIONS</div>
+              <a class="nav-item" data-panel="panelSunshine"><span data-i18n="nav.crmIntegration">CRM Integration</span></a>
+              <a class="nav-item" data-panel="panelWhatsApp"><span data-i18n="nav.whatsapp">WhatsApp</span></a>
             </div>
 
             <!-- SISTEM group (toggle ile gizlenebilir) -->
             <div class="nav-group">
-              <div id="advancedToggle" class="nav-advanced-toggle">System &#9662;</div>
-              <a class="nav-item advanced" data-panel="panelAnalytics">Dashboard</a>
-              <a class="nav-item advanced" data-panel="panelEnv">Environment Variables</a>
-              <a class="nav-item advanced" data-panel="panelWebhooks">Webhooks</a>
-              <a class="nav-item advanced" data-panel="panelAutoFAQ">FAQ Suggestions</a>
-              <a class="nav-item advanced" data-panel="panelPromptVersions">Prompt History</a>
-              <a class="nav-item advanced" data-panel="panelFeedbackReport">Feedback Report</a>
-              <a class="nav-item advanced" data-panel="panelContentGaps">Content Gaps</a>
-              <a class="nav-item advanced" data-panel="panelSystem">System Health</a>
-              <a class="nav-item advanced" data-panel="panelAgentFiles">Agent Files</a>
-              <a class="nav-item advanced" data-panel="panelMemory">Memory Templates</a>
+              <div id="advancedToggle" class="nav-advanced-toggle"><span data-i18n="nav.system">System</span> &#9662;</div>
+              <a class="nav-item advanced" data-panel="panelAnalytics"><span data-i18n="nav.dashboard">Dashboard</span></a>
+              <a class="nav-item advanced" data-panel="panelEnv"><span data-i18n="nav.envVars">Environment Variables</span></a>
+              <a class="nav-item advanced" data-panel="panelWebhooks"><span data-i18n="nav.webhooks">Webhooks</span></a>
+              <a class="nav-item advanced" data-panel="panelAutoFAQ"><span data-i18n="nav.faqSuggestions">FAQ Suggestions</span></a>
+              <a class="nav-item advanced" data-panel="panelPromptVersions"><span data-i18n="nav.promptHistory">Prompt History</span></a>
+              <a class="nav-item advanced" data-panel="panelFeedbackReport"><span data-i18n="nav.feedbackReport">Feedback Report</span></a>
+              <a class="nav-item advanced" data-panel="panelContentGaps"><span data-i18n="nav.contentGaps">Content Gaps</span></a>
+              <a class="nav-item advanced" data-panel="panelSystem"><span data-i18n="nav.systemHealth">System Health</span></a>
+              <a class="nav-item advanced" data-panel="panelAgentFiles"><span data-i18n="nav.agentFiles">Agent Files</span></a>
+              <a class="nav-item advanced" data-panel="panelMemory"><span data-i18n="nav.memoryTemplates">Memory Templates</span></a>
             </div>
           </nav>
         </aside>
@@ -87,12 +91,12 @@
             <!-- Onboarding Checklist -->
             <div id="onboardingChecklist" class="onboarding-checklist" style="display:none;">
               <div class="checklist-header">
-                <h3>Getting Started</h3>
+                <h3 data-i18n="onboarding.title">Getting Started</h3>
                 <button id="onboardingDismiss" class="btn btn-sm" title="Close">&times;</button>
               </div>
               <ul id="onboardingItems"></ul>
               <div id="onboardingComplete" style="display:none;" class="checklist-complete">
-                Congratulations! You have completed all steps.
+                <span data-i18n="onboarding.complete">Congratulations! You have completed all steps.</span>
               </div>
             </div>
             <section class="summary-grid" id="summaryGrid"></section>
@@ -125,8 +129,8 @@
 
               <div class="panel-split-right">
                 <section class="detail-section">
-                  <h2>Ticket Detail</h2>
-                  <div id="ticketDetail" class="detail-box">Select a ticket.</div>
+                  <h2 data-i18n="summary.ticketDetail">Ticket Detail</h2>
+                  <div id="ticketDetail" class="detail-box" data-i18n="summary.selectTicket">Select a ticket.</div>
 
                   <!-- Team features: assign, priority, notes -->
                   <div id="ticketActions" class="ticket-actions" style="display:none">
@@ -149,8 +153,8 @@
                     <div id="ticketNotesList" class="notes-list"></div>
                   </div>
 
-                  <h3 style="margin-top:14px">Chat History</h3>
-                  <div id="chatHistory" class="chat-history-container">Select a ticket.</div>
+                  <h3 style="margin-top:14px" data-i18n="summary.chatHistory">Chat History</h3>
+                  <div id="chatHistory" class="chat-history-container" data-i18n="summary.selectTicket">Select a ticket.</div>
                 </section>
               </div>
             </div>
@@ -159,8 +163,8 @@
           <!-- PANEL: Live Chats -->
           <div id="panelLiveChats" class="panel">
             <div class="section-header" style="margin-bottom:8px;display:flex;align-items:center;gap:12px">
-              <h3>Live Chats <span class="badge">0</span></h3>
-              <button type="button" id="closeAllConvsBtn" class="open-button" style="font-size:12px;padding:4px 10px">Close All</button>
+              <h3><span data-i18n="liveChats.title">Live Chats</span> <span class="badge">0</span></h3>
+              <button type="button" id="closeAllConvsBtn" class="open-button" style="font-size:12px;padding:4px 10px" data-i18n="liveChats.closeAll">Close All</button>
             </div>
             <div class="table-section">
               <table>
@@ -188,7 +192,7 @@
           <!-- PANEL: Closed Chats -->
           <div id="panelClosedChats" class="panel">
             <div class="section-header" style="margin-bottom:8px;display:flex;align-items:center;gap:12px">
-              <h3>Closed Chats <span id="closedConvCount" class="badge">0</span></h3>
+              <h3><span data-i18n="closedChats.title">Closed Chats</span> <span id="closedConvCount" class="badge">0</span></h3>
             </div>
             <div class="table-section">
               <table>

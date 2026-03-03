@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
+  import { t } from "../../lib/i18n.svelte.js";
   import KpiCard from "../../components/ui/KpiCard.svelte";
   import BarChart from "../../components/ui/BarChart.svelte";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
@@ -21,16 +22,16 @@
       summary = sum;
     } catch (e) {
       error = e.message;
-      showToast("Failed to load dashboard: " + e.message, "error");
+      showToast(t("dashboard.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
   });
 
   let topTopics = $derived(
-    (stats?.thisWeek?.topTopics || []).slice(0, 8).map((t) => ({
-      label: t.topicId || t.topic || "?",
-      value: t.count || 0,
+    (stats?.thisWeek?.topTopics || []).slice(0, 8).map((tp) => ({
+      label: tp.topicId || tp.topic || "?",
+      value: tp.count || 0,
     }))
   );
 
@@ -42,36 +43,36 @@
 
 <div class="page-header">
   <div>
-    <h1>Dashboard</h1>
-    <p>System overview</p>
+    <h1>{t("dashboard.title")}</h1>
+    <p>{t("dashboard.subtitle")}</p>
   </div>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else if error}
   <div class="error-state">Error: {error}</div>
 {:else}
   <div class="kpi-grid">
     <KpiCard
-      label="Today's Chats"
+      label={t("dashboard.todayChats")}
       value={stats?.today?.chats ?? 0}
       sub="Resolution: %{stats?.today?.resolutionRate ?? 0}"
     />
     <KpiCard
-      label="Weekly Chats"
+      label={t("dashboard.weeklyChats")}
       value={stats?.thisWeek?.chats ?? 0}
       sub={trendArrow(stats?.trends?.weeklyChats)}
       trend={stats?.trends?.weeklyChats > 0 ? "up" : stats?.trends?.weeklyChats < 0 ? "down" : ""}
     />
     <KpiCard
-      label="Weekly CSAT"
+      label={t("dashboard.weeklyCsat")}
       value={(stats?.thisWeek?.csatAvg ?? 0).toFixed(1) + "/5"}
       sub={trendArrow(stats?.trends?.weeklyCsat)}
       trend={stats?.trends?.weeklyCsat > 0 ? "up" : stats?.trends?.weeklyCsat < 0 ? "down" : ""}
     />
     <KpiCard
-      label="Monthly Resolution"
+      label={t("dashboard.monthlyResolution")}
       value="%{stats?.thisMonth?.resolutionRate ?? 0}"
       sub={trendArrow(stats?.trends?.monthlyChats)}
     />
@@ -80,14 +81,14 @@
   {#if summary?.summary}
     <div class="grid-2">
       <div class="card">
-        <h2>Ticket Status</h2>
+        <h2>{t("dashboard.ticketStatus")}</h2>
         <div class="status-grid">
           <div class="status-item">
-            <span class="status-label">Total</span>
+            <span class="status-label">{t("dashboard.total")}</span>
             <span class="status-val">{summary.summary.total ?? 0}</span>
           </div>
           <div class="status-item">
-            <span class="status-label">Last 24h</span>
+            <span class="status-label">{t("dashboard.last24h")}</span>
             <span class="status-val">{summary.summary.last24h ?? 0}</span>
           </div>
           {#each Object.entries(summary.summary.byStatus || {}) as [key, val]}
@@ -101,7 +102,7 @@
 
       {#if topTopics.length}
         <div class="card">
-          <h2>Weekly Popular Topics</h2>
+          <h2>{t("dashboard.weeklyTopics")}</h2>
           <BarChart items={topTopics} />
         </div>
       {/if}

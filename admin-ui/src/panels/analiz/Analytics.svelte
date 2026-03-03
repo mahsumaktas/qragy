@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { t } from "../../lib/i18n.svelte.js";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
   import { getToken } from "../../lib/auth.svelte.js";
@@ -13,11 +14,11 @@
   let range = $state("7");
   let data = $state(null);
 
-  const ranges = [
-    { id: "7", label: "7 Days" },
-    { id: "30", label: "30 Days" },
-    { id: "90", label: "90 Days" },
-  ];
+  const ranges = $derived([
+    { id: "7", label: t("analytics.7days") },
+    { id: "30", label: t("analytics.30days") },
+    { id: "90", label: t("analytics.90days") },
+  ]);
 
   onMount(() => load());
 
@@ -26,7 +27,7 @@
     try {
       data = await api.get("admin/analytics?range=" + range);
     } catch (e) {
-      showToast("Failed to load analytics: " + e.message, "error");
+      showToast(t("analytics.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -50,25 +51,25 @@
 </script>
 
 <div class="page-header">
-  <div><h1>Analytics</h1><p>Performance analysis</p></div>
-  <Button onclick={exportData} variant="ghost" size="sm">Export</Button>
+  <div><h1>{t("analytics.title")}</h1><p>{t("analytics.subtitle")}</p></div>
+  <Button onclick={exportData} variant="ghost" size="sm">{t("analytics.export")}</Button>
 </div>
 
 <Tabs tabs={ranges} bind:active={range} onchange={handleRange} />
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else if data}
   <div class="kpi-grid">
-    <KpiCard label="Total Chats" value={data.totalChats ?? data.chats ?? 0} />
-    <KpiCard label="Escalations" value={data.totalEscalations ?? data.escalations ?? 0} />
-    <KpiCard label="Avg. CSAT" value={(data.avgCsat ?? data.csatAvg ?? 0).toFixed(1) + "/5"} />
-    <KpiCard label="Resolution Rate" value={(data.resolutionRate ?? 0) + "%"} />
+    <KpiCard label={t("analytics.totalChats")} value={data.totalChats ?? data.chats ?? 0} />
+    <KpiCard label={t("analytics.escalations")} value={data.totalEscalations ?? data.escalations ?? 0} />
+    <KpiCard label={t("analytics.avgCsat")} value={(data.avgCsat ?? data.csatAvg ?? 0).toFixed(1) + "/5"} />
+    <KpiCard label={t("analytics.resolutionRate")} value={(data.resolutionRate ?? 0) + "%"} />
   </div>
 
   {#if topTopics.length}
     <div class="card">
-      <h2>Popular Topics</h2>
+      <h2>{t("analytics.popularTopics")}</h2>
       <BarChart items={topTopics} />
     </div>
   {/if}

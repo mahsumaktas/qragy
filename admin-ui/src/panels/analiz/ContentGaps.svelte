@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { t } from "../../lib/i18n.svelte.js";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
   import { truncate } from "../../lib/format.js";
@@ -17,7 +18,7 @@
       const res = await api.get("admin/content-gaps");
       gaps = res.gaps || res || [];
     } catch (e) {
-      showToast("Failed to load content gaps: " + e.message, "error");
+      showToast(t("contentGaps.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -25,16 +26,16 @@
 </script>
 
 <div class="page-header">
-  <div><h1>Content Gaps</h1><p>Unanswered questions</p></div>
-  <Button onclick={loadGaps} variant="ghost" size="sm">Refresh</Button>
+  <div><h1>{t("contentGaps.title")}</h1><p>{t("contentGaps.subtitle")}</p></div>
+  <Button onclick={loadGaps} variant="ghost" size="sm">{t("common.refresh")}</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="card">
     <table>
-      <thead><tr><th>Question</th><th>Count</th><th>Last Seen</th></tr></thead>
+      <thead><tr><th>{t("contentGaps.question")}</th><th>{t("contentGaps.count")}</th><th>{t("contentGaps.lastSeen")}</th></tr></thead>
       <tbody>
         {#each gaps as g}
           <tr>
@@ -43,7 +44,7 @@
             <td>{g.lastSeen || "-"}</td>
           </tr>
         {:else}
-          <tr><td colspan="3" class="empty-row">No content gaps</td></tr>
+          <tr><td colspan="3" class="empty-row">{t("contentGaps.empty")}</td></tr>
         {/each}
       </tbody>
     </table>

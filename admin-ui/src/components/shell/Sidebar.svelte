@@ -1,6 +1,7 @@
 <script>
   import { NAV_GROUPS } from "../../lib/constants.js";
   import { getPanel, navigate } from "../../lib/router.svelte.js";
+  import { t } from "../../lib/i18n.svelte.js";
 
   let { mobileOpen = $bindable(false) } = $props();
 
@@ -51,7 +52,7 @@
 
   <nav class="nav">
     {#each NAV_GROUPS as group}
-      <div class="nav-group-label">{group.label}</div>
+      <div class="nav-group-label">{t(group.labelKey)}</div>
       {#each group.items as item}
         <a
           href="#{item.id}"
@@ -60,7 +61,7 @@
           onclick={(e) => handleClick(e, item.id)}
         >
           <span class="nav-icon">{@html ICONS[item.icon] || ""}</span>
-          <span class="nav-label">{item.label}</span>
+          <span class="nav-label">{t(item.labelKey)}</span>
         </a>
       {/each}
     {/each}

@@ -1,8 +1,10 @@
+import { t, getDateLocale } from "./i18n.svelte.js";
+
 export function fmtDate(dateStr) {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-US", {
+  return d.toLocaleDateString(getDateLocale(), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -15,7 +17,7 @@ export function fmtDateShort(dateStr) {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-US", {
+  return d.toLocaleDateString(getDateLocale(), {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -29,12 +31,12 @@ export function fmtRelative(dateStr) {
   if (isNaN(d.getTime())) return "-";
   const diff = Date.now() - d.getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return mins + " min ago";
+  if (mins < 1) return t("time.justNow");
+  if (mins < 60) return t("time.minAgo", { n: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return hours + " hr ago";
+  if (hours < 24) return t("time.hrAgo", { n: hours });
   const days = Math.floor(hours / 24);
-  if (days < 30) return days + " days ago";
+  if (days < 30) return t("time.daysAgo", { n: days });
   return fmtDate(dateStr);
 }
 

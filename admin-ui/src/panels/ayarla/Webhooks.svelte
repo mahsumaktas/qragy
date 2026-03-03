@@ -3,6 +3,7 @@
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
   import { showConfirm } from "../../lib/confirm.svelte.js";
+  import { t } from "../../lib/i18n.svelte.js";
   import Button from "../../components/ui/Button.svelte";
   import Modal from "../../components/ui/Modal.svelte";
   import Badge from "../../components/ui/Badge.svelte";
@@ -25,7 +26,7 @@
       const res = await api.get("admin/webhooks");
       webhooks = res.webhooks || res || [];
     } catch (e) {
-      showToast("Failed to load webhooks: " + e.message, "error");
+      showToast(t("webhooks.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -51,32 +52,32 @@
       } else {
         await api.post("admin/webhooks", editHook);
       }
-      showToast("Saved", "success");
+      showToast(t("webhooks.saved"), "success");
       editOpen = false;
       await loadWebhooks();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
   async function deleteHook(id) {
-    const ok = await showConfirm({ title: "Delete", message: "This webhook will be deleted.", confirmText: "Delete", danger: true });
+    const ok = await showConfirm({ title: t("webhooks.deleteTitle"), message: t("webhooks.deleteMsg"), confirmText: t("common.delete"), danger: true });
     if (!ok) return;
     try {
       await api.delete("admin/webhooks/" + id);
-      showToast("Deleted", "success");
+      showToast(t("webhooks.deleted"), "success");
       await loadWebhooks();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
   async function testHook(id) {
     try {
       await api.post("admin/webhooks/" + id + "/test", {});
-      showToast("Test sent", "success");
+      showToast(t("webhooks.testSent"), "success");
     } catch (e) {
-      showToast("Test error: " + e.message, "error");
+      showToast(t("webhooks.testError", { msg: e.message }), "error");
     }
   }
 
@@ -85,7 +86,7 @@
       await api.put("admin/webhooks/" + (w.id || w._id), { active: !w.active });
       await loadWebhooks();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
@@ -99,45 +100,45 @@
 </script>
 
 <div class="page-header">
-  <div><h1>Webhooks</h1><p>{webhooks.length} webhook</p></div>
-  <Button onclick={openNew} variant="primary" size="sm">+ New Webhook</Button>
+  <div><h1>{t("webhooks.title")}</h1><p>{t("webhooks.count", { n: webhooks.length })}</p></div>
+  <Button onclick={openNew} variant="primary" size="sm">{t("webhooks.newWebhook")}</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="card">
     <table>
-      <thead><tr><th>URL</th><th>Events</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>{t("webhooks.url")}</th><th>{t("webhooks.events")}</th><th>{t("webhooks.status")}</th><th></th></tr></thead>
       <tbody>
         {#each webhooks as w}
           <tr>
             <td class="mono">{w.url}</td>
             <td>{(w.events || []).join(", ")}</td>
             <td>
-              <button class="status-toggle" class:active={w.active !== false} onclick={() => toggleActive(w)} title={w.active !== false ? "Disable" : "Enable"}>
-                <Badge variant={w.active !== false ? "green" : "gray"}>{w.active !== false ? "active" : "inactive"}</Badge>
+              <button class="status-toggle" class:active={w.active !== false} onclick={() => toggleActive(w)} title={w.active !== false ? t("webhooks.disable") : t("webhooks.enable")}>
+                <Badge variant={w.active !== false ? "green" : "gray"}>{w.active !== false ? t("webhooks.active") : t("webhooks.inactive")}</Badge>
               </button>
             </td>
             <td class="actions">
-              <Button onclick={() => testHook(w.id || w._id)} variant="ghost" size="sm">Test</Button>
-              <Button onclick={() => openEdit(w)} variant="ghost" size="sm">Edit</Button>
-              <Button onclick={() => deleteHook(w.id || w._id)} variant="ghost" size="sm">Delete</Button>
+              <Button onclick={() => testHook(w.id || w._id)} variant="ghost" size="sm">{t("common.test")}</Button>
+              <Button onclick={() => openEdit(w)} variant="ghost" size="sm">{t("common.edit")}</Button>
+              <Button onclick={() => deleteHook(w.id || w._id)} variant="ghost" size="sm">{t("common.delete")}</Button>
             </td>
           </tr>
         {:else}
-          <tr><td colspan="4" class="empty-row">No webhooks</td></tr>
+          <tr><td colspan="4" class="empty-row">{t("webhooks.empty")}</td></tr>
         {/each}
       </tbody>
     </table>
   </div>
 {/if}
 
-<Modal bind:open={editOpen} title={editId ? "Edit Webhook" : "New Webhook"}>
-  <div class="form-group"><span class="lbl">URL</span><input class="input" bind:value={editHook.url} placeholder="https://..." /></div>
-  <div class="form-group"><span class="lbl">Secret</span><input class="input" bind:value={editHook.secret} placeholder="Optional" /></div>
+<Modal bind:open={editOpen} title={editId ? t("webhooks.editWebhook") : t("webhooks.newWebhookTitle")}>
+  <div class="form-group"><span class="lbl">{t("webhooks.url")}</span><input class="input" bind:value={editHook.url} placeholder="https://..." /></div>
+  <div class="form-group"><span class="lbl">{t("webhooks.secret")}</span><input class="input" bind:value={editHook.secret} placeholder={t("webhooks.optional")} /></div>
   <div class="form-group">
-    <span class="lbl">Events</span>
+    <span class="lbl">{t("webhooks.events")}</span>
     <div class="event-checks">
       {#each EVENT_OPTIONS as ev}
         <!-- svelte-ignore a11y_label_has_associated_control -->
@@ -149,8 +150,8 @@
     </div>
   </div>
   <div class="modal-actions">
-    <Button onclick={() => (editOpen = false)} variant="secondary">Cancel</Button>
-    <Button onclick={save} variant="primary">Save</Button>
+    <Button onclick={() => (editOpen = false)} variant="secondary">{t("common.cancel")}</Button>
+    <Button onclick={save} variant="primary">{t("common.save")}</Button>
   </div>
 </Modal>
 

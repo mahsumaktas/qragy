@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from "svelte";
+  import { t } from "../../lib/i18n.svelte.js";
   import { api } from "../../lib/api.js";
   import { createSSE } from "../../lib/sse.js";
   import { showToast } from "../../lib/toast.svelte.js";
@@ -34,7 +35,7 @@
       scenarios = s.scenarios || s || [];
       history = Array.isArray(h) ? h : (h.history || []);
     } catch (e) {
-      showToast("Failed to load eval: " + e.message, "error");
+      showToast(t("eval.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -42,34 +43,34 @@
 
   function runAll() {
     running = true;
-    progress = { completed: 0, total: scenarios.length, text: "Starting..." };
+    progress = { completed: 0, total: scenarios.length, text: t("eval.starting") };
     results = {};
 
     sseHandle = createSSE("admin/eval/run-all?runs=3", {
       onMessage(data) {
         if (data.type === "progress") {
           progress.completed++;
-          progress.text = data.scenarioId + ": " + (data.pass ? "PASSED" : "FAILED");
+          progress.text = data.scenarioId + ": " + (data.pass ? t("eval.passed") : t("eval.failed"));
           results[data.scenarioId] = data;
         }
         if (data.type === "done") {
           running = false;
           sseHandle?.close();
           const sum = data.summary || data;
-          progress.text = "Completed — " + sum.passed + "/" + sum.total + " passed ("+ sum.passRate +"%)";
-          showToast("Eval completed: " + sum.passed + "/" + sum.total, sum.passed === sum.total ? "success" : "warning");
+          progress.text = t("eval.completed", { passed: sum.passed + "/" + sum.total, rate: sum.passRate });
+          showToast(t("eval.evalCompleted", { result: sum.passed + "/" + sum.total }), sum.passed === sum.total ? "success" : "warning");
           loadEval();
         }
         if (data.type === "error") {
           running = false;
           sseHandle?.close();
-          progress.text = "Error: " + data.message;
-          showToast("Eval error: " + data.message, "error");
+          progress.text = data.message;
+          showToast(t("eval.evalError", { msg: data.message }), "error");
         }
       },
       onError() {
         running = false;
-        progress.text = "Connection error";
+        progress.text = t("eval.connectionError");
       },
     });
   }
@@ -78,9 +79,9 @@
     try {
       const res = await api.post("admin/eval/run/" + id + "?runs=3", {});
       results[id] = res;
-      showToast(id + ": " + (res.pass ? "PASSED" : "FAILED"), res.pass ? "success" : "warning");
+      showToast(id + ": " + (res.pass ? t("eval.passed") : t("eval.failed")), res.pass ? "success" : "warning");
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
@@ -109,45 +110,45 @@
       } else {
         await api.post("admin/eval/scenarios", editScenario);
       }
-      showToast("Saved", "success");
+      showToast(t("common.saved"), "success");
       editOpen = false;
       await loadEval();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
   async function deleteScenario(id) {
-    const ok = await showConfirm({ title: "Delete", message: "This scenario will be deleted.", confirmText: "Delete", danger: true });
+    const ok = await showConfirm({ title: t("common.delete"), message: t("eval.deleteMsg"), confirmText: t("common.delete"), danger: true });
     if (!ok) return;
     try {
       await api.delete("admin/eval/scenarios/" + id);
-      showToast("Deleted", "success");
+      showToast(t("common.deleted"), "success");
       await loadEval();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
   async function clearHistory() {
-    const ok = await showConfirm({ title: "Clear History", message: "All eval history will be deleted.", confirmText: "Clear", danger: true });
+    const ok = await showConfirm({ title: t("eval.clearHistory"), message: t("eval.clearHistoryMsg"), confirmText: t("eval.clearBtn"), danger: true });
     if (!ok) return;
     try {
       await api.delete("admin/eval/history");
       history = [];
-      showToast("History cleared", "success");
+      showToast(t("eval.historyCleared"), "success");
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>Eval Management</h1><p>{scenarios.length} scenarios</p></div>
+  <div><h1>{t("eval.title")}</h1><p>{t("eval.scenarios", { n: scenarios.length })}</p></div>
   <div class="actions">
-    <Button onclick={clearHistory} variant="ghost" size="sm">Clear History</Button>
-    <Button onclick={openNew} variant="secondary" size="sm">+ Scenario</Button>
-    <Button onclick={runAll} variant="primary" size="sm" disabled={running || !scenarios.length}>{running ? "Running..." : "Run All"}</Button>
+    <Button onclick={clearHistory} variant="ghost" size="sm">{t("eval.clearHistory")}</Button>
+    <Button onclick={openNew} variant="secondary" size="sm">{t("eval.addScenario")}</Button>
+    <Button onclick={runAll} variant="primary" size="sm" disabled={running || !scenarios.length}>{running ? t("eval.running") : t("eval.runAll")}</Button>
   </div>
 </div>
 
@@ -159,11 +160,11 @@
 {/if}
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="card">
     <table>
-      <thead><tr><th>ID</th><th>Title</th><th>Turn</th><th>Last Result</th><th></th></tr></thead>
+      <thead><tr><th>{t("eval.id")}</th><th>{t("eval.titleCol")}</th><th>{t("eval.turn")}</th><th>{t("eval.lastResult")}</th><th></th></tr></thead>
       <tbody>
         {#each scenarios as s}
           <tr>
@@ -172,19 +173,19 @@
             <td class="muted">{s.turns?.length || 0}</td>
             <td>
               {#if results[s.id]}
-                <Badge variant={results[s.id].pass ? "green" : "red"}>{results[s.id].pass ? "PASSED" : "FAILED"}</Badge>
+                <Badge variant={results[s.id].pass ? "green" : "red"}>{results[s.id].pass ? t("eval.passed") : t("eval.failed")}</Badge>
               {:else}
                 <span class="muted">-</span>
               {/if}
             </td>
             <td class="row-actions">
-              <Button onclick={() => runSingle(s.id)} variant="ghost" size="sm">Run</Button>
-              <Button onclick={() => openEdit(s)} variant="ghost" size="sm">Edit</Button>
-              <Button onclick={() => deleteScenario(s.id)} variant="ghost" size="sm">Delete</Button>
+              <Button onclick={() => runSingle(s.id)} variant="ghost" size="sm">{t("eval.run")}</Button>
+              <Button onclick={() => openEdit(s)} variant="ghost" size="sm">{t("common.edit")}</Button>
+              <Button onclick={() => deleteScenario(s.id)} variant="ghost" size="sm">{t("common.delete")}</Button>
             </td>
           </tr>
         {:else}
-          <tr><td colspan="5" class="empty-row">No scenarios</td></tr>
+          <tr><td colspan="5" class="empty-row">{t("eval.noScenarios")}</td></tr>
         {/each}
       </tbody>
     </table>
@@ -192,10 +193,10 @@
 
   {#if history.length > 0}
     <div class="history-section">
-      <h2>History</h2>
+      <h2>{t("eval.history")}</h2>
       <div class="card">
         <table>
-          <thead><tr><th>Date</th><th>Total</th><th>Passed</th><th>Failed</th><th>Rate</th><th>Duration</th></tr></thead>
+          <thead><tr><th>{t("eval.date")}</th><th>{t("eval.total")}</th><th>{t("eval.passedCol")}</th><th>{t("eval.failedCol")}</th><th>{t("eval.rate")}</th><th>{t("eval.duration")}</th></tr></thead>
           <tbody>
             {#each history as h}
               <tr>
@@ -214,33 +215,33 @@
   {/if}
 {/if}
 
-<Modal bind:open={editOpen} title={editId ? "Edit Scenario" : "New Scenario"} width="640px">
-  <div class="form-group"><span class="lbl">ID</span><input class="input mono" bind:value={editScenario.id} placeholder="S01" disabled={!!editId} /></div>
-  <div class="form-group"><span class="lbl">Title</span><input class="input" bind:value={editScenario.title} placeholder="Scenario description..." /></div>
-  <div class="form-group"><span class="lbl">Tags (comma-separated)</span><input class="input" value={(editScenario.tags || []).join(", ")} oninput={(e) => { editScenario.tags = e.target.value.split(",").map(s => s.trim()).filter(Boolean); }} /></div>
+<Modal bind:open={editOpen} title={editId ? t("eval.editScenario") : t("eval.newScenario")} width="640px">
+  <div class="form-group"><span class="lbl">{t("eval.id")}</span><input class="input mono" bind:value={editScenario.id} placeholder="S01" disabled={!!editId} /></div>
+  <div class="form-group"><span class="lbl">{t("eval.titleCol")}</span><input class="input" bind:value={editScenario.title} placeholder={t("eval.titlePlaceholder")} /></div>
+  <div class="form-group"><span class="lbl">{t("eval.tags")}</span><input class="input" value={(editScenario.tags || []).join(", ")} oninput={(e) => { editScenario.tags = e.target.value.split(",").map(s => s.trim()).filter(Boolean); }} /></div>
 
   <div class="turns-section">
     <div class="turns-header">
-      <span class="lbl">Turns ({editScenario.turns?.length || 0})</span>
-      <Button onclick={() => { editScenario.turns = [...(editScenario.turns || []), { user: "", expect: {} }]; }} variant="ghost" size="sm">+ Turn</Button>
+      <span class="lbl">{t("eval.turns", { n: editScenario.turns?.length || 0 })}</span>
+      <Button onclick={() => { editScenario.turns = [...(editScenario.turns || []), { user: "", expect: {} }]; }} variant="ghost" size="sm">{t("eval.addTurn")}</Button>
     </div>
     {#each editScenario.turns || [] as turn, i}
       <div class="turn-card">
         <div class="turn-top">
           <span class="turn-num">#{i + 1}</span>
           {#if (editScenario.turns || []).length > 1}
-            <Button onclick={() => { editScenario.turns = editScenario.turns.filter((_, idx) => idx !== i); }} variant="ghost" size="sm">Delete</Button>
+            <Button onclick={() => { editScenario.turns = editScenario.turns.filter((_, idx) => idx !== i); }} variant="ghost" size="sm">{t("common.delete")}</Button>
           {/if}
         </div>
-        <div class="form-group"><span class="lbl">User Message</span><textarea class="textarea" bind:value={turn.user} rows="2" placeholder="User's message..."></textarea></div>
-        <div class="form-group"><span class="lbl">Expected (shouldContainAny, comma-separated)</span><input class="input" value={(turn.expect?.shouldContainAny || []).join(", ")} oninput={(e) => { turn.expect = { ...turn.expect, shouldContainAny: e.target.value.split(",").map(s => s.trim()).filter(Boolean) }; }} /></div>
+        <div class="form-group"><span class="lbl">{t("eval.userMessage")}</span><textarea class="textarea" bind:value={turn.user} rows="2" placeholder={t("eval.userMsgPlaceholder")}></textarea></div>
+        <div class="form-group"><span class="lbl">{t("eval.expected")}</span><input class="input" value={(turn.expect?.shouldContainAny || []).join(", ")} oninput={(e) => { turn.expect = { ...turn.expect, shouldContainAny: e.target.value.split(",").map(s => s.trim()).filter(Boolean) }; }} /></div>
       </div>
     {/each}
   </div>
 
   <div class="modal-actions">
-    <Button onclick={() => (editOpen = false)} variant="secondary">Cancel</Button>
-    <Button onclick={saveScenario} variant="primary">Save</Button>
+    <Button onclick={() => (editOpen = false)} variant="secondary">{t("common.cancel")}</Button>
+    <Button onclick={saveScenario} variant="primary">{t("common.save")}</Button>
   </div>
 </Modal>
 

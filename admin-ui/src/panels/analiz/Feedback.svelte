@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { t } from "../../lib/i18n.svelte.js";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
   import KpiCard from "../../components/ui/KpiCard.svelte";
@@ -22,7 +23,7 @@
       report = r;
       feedbacks = f.feedbacks || f || [];
     } catch (e) {
-      showToast("Failed to load feedback: " + e.message, "error");
+      showToast(t("feedback.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -30,31 +31,31 @@
 </script>
 
 <div class="page-header">
-  <div><h1>Feedback Report</h1><p>User feedback</p></div>
+  <div><h1>{t("feedback.title")}</h1><p>{t("feedback.subtitle")}</p></div>
   <select class="select" bind:value={days} onchange={load}>
-    <option value={7}>7 Days</option>
-    <option value={30}>30 Days</option>
-    <option value={90}>90 Days</option>
+    <option value={7}>{t("analytics.7days")}</option>
+    <option value={30}>{t("analytics.30days")}</option>
+    <option value={90}>{t("analytics.90days")}</option>
   </select>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   {#if report}
     <div class="kpi-grid">
-      <KpiCard label="Total Feedback" value={report.totalFeedbacks ?? report.total ?? 0} />
-      <KpiCard label="Avg. CSAT" value={(report.avgCsat ?? 0).toFixed(1) + "/5"} />
-      <KpiCard label="Positive" value={report.positive ?? 0} color="var(--success)" />
-      <KpiCard label="Negative" value={report.negative ?? 0} color="var(--error)" />
+      <KpiCard label={t("feedback.totalFeedback")} value={report.totalFeedbacks ?? report.total ?? 0} />
+      <KpiCard label={t("feedback.avgCsat")} value={(report.avgCsat ?? 0).toFixed(1) + "/5"} />
+      <KpiCard label={t("feedback.positive")} value={report.positive ?? 0} color="var(--success)" />
+      <KpiCard label={t("feedback.negative")} value={report.negative ?? 0} color="var(--error)" />
     </div>
   {/if}
 
   {#if feedbacks.length}
     <div class="card">
-      <h2>Recent Feedback</h2>
+      <h2>{t("feedback.recentFeedback")}</h2>
       <table>
-        <thead><tr><th>Score</th><th>Comment</th><th>Session</th></tr></thead>
+        <thead><tr><th>{t("feedback.score")}</th><th>{t("feedback.comment")}</th><th>{t("feedback.session")}</th></tr></thead>
         <tbody>
           {#each feedbacks.slice(0, 20) as fb}
             <tr>

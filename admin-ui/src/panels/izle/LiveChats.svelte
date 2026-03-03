@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
+  import { t } from "../../lib/i18n.svelte.js";
   import { showConfirm } from "../../lib/confirm.svelte.js";
   import { fmtRelative } from "../../lib/format.js";
   import ChatBubble from "../../components/chat/ChatBubble.svelte";
@@ -24,7 +25,7 @@
         (c) => c.status === "active" || c.status === "ticketed"
       );
     } catch (e) {
-      showToast("Failed to load chats: " + e.message, "error");
+      showToast(t("liveChats.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -32,38 +33,38 @@
 
   async function closeAll() {
     const ok = await showConfirm({
-      title: "Close All Chats",
-      message: "All active chats will be closed. Are you sure?",
-      confirmText: "Close",
+      title: t("liveChats.closeAllTitle"),
+      message: t("liveChats.closeAllMsg"),
+      confirmText: t("common.close"),
       danger: true,
     });
     if (!ok) return;
     try {
       const res = await api.post("admin/conversations/close-all", {});
-      showToast(res.closedCount + " chats closed", "success");
+      showToast(t("liveChats.chatsClosed", { n: res.closedCount }), "success");
       await loadConversations();
       selectedId = null;
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 </script>
 
 <div class="page-header">
   <div>
-    <h1>Live Chats <Badge variant="blue">{conversations.length}</Badge></h1>
-    <p>Active and ticketed conversations</p>
+    <h1>{t("liveChats.title")} <Badge variant="blue">{conversations.length}</Badge></h1>
+    <p>{t("liveChats.subtitle")}</p>
   </div>
   <div class="header-actions">
-    <Button onclick={loadConversations} variant="ghost" size="sm">Refresh</Button>
+    <Button onclick={loadConversations} variant="ghost" size="sm">{t("common.refresh")}</Button>
     {#if conversations.length}
-      <Button onclick={closeAll} variant="danger" size="sm">Close All</Button>
+      <Button onclick={closeAll} variant="danger" size="sm">{t("liveChats.closeAll")}</Button>
     {/if}
   </div>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="live-layout">
     <!-- Conversation List -->
@@ -87,7 +88,7 @@
           </div>
         </div>
       {:else}
-        <div class="empty-list">No active chats</div>
+        <div class="empty-list">{t("liveChats.noActive")}</div>
       {/each}
     </div>
 
@@ -105,37 +106,37 @@
               message={msg.content || ""}
             />
           {:else}
-            <div class="empty-chat">No messages</div>
+            <div class="empty-chat">{t("common.noMessages")}</div>
           {/each}
         </div>
       {:else}
-        <div class="no-selection">Select a chat</div>
+        <div class="no-selection">{t("liveChats.selectChat")}</div>
       {/if}
     </div>
 
     <!-- Context Panel -->
     <div class="context-panel">
       {#if selected}
-        <h3>Details</h3>
+        <h3>{t("liveChats.details")}</h3>
         <div class="detail-rows">
           <div class="detail-row">
-            <span class="detail-label">Session</span>
+            <span class="detail-label">{t("liveChats.session")}</span>
             <span class="detail-val mono">{selected.sessionId?.slice(0, 16)}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Status</span>
+            <span class="detail-label">{t("liveChats.status")}</span>
             <span class="detail-val">{selected.status}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Source</span>
+            <span class="detail-label">{t("liveChats.source")}</span>
             <span class="detail-val">{selected.source || "web"}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Created</span>
+            <span class="detail-label">{t("liveChats.created")}</span>
             <span class="detail-val">{fmtRelative(selected.createdAt)}</span>
           </div>
           {#if selected.memory}
-            <h4>Memory</h4>
+            <h4>{t("liveChats.memory")}</h4>
             {#each Object.entries(selected.memory) as [k, v]}
               {#if v}
                 <div class="detail-row">
@@ -147,7 +148,7 @@
           {/if}
         </div>
       {:else}
-        <div class="no-selection-ctx">Select a chat for details</div>
+        <div class="no-selection-ctx">{t("liveChats.selectChatDetails")}</div>
       {/if}
     </div>
   </div>

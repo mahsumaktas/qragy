@@ -1,4 +1,6 @@
 <script>
+  import { t, getDateLocale } from "../../lib/i18n.svelte.js";
+
   let {
     columns = [],
     rows = [],
@@ -6,7 +8,7 @@
     sortDir = $bindable("asc"),
     selectable = false,
     selected = $bindable([]),
-    emptyText = "No data found",
+    emptyText = "",
     onrowclick,
   } = $props();
 
@@ -25,7 +27,7 @@
     return [...rows].sort((a, b) => {
       const va = a[sortKey] ?? "";
       const vb = b[sortKey] ?? "";
-      const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb), "en");
+      const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb), getDateLocale());
       return sortDir === "asc" ? cmp : -cmp;
     });
   });
@@ -100,7 +102,7 @@
       {:else}
         <tr>
           <td colspan={columns.length + (selectable ? 1 : 0)} class="empty-row">
-            {emptyText}
+            {emptyText || t("common.noData")}
           </td>
         </tr>
       {/each}

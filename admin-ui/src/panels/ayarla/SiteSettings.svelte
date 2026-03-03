@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
+  import { t } from "../../lib/i18n.svelte.js";
   import Button from "../../components/ui/Button.svelte";
   import Toggle from "../../components/ui/Toggle.svelte";
   import ColorPicker from "../../components/ui/ColorPicker.svelte";
@@ -16,7 +17,7 @@
       const res = await api.get("admin/site-config");
       config = res.config || res || {};
     } catch (e) {
-      showToast("Failed to load site settings: " + e.message, "error");
+      showToast(t("siteSettings.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -25,9 +26,9 @@
   async function save() {
     try {
       await api.put("admin/site-config", { config });
-      showToast("Saved", "success");
+      showToast(t("siteSettings.saved"), "success");
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
@@ -35,53 +36,53 @@
     if (!logoFile) return;
     try {
       await api.upload("admin/site-logo", logoFile);
-      showToast("Logo uploaded", "success");
+      showToast(t("siteSettings.logoUploaded"), "success");
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>Site Settings</h1><p>Widget appearance and configuration</p></div>
-  <Button onclick={save} variant="primary" size="sm">Save</Button>
+  <div><h1>{t("siteSettings.title")}</h1><p>{t("siteSettings.subtitle")}</p></div>
+  <Button onclick={save} variant="primary" size="sm">{t("common.save")}</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="settings-grid">
     <div class="card">
-      <h2>Widget Settings</h2>
+      <h2>{t("siteSettings.widgetSettings")}</h2>
       <div class="form-grid">
-        <div class="form-group"><span class="label">Bot Name</span><input class="input" bind:value={config.botName} /></div>
-        <div class="form-group"><span class="label">Welcome Message</span><input class="input" bind:value={config.welcomeMessage} /></div>
-        <div class="form-group"><span class="label">Placeholder</span><input class="input" bind:value={config.inputPlaceholder} /></div>
-        <div class="form-group"><span class="label">Position</span>
+        <div class="form-group"><span class="label">{t("siteSettings.botName")}</span><input class="input" bind:value={config.botName} /></div>
+        <div class="form-group"><span class="label">{t("siteSettings.welcomeMessage")}</span><input class="input" bind:value={config.welcomeMessage} /></div>
+        <div class="form-group"><span class="label">{t("siteSettings.placeholder")}</span><input class="input" bind:value={config.inputPlaceholder} /></div>
+        <div class="form-group"><span class="label">{t("siteSettings.position")}</span>
           <select class="select" bind:value={config.position}>
-            <option value="right">Right</option>
-            <option value="left">Left</option>
+            <option value="right">{t("siteSettings.right")}</option>
+            <option value="left">{t("siteSettings.left")}</option>
           </select>
         </div>
-        <div class="form-row"><span class="label">Widget Active</span><Toggle bind:checked={config.enabled} /></div>
-        <div class="form-row"><span class="label">Sound Effect</span><Toggle bind:checked={config.soundEnabled} /></div>
+        <div class="form-row"><span class="label">{t("siteSettings.widgetActive")}</span><Toggle bind:checked={config.enabled} /></div>
+        <div class="form-row"><span class="label">{t("siteSettings.soundEffect")}</span><Toggle bind:checked={config.soundEnabled} /></div>
       </div>
     </div>
 
     <div class="card">
-      <h2>Appearance</h2>
+      <h2>{t("siteSettings.appearance")}</h2>
       <div class="form-grid">
-        <ColorPicker label="Primary Color" bind:value={config.primaryColor} />
-        <ColorPicker label="Text Color" bind:value={config.textColor} />
-        <div class="form-group"><span class="label">Border Radius</span><input class="input" type="number" bind:value={config.borderRadius} /></div>
+        <ColorPicker label={t("siteSettings.primaryColor")} bind:value={config.primaryColor} />
+        <ColorPicker label={t("siteSettings.textColor")} bind:value={config.textColor} />
+        <div class="form-group"><span class="label">{t("siteSettings.borderRadius")}</span><input class="input" type="number" bind:value={config.borderRadius} /></div>
       </div>
     </div>
 
     <div class="card">
-      <h2>Logo</h2>
+      <h2>{t("siteSettings.logo")}</h2>
       <div class="logo-upload">
         <input type="file" accept="image/*" onchange={(e) => { logoFile = e.target.files[0]; }} />
-        <Button onclick={uploadLogo} variant="secondary" size="sm" disabled={!logoFile}>Upload</Button>
+        <Button onclick={uploadLogo} variant="secondary" size="sm" disabled={!logoFile}>{t("common.upload")}</Button>
       </div>
     </div>
   </div>

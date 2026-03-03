@@ -4,6 +4,7 @@
   import { createSSE } from "../../lib/sse.js";
   import { showToast } from "../../lib/toast.svelte.js";
   import { fmtRelative } from "../../lib/format.js";
+  import { t } from "../../lib/i18n.svelte.js";
   import ChatBubble from "../../components/chat/ChatBubble.svelte";
   import ChatInput from "../../components/chat/ChatInput.svelte";
   import Badge from "../../components/ui/Badge.svelte";
@@ -47,7 +48,7 @@
       pending = res.pending || [];
       active = res.active || [];
     } catch (e) {
-      showToast("Failed to load inbox: " + e.message, "error");
+      showToast(t("agentInbox.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -71,21 +72,21 @@
   async function claimItem(id) {
     try {
       await api.post("admin/inbox/" + id + "/claim", { agentName: "admin" });
-      showToast("Claimed", "success");
+      showToast(t("agentInbox.claimed"), "success");
       await loadInbox();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
   async function releaseItem(id) {
     try {
       await api.post("admin/inbox/" + id + "/release", {});
-      showToast("Released", "success");
+      showToast(t("agentInbox.released"), "success");
       selectedId = null;
       await loadInbox();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
@@ -95,51 +96,51 @@
       await api.post("admin/inbox/" + selected.id + "/message", { message: text });
       await loadChat(selectedId);
     } catch (e) {
-      showToast("Failed to send message: " + e.message, "error");
+      showToast(t("agentInbox.sendError", { msg: e.message }), "error");
     }
   }
 </script>
 
 <div class="page-header">
   <div>
-    <h1>Agent Inbox</h1>
-    <p>Human agent queue</p>
+    <h1>{t("agentInbox.title")}</h1>
+    <p>{t("agentInbox.subtitle")}</p>
   </div>
-  <Button onclick={loadInbox} variant="ghost" size="sm">Refresh</Button>
+  <Button onclick={loadInbox} variant="ghost" size="sm">{t("common.refresh")}</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="inbox-layout">
     <!-- Queue List -->
     <div class="queue-panel">
       {#if pending.length}
-        <div class="queue-group">Pending ({pending.length})</div>
+        <div class="queue-group">{t("agentInbox.pending")} ({pending.length})</div>
         {#each pending as item}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div class="queue-item" class:active={selectedId === item.sessionId} onclick={() => selectItem(item.sessionId)}>
             <div class="qi-top">
-              <span class="qi-name">{item.customerName || "Guest"}</span>
-              <Badge variant="yellow">waiting</Badge>
+              <span class="qi-name">{item.customerName || t("agentInbox.guest")}</span>
+              <Badge variant="yellow">{t("agentInbox.waiting")}</Badge>
             </div>
             <div class="qi-topic">{item.topic || item.summary || "..."}</div>
             <div class="qi-meta">{fmtRelative(item.createdAt)}</div>
-            <Button onclick={(e) => { e.stopPropagation(); claimItem(item.id); }} variant="primary" size="sm">Claim</Button>
+            <Button onclick={(e) => { e.stopPropagation(); claimItem(item.id); }} variant="primary" size="sm">{t("agentInbox.claim")}</Button>
           </div>
         {/each}
       {/if}
 
       {#if active.length}
-        <div class="queue-group">Active ({active.length})</div>
+        <div class="queue-group">{t("agentInbox.active")} ({active.length})</div>
         {#each active as item}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div class="queue-item" class:active={selectedId === item.sessionId} onclick={() => selectItem(item.sessionId)}>
             <div class="qi-top">
-              <span class="qi-name">{item.customerName || "Guest"}</span>
-              <Badge variant="green">active</Badge>
+              <span class="qi-name">{item.customerName || t("agentInbox.guest")}</span>
+              <Badge variant="green">{t("agentInbox.activeBadge")}</Badge>
             </div>
             <div class="qi-topic">{item.topic || item.summary || "..."}</div>
             <div class="qi-meta">{item.assignedTo || "admin"} &middot; {fmtRelative(item.createdAt)}</div>
@@ -148,7 +149,7 @@
       {/if}
 
       {#if !pending.length && !active.length}
-        <div class="queue-empty">Queue is empty</div>
+        <div class="queue-empty">{t("agentInbox.queueEmpty")}</div>
       {/if}
     </div>
 
@@ -157,25 +158,25 @@
       {#if selected}
         <div class="chat-header">
           <div>
-            <strong>{selected.customerName || "Guest"}</strong>
+            <strong>{selected.customerName || t("agentInbox.guest")}</strong>
             <span class="chat-meta">{selected.topic || ""}</span>
           </div>
           {#if selected.assignedTo}
-            <Button onclick={() => releaseItem(selected.id)} variant="ghost" size="sm">Release</Button>
+            <Button onclick={() => releaseItem(selected.id)} variant="ghost" size="sm">{t("agentInbox.release")}</Button>
           {/if}
         </div>
         <div class="chat-body">
           {#each chatMessages as msg}
             <ChatBubble sender={msg.role === "user" ? "user" : "bot"} message={msg.content || ""} />
           {:else}
-            <div class="empty-chat">No messages</div>
+            <div class="empty-chat">{t("common.noMessages")}</div>
           {/each}
         </div>
         {#if selected.assignedTo}
           <ChatInput onsend={sendMessage} />
         {/if}
       {:else}
-        <div class="no-selection">Select a request</div>
+        <div class="no-selection">{t("agentInbox.selectRequest")}</div>
       {/if}
     </div>
   </div>

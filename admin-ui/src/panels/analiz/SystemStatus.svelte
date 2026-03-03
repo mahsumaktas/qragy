@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { t } from "../../lib/i18n.svelte.js";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
   import { fmtDate } from "../../lib/format.js";
@@ -26,7 +27,7 @@
       sla = sl;
       auditLog = audit.log || audit || [];
     } catch (e) {
-      showToast("Failed to load system status: " + e.message, "error");
+      showToast(t("systemStatus.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -35,43 +36,43 @@
   async function forceCheck() {
     try {
       system = await api.get("admin/system?forceCheck=1");
-      showToast("Check completed", "success");
+      showToast(t("systemStatus.checkCompleted"), "success");
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>System Status</h1><p>System health and audit</p></div>
-  <Button onclick={forceCheck} variant="secondary" size="sm">Check</Button>
+  <div><h1>{t("systemStatus.title")}</h1><p>{t("systemStatus.subtitle")}</p></div>
+  <Button onclick={forceCheck} variant="secondary" size="sm">{t("systemStatus.check")}</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="status-grid">
     {#if system}
       <div class="card">
-        <h2>System</h2>
+        <h2>{t("systemStatus.system")}</h2>
         <div class="info-rows">
-          <div class="info-row"><span>Status</span><Badge variant={system.status === "ok" || system.healthy ? "green" : "red"}>{system.status || (system.healthy ? "healthy" : "unhealthy")}</Badge></div>
-          <div class="info-row"><span>Uptime</span><span>{system.uptime || "-"}</span></div>
-          <div class="info-row"><span>Node</span><span>{system.nodeVersion || "-"}</span></div>
-          <div class="info-row"><span>Memory</span><span>{system.memoryUsage || "-"}</span></div>
-          <div class="info-row"><span>LLM</span><Badge variant={system.llmStatus === "ok" ? "green" : "yellow"}>{system.llmStatus || system.llm || "-"}</Badge></div>
-          <div class="info-row"><span>Embedding</span><Badge variant={system.embeddingStatus === "ok" ? "green" : "yellow"}>{system.embeddingStatus || "-"}</Badge></div>
+          <div class="info-row"><span>{t("systemStatus.status")}</span><Badge variant={system.status === "ok" || system.healthy ? "green" : "red"}>{system.status || (system.healthy ? t("systemStatus.healthy") : t("systemStatus.unhealthy"))}</Badge></div>
+          <div class="info-row"><span>{t("systemStatus.uptime")}</span><span>{system.uptime || "-"}</span></div>
+          <div class="info-row"><span>{t("systemStatus.node")}</span><span>{system.nodeVersion || "-"}</span></div>
+          <div class="info-row"><span>{t("systemStatus.memory")}</span><span>{system.memoryUsage || "-"}</span></div>
+          <div class="info-row"><span>{t("systemStatus.llm")}</span><Badge variant={system.llmStatus === "ok" ? "green" : "yellow"}>{system.llmStatus || system.llm || "-"}</Badge></div>
+          <div class="info-row"><span>{t("systemStatus.embedding")}</span><Badge variant={system.embeddingStatus === "ok" ? "green" : "yellow"}>{system.embeddingStatus || "-"}</Badge></div>
         </div>
       </div>
     {/if}
 
     {#if sla}
       <div class="card">
-        <h2>SLA</h2>
+        <h2>{t("systemStatus.sla")}</h2>
         <div class="info-rows">
-          <div class="info-row"><span>Avg. Response Time</span><span>{sla.avgResponseMs ? (sla.avgResponseMs / 1000).toFixed(1) + "s" : "-"}</span></div>
-          <div class="info-row"><span>Uptime</span><span>{sla.uptimePercent ? sla.uptimePercent + "%" : "-"}</span></div>
-          <div class="info-row"><span>Success Rate</span><span>{sla.successRate ? sla.successRate + "%" : "-"}</span></div>
+          <div class="info-row"><span>{t("systemStatus.avgResponseTime")}</span><span>{sla.avgResponseMs ? (sla.avgResponseMs / 1000).toFixed(1) + "s" : "-"}</span></div>
+          <div class="info-row"><span>{t("systemStatus.uptime")}</span><span>{sla.uptimePercent ? sla.uptimePercent + "%" : "-"}</span></div>
+          <div class="info-row"><span>{t("systemStatus.successRate")}</span><span>{sla.successRate ? sla.successRate + "%" : "-"}</span></div>
         </div>
       </div>
     {/if}
@@ -79,9 +80,9 @@
 
   {#if auditLog.length}
     <div class="card audit-card">
-      <h2>Audit Log</h2>
+      <h2>{t("systemStatus.auditLog")}</h2>
       <table>
-        <thead><tr><th>Time</th><th>Action</th><th>Detail</th></tr></thead>
+        <thead><tr><th>{t("systemStatus.time")}</th><th>{t("systemStatus.action")}</th><th>{t("systemStatus.detail")}</th></tr></thead>
         <tbody>
           {#each auditLog.slice(0, 50) as entry}
             <tr>

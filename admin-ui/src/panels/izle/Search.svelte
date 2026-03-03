@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
+  import { t } from "../../lib/i18n.svelte.js";
   import { fmtDate, truncate } from "../../lib/format.js";
   import { getToken } from "../../lib/auth.svelte.js";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
@@ -19,15 +20,15 @@
   let selectedTicket = $state(null);
   let debounceTimer;
 
-  const STATUSES = [
-    { value: "", label: "All" },
-    { value: "handoff_pending", label: "Handoff Pending" },
-    { value: "queued_after_hours", label: "After Hours" },
-    { value: "handoff_success", label: "Successful" },
-    { value: "handoff_failed", label: "Failed" },
-    { value: "handoff_parent_posted", label: "Parent Handoff" },
-    { value: "handoff_opened_no_summary", label: "No Summary" },
-  ];
+  let STATUSES = $derived([
+    { value: "", label: t("search.all") },
+    { value: "handoff_pending", label: t("search.handoffPending") },
+    { value: "queued_after_hours", label: t("search.afterHours") },
+    { value: "handoff_success", label: t("search.successful") },
+    { value: "handoff_failed", label: t("search.failed") },
+    { value: "handoff_parent_posted", label: t("search.parentHandoff") },
+    { value: "handoff_opened_no_summary", label: t("search.noSummary") },
+  ]);
 
   const statusColors = {
     handoff_pending: "yellow",
@@ -53,7 +54,7 @@
       tickets = res.tickets || [];
       total = res.total || 0;
     } catch (e) {
-      showToast("Search error: " + e.message, "error");
+      showToast(t("search.searchError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -69,7 +70,7 @@
       const res = await api.get("admin/tickets/" + encodeURIComponent(ticketId));
       selectedTicket = res.ticket || res;
     } catch (e) {
-      showToast("Failed to load ticket: " + e.message, "error");
+      showToast(t("search.loadError", { msg: e.message }), "error");
     }
   }
 
@@ -89,11 +90,11 @@
     if (!assignInput.trim()) return;
     try {
       await api.put("admin/tickets/" + encodeURIComponent(selectedTicket.id) + "/assign", { assignedTo: assignInput.trim() });
-      showToast("Assigned: " + assignInput.trim(), "success");
+      showToast(t("search.assigned", { name: assignInput.trim() }), "success");
       assignInput = "";
       await reloadTicket(selectedTicket.id);
     } catch (e) {
-      showToast("Assignment error: " + e.message, "error");
+      showToast(t("search.assignError", { msg: e.message }), "error");
     }
   }
 
@@ -101,11 +102,11 @@
     if (!priorityInput) return;
     try {
       await api.put("admin/tickets/" + encodeURIComponent(selectedTicket.id) + "/priority", { priority: priorityInput });
-      showToast("Priority changed: " + priorityInput, "success");
+      showToast(t("search.priorityChanged", { val: priorityInput }), "success");
       priorityInput = "";
       await reloadTicket(selectedTicket.id);
     } catch (e) {
-      showToast("Priority error: " + e.message, "error");
+      showToast(t("search.priorityError", { msg: e.message }), "error");
     }
   }
 
@@ -113,11 +114,11 @@
     if (!noteInput.trim()) return;
     try {
       await api.post("admin/tickets/" + encodeURIComponent(selectedTicket.id) + "/notes", { note: noteInput.trim() });
-      showToast("Note added", "success");
+      showToast(t("search.noteAdded"), "success");
       noteInput = "";
       await reloadTicket(selectedTicket.id);
     } catch (e) {
-      showToast("Note error: " + e.message, "error");
+      showToast(t("search.noteError", { msg: e.message }), "error");
     }
   }
 
@@ -130,11 +131,11 @@
 
 <div class="page-header">
   <div>
-    <h1>Search</h1>
-    <p>Search and filter tickets ({total} results)</p>
+    <h1>{t("search.title")}</h1>
+    <p>{t("search.subtitle", { n: total })}</p>
   </div>
   <div class="header-actions">
-    <Button onclick={exportCsv} variant="ghost" size="sm">Download CSV</Button>
+    <Button onclick={exportCsv} variant="ghost" size="sm">{t("search.downloadCsv")}</Button>
   </div>
 </div>
 
@@ -142,7 +143,7 @@
   <input
     class="input search-input"
     type="text"
-    placeholder="Search ID, name, summary, phone..."
+    placeholder={t("search.placeholder")}
     bind:value={searchQuery}
     oninput={handleSearch}
   />
@@ -152,10 +153,10 @@
     {/each}
   </select>
   <select class="select" bind:value={sourceFilter} onchange={loadTickets}>
-    <option value="">All Sources</option>
-    <option value="web">Web</option>
-    <option value="whatsapp">WhatsApp</option>
-    <option value="zendesk">Zendesk</option>
+    <option value="">{t("search.allSources")}</option>
+    <option value="web">{t("search.web")}</option>
+    <option value="whatsapp">{t("search.whatsapp")}</option>
+    <option value="zendesk">{t("search.zendeskSource")}</option>
   </select>
   <select class="select" bind:value={limitFilter} onchange={loadTickets}>
     <option value="50">50</option>
@@ -166,67 +167,67 @@
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Searching..." />
+  <LoadingSpinner message={t("search.searching")} />
 {:else if selectedTicket}
   <div class="detail-view">
-    <Button onclick={() => (selectedTicket = null)} variant="ghost" size="sm">← Back to List</Button>
+    <Button onclick={() => (selectedTicket = null)} variant="ghost" size="sm">{t("common.back")}</Button>
     <div class="detail-header">
       <h2>{selectedTicket.id}</h2>
       <Badge variant={statusColors[selectedTicket.status] || "gray"}>{selectedTicket.status?.replace(/_/g, " ")}</Badge>
     </div>
     <div class="ticket-actions">
       <div class="action-group">
-        <label>Assign</label>
+        <label>{t("search.assign")}</label>
         <div class="action-row">
-          <input class="input action-input" type="text" placeholder="Agent name" bind:value={assignInput} />
-          <Button onclick={assignTicket} variant="primary" size="sm">Assign</Button>
+          <input class="input action-input" type="text" placeholder={t("search.agentName")} bind:value={assignInput} />
+          <Button onclick={assignTicket} variant="primary" size="sm">{t("search.assign")}</Button>
         </div>
       </div>
       <div class="action-group">
-        <label>Priority</label>
+        <label>{t("search.priority")}</label>
         <div class="action-row">
           <select class="select" bind:value={priorityInput}>
-            <option value="">Select...</option>
-            <option value="low">Low</option>
-            <option value="normal">Normal</option>
-            <option value="high">High</option>
+            <option value="">{t("search.selectPriority")}</option>
+            <option value="low">{t("search.low")}</option>
+            <option value="normal">{t("search.normal")}</option>
+            <option value="high">{t("search.high")}</option>
           </select>
-          <Button onclick={changePriority} variant="primary" size="sm">Change</Button>
+          <Button onclick={changePriority} variant="primary" size="sm">{t("search.change")}</Button>
         </div>
       </div>
       <div class="action-group">
-        <label>Add Note</label>
+        <label>{t("search.addNote")}</label>
         <div class="action-row">
-          <textarea class="input action-textarea" placeholder="Internal note..." bind:value={noteInput} rows="2"></textarea>
-          <Button onclick={addNote} variant="primary" size="sm">Add</Button>
+          <textarea class="input action-textarea" placeholder={t("search.notePlaceholder")} bind:value={noteInput} rows="2"></textarea>
+          <Button onclick={addNote} variant="primary" size="sm">{t("common.add")}</Button>
         </div>
       </div>
     </div>
     <div class="detail-grid">
       <div class="info-card">
-        <h3>Details</h3>
-        <div class="info-row"><span>Branch Code</span><span>{selectedTicket.branchCode || "-"}</span></div>
-        <div class="info-row"><span>Company</span><span>{selectedTicket.companyName || "-"}</span></div>
-        <div class="info-row"><span>Full Name</span><span>{selectedTicket.fullName || "-"}</span></div>
-        <div class="info-row"><span>Phone</span><span>{selectedTicket.phone || "-"}</span></div>
-        <div class="info-row"><span>Source</span><span>{selectedTicket.source || "-"}</span></div>
-        <div class="info-row"><span>Priority</span><span>{selectedTicket.priority || "normal"}</span></div>
-        <div class="info-row"><span>Assigned To</span><span>{selectedTicket.assignedTo || "-"}</span></div>
-        <div class="info-row"><span>Created</span><span>{fmtDate(selectedTicket.createdAt)}</span></div>
-        <div class="info-row"><span>Summary</span><span>{selectedTicket.issueSummary || "-"}</span></div>
+        <h3>{t("search.details")}</h3>
+        <div class="info-row"><span>{t("search.branchCode")}</span><span>{selectedTicket.branchCode || "-"}</span></div>
+        <div class="info-row"><span>{t("search.company")}</span><span>{selectedTicket.companyName || "-"}</span></div>
+        <div class="info-row"><span>{t("search.fullName")}</span><span>{selectedTicket.fullName || "-"}</span></div>
+        <div class="info-row"><span>{t("search.phone")}</span><span>{selectedTicket.phone || "-"}</span></div>
+        <div class="info-row"><span>{t("search.source")}</span><span>{selectedTicket.source || "-"}</span></div>
+        <div class="info-row"><span>{t("search.priority")}</span><span>{selectedTicket.priority || "normal"}</span></div>
+        <div class="info-row"><span>{t("search.assignedTo")}</span><span>{selectedTicket.assignedTo || "-"}</span></div>
+        <div class="info-row"><span>{t("search.created")}</span><span>{fmtDate(selectedTicket.createdAt)}</span></div>
+        <div class="info-row"><span>{t("search.summary")}</span><span>{selectedTicket.issueSummary || "-"}</span></div>
       </div>
       <div class="chat-card">
-        <h3>Chat History</h3>
+        <h3>{t("search.chatHistory")}</h3>
         {#each selectedTicket.chatHistory || [] as msg}
           <ChatBubble sender={msg.role === "user" ? "user" : "bot"} message={msg.content || ""} />
         {:else}
-          <p class="no-msg">No messages</p>
+          <p class="no-msg">{t("common.noMessages")}</p>
         {/each}
       </div>
     </div>
     {#if selectedTicket.internalNotes?.length}
       <div class="info-card">
-        <h3>Notes</h3>
+        <h3>{t("search.notes")}</h3>
         {#each selectedTicket.internalNotes as note}
           <div class="note-item">
             <span class="note-meta">{note.author} &middot; {fmtDate(note.at)}</span>
@@ -241,34 +242,34 @@
     <table>
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Status</th>
-          <th>Priority</th>
-          <th>Branch</th>
-          <th>Summary</th>
-          <th>Source</th>
-          <th>Date</th>
+          <th>{t("search.id")}</th>
+          <th>{t("search.statusCol")}</th>
+          <th>{t("search.priorityCol")}</th>
+          <th>{t("search.branch")}</th>
+          <th>{t("search.summaryCol")}</th>
+          <th>{t("search.sourceCol")}</th>
+          <th>{t("search.date")}</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-        {#each tickets as t}
+        {#each tickets as tk}
           <tr>
-            <td class="mono">{t.id}</td>
-            <td><Badge variant={statusColors[t.status] || "gray"}>{t.status?.replace(/_/g, " ")}</Badge></td>
+            <td class="mono">{tk.id}</td>
+            <td><Badge variant={statusColors[tk.status] || "gray"}>{tk.status?.replace(/_/g, " ")}</Badge></td>
             <td>
-              <span class="priority" class:high={t.priority === "high"} class:low={t.priority === "low"}>
-                {t.priority || "normal"}
+              <span class="priority" class:high={tk.priority === "high"} class:low={tk.priority === "low"}>
+                {tk.priority || "normal"}
               </span>
             </td>
-            <td>{t.branchCode || "-"}</td>
-            <td>{truncate(t.issueSummary || "", 40)}</td>
-            <td>{t.source || "web"}</td>
-            <td>{fmtDate(t.createdAt)}</td>
-            <td><Button onclick={() => openTicket(t.id)} variant="ghost" size="sm">Open</Button></td>
+            <td>{tk.branchCode || "-"}</td>
+            <td>{truncate(tk.issueSummary || "", 40)}</td>
+            <td>{tk.source || "web"}</td>
+            <td>{fmtDate(tk.createdAt)}</td>
+            <td><Button onclick={() => openTicket(tk.id)} variant="ghost" size="sm">Open</Button></td>
           </tr>
         {:else}
-          <tr><td colspan="8" class="empty-row">No results found</td></tr>
+          <tr><td colspan="8" class="empty-row">{t("search.noResults")}</td></tr>
         {/each}
       </tbody>
     </table>

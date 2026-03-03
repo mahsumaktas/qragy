@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
+  import { t } from "../../lib/i18n.svelte.js";
   import Button from "../../components/ui/Button.svelte";
   import Toggle from "../../components/ui/Toggle.svelte";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
@@ -14,7 +15,7 @@
       const res = await api.get("admin/chat-flow");
       config = res.config || res || {};
     } catch (e) {
-      showToast("Failed to load chat flow: " + e.message, "error");
+      showToast(t("chatFlow.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -23,40 +24,40 @@
   async function save() {
     try {
       await api.put("admin/chat-flow", { config });
-      showToast("Saved", "success");
+      showToast(t("chatFlow.saved"), "success");
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 </script>
 
 <div class="page-header">
   <div>
-    <h1>Chat Flow</h1>
-    <p>Greeting, timing, detection, closing settings</p>
+    <h1>{t("chatFlow.title")}</h1>
+    <p>{t("chatFlow.subtitle")}</p>
   </div>
-  <Button onclick={save} variant="primary" size="sm">Save</Button>
+  <Button onclick={save} variant="primary" size="sm">{t("common.save")}</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="flow-sections">
     <div class="card">
-      <h2>Greeting</h2>
+      <h2>{t("chatFlow.greeting")}</h2>
       <div class="form-grid">
         <div class="form-row">
-          <label>Greeting Enabled
+          <label>{t("chatFlow.greetingEnabled")}
             <Toggle bind:checked={config.greetingEnabled} />
           </label>
         </div>
         <div class="form-group">
-          <label>Greeting Message
+          <label>{t("chatFlow.greetingMessage")}
             <textarea class="textarea" bind:value={config.greetingMessage} rows="3"></textarea>
           </label>
         </div>
         <div class="form-group">
-          <label>Greeting Delay (ms)
+          <label>{t("chatFlow.greetingDelay")}
             <input class="input" type="number" bind:value={config.greetingDelay} />
           </label>
         </div>
@@ -64,35 +65,35 @@
     </div>
 
     <div class="card">
-      <h2>Timing</h2>
+      <h2>{t("chatFlow.timing")}</h2>
       <div class="form-grid">
         <div class="form-group">
-          <label>Off-Hours Message
+          <label>{t("chatFlow.offHoursMessage")}
             <textarea class="textarea" bind:value={config.offHoursMessage} rows="2"></textarea>
           </label>
         </div>
         <div class="form-group">
-          <label>Auto Close (min)
+          <label>{t("chatFlow.autoClose")}
             <input class="input" type="number" bind:value={config.autoCloseMinutes} />
           </label>
         </div>
         <div class="form-group">
-          <label>Inactivity Warning (min)
+          <label>{t("chatFlow.inactivityWarning")}
             <input class="input" type="number" bind:value={config.inactivityWarningMinutes} />
           </label>
         </div>
         <div class="form-group">
-          <label>Message Aggregation Window (ms)
+          <label>{t("chatFlow.aggregationWindow")}
             <input class="input" type="number" bind:value={config.messageAggregationWindowMs} />
           </label>
         </div>
         <div class="form-group">
-          <label>Bot Response Delay (ms)
+          <label>{t("chatFlow.responseDelay")}
             <input class="input" type="number" bind:value={config.botResponseDelayMs} />
           </label>
         </div>
         <div class="form-row">
-          <label>Typing Indicator
+          <label>{t("chatFlow.typingIndicator")}
             <Toggle bind:checked={config.typingIndicatorEnabled} />
           </label>
         </div>
@@ -100,30 +101,30 @@
     </div>
 
     <div class="card">
-      <h2>Detection</h2>
+      <h2>{t("chatFlow.detection")}</h2>
       <div class="form-grid">
         <div class="form-row">
-          <label>Topic Detection Enabled
+          <label>{t("chatFlow.topicDetection")}
             <Toggle bind:checked={config.topicDetectionEnabled} />
           </label>
         </div>
         <div class="form-row">
-          <label>Sentiment Analysis
+          <label>{t("chatFlow.sentimentAnalysis")}
             <Toggle bind:checked={config.sentimentEnabled} />
           </label>
         </div>
         <div class="form-group">
-          <label>Max Clarifications
+          <label>{t("chatFlow.maxClarifications")}
             <input class="input" type="number" bind:value={config.maxClarifications} />
           </label>
         </div>
         <div class="form-row">
-          <label>Gibberish Detection
+          <label>{t("chatFlow.gibberishDetection")}
             <Toggle bind:checked={config.gibberishDetectionEnabled} />
           </label>
         </div>
         <div class="form-group">
-          <label>Gibberish Message
+          <label>{t("chatFlow.gibberishMessage")}
             <textarea class="textarea" bind:value={config.gibberishMessage} rows="2"></textarea>
           </label>
         </div>
@@ -131,35 +132,35 @@
     </div>
 
     <div class="card">
-      <h2>Closing</h2>
+      <h2>{t("chatFlow.closing")}</h2>
       <div class="form-grid">
         <div class="form-row">
-          <label>Closing Flow Enabled
+          <label>{t("chatFlow.closingEnabled")}
             <Toggle bind:checked={config.closingFlowEnabled} />
           </label>
         </div>
         <div class="form-group">
-          <label>Closing Message
+          <label>{t("chatFlow.closingMessage")}
             <textarea class="textarea" bind:value={config.closingMessage} rows="2"></textarea>
           </label>
         </div>
         <div class="form-group">
-          <label>Anything Else? Message
+          <label>{t("chatFlow.anythingElse")}
             <textarea class="textarea" bind:value={config.anythingElseMessage} rows="2"></textarea>
           </label>
         </div>
         <div class="form-group">
-          <label>Farewell Message
+          <label>{t("chatFlow.farewellMessage")}
             <textarea class="textarea" bind:value={config.farewellMessage} rows="2"></textarea>
           </label>
         </div>
         <div class="form-row">
-          <label>CSAT Survey
+          <label>{t("chatFlow.csatSurvey")}
             <Toggle bind:checked={config.csatEnabled} />
           </label>
         </div>
         <div class="form-group">
-          <label>CSAT Message
+          <label>{t("chatFlow.csatMessage")}
             <textarea class="textarea" bind:value={config.csatMessage} rows="2"></textarea>
           </label>
         </div>
@@ -167,25 +168,25 @@
     </div>
 
     <div class="card">
-      <h2>Nudge</h2>
+      <h2>{t("chatFlow.nudge")}</h2>
       <div class="form-grid">
         <div class="form-row">
-          <label>Nudge Enabled
+          <label>{t("chatFlow.nudgeEnabled")}
             <Toggle bind:checked={config.nudgeEnabled} />
           </label>
         </div>
         <div class="form-group">
-          <label>75% Nudge Message
+          <label>{t("chatFlow.nudge75")}
             <textarea class="textarea" bind:value={config.nudgeAt75Message} rows="2"></textarea>
           </label>
         </div>
         <div class="form-group">
-          <label>90% Nudge Message
+          <label>{t("chatFlow.nudge90")}
             <textarea class="textarea" bind:value={config.nudgeAt90Message} rows="2"></textarea>
           </label>
         </div>
         <div class="form-group">
-          <label>Inactivity Close Message
+          <label>{t("chatFlow.inactivityClose")}
             <textarea class="textarea" bind:value={config.inactivityCloseMessage} rows="2"></textarea>
           </label>
         </div>

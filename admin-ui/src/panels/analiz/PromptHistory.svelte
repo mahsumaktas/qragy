@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { t } from "../../lib/i18n.svelte.js";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
   import { fmtDate } from "../../lib/format.js";
@@ -19,42 +20,42 @@
       const res = await api.get("admin/prompt-versions");
       versions = res.versions || res || [];
     } catch (e) {
-      showToast("Failed to load prompt versions: " + e.message, "error");
+      showToast(t("promptHistory.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
   }
 
   async function rollback(v) {
-    if (!confirm(`Are you sure you want to roll back "${v.filename || v.file}" to this version?`)) return;
+    if (!confirm(t("promptHistory.rollbackConfirm", { file: v.filename || v.file }))) return;
     try {
       await api.post("admin/prompt-versions/" + (v.id || v._id) + "/rollback");
-      showToast("Rolled back: " + (v.filename || v.file), "success");
+      showToast(t("promptHistory.rolledBack", { file: v.filename || v.file }), "success");
       selectedVersion = null;
       await loadVersions();
     } catch (e) {
-      showToast("Rollback error: " + e.message, "error");
+      showToast(t("promptHistory.rollbackError", { msg: e.message }), "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>Prompt History</h1><p>Prompt version history</p></div>
-  <Button onclick={loadVersions} variant="ghost" size="sm">Refresh</Button>
+  <div><h1>{t("promptHistory.title")}</h1><p>{t("promptHistory.subtitle")}</p></div>
+  <Button onclick={loadVersions} variant="ghost" size="sm">{t("common.refresh")}</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else if selectedVersion}
   <div class="detail">
-    <Button onclick={() => (selectedVersion = null)} variant="ghost" size="sm">← Back</Button>
+    <Button onclick={() => (selectedVersion = null)} variant="ghost" size="sm">{t("common.backShort")}</Button>
     <div class="version-card">
       <div class="version-header">
         <div>
           <h2>{selectedVersion.filename || selectedVersion.file}</h2>
           <p class="meta">{fmtDate(selectedVersion.savedAt || selectedVersion.createdAt)}</p>
         </div>
-        <Button onclick={() => rollback(selectedVersion)} variant="danger" size="sm">Rollback</Button>
+        <Button onclick={() => rollback(selectedVersion)} variant="danger" size="sm">{t("promptHistory.rollback")}</Button>
       </div>
       <pre class="content-pre">{selectedVersion.content || ""}</pre>
     </div>
@@ -62,19 +63,19 @@
 {:else}
   <div class="card">
     <table>
-      <thead><tr><th>File</th><th>Date</th><th></th></tr></thead>
+      <thead><tr><th>{t("promptHistory.file")}</th><th>{t("promptHistory.date")}</th><th></th></tr></thead>
       <tbody>
         {#each versions as v}
           <tr>
             <td>{v.filename || v.file}</td>
             <td>{fmtDate(v.savedAt || v.createdAt)}</td>
             <td class="action-col">
-              <Button onclick={() => (selectedVersion = v)} variant="ghost" size="sm">View</Button>
-              <Button onclick={() => rollback(v)} variant="danger" size="sm">Rollback</Button>
+              <Button onclick={() => (selectedVersion = v)} variant="ghost" size="sm">{t("promptHistory.view")}</Button>
+              <Button onclick={() => rollback(v)} variant="danger" size="sm">{t("promptHistory.rollback")}</Button>
             </td>
           </tr>
         {:else}
-          <tr><td colspan="3" class="empty-row">No versions</td></tr>
+          <tr><td colspan="3" class="empty-row">{t("promptHistory.noVersions")}</td></tr>
         {/each}
       </tbody>
     </table>

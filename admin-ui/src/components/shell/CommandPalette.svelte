@@ -1,14 +1,17 @@
 <script>
   import { NAV_GROUPS } from "../../lib/constants.js";
   import { navigate } from "../../lib/router.svelte.js";
+  import { t } from "../../lib/i18n.svelte.js";
 
   let { open = $bindable(false) } = $props();
   let query = $state("");
   let inputRef;
   let selectedIdx = $state(0);
 
-  let allItems = NAV_GROUPS.flatMap((g) =>
-    g.items.map((item) => ({ ...item, group: g.label }))
+  let allItems = $derived(
+    NAV_GROUPS.flatMap((g) =>
+      g.items.map((item) => ({ ...item, label: t(item.labelKey), group: t(g.labelKey) }))
+    )
   );
 
   let filtered = $derived(
@@ -64,12 +67,12 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="cmd-overlay" onclick={handleOverlayClick}>
-    <div class="cmd-box" role="dialog" aria-label="Quick search">
+    <div class="cmd-box" role="dialog" aria-label={t("cmd.ariaLabel")}>
       <input
         bind:this={inputRef}
         bind:value={query}
         class="cmd-input"
-        placeholder="Search panels or actions..."
+        placeholder={t("cmd.placeholder")}
         onkeydown={handleKeydown}
       />
       <div class="cmd-results">
@@ -88,7 +91,7 @@
           </div>
         {/each}
         {#if filtered.length === 0}
-          <div class="cmd-empty">No results found</div>
+          <div class="cmd-empty">{t("cmd.noResults")}</div>
         {/if}
       </div>
     </div>

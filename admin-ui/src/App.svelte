@@ -5,6 +5,7 @@
   import ConfirmDialog from "./components/ui/ConfirmDialog.svelte";
   import { getPanel, initRouter } from "./lib/router.svelte.js";
   import { getToken, setToken } from "./lib/auth.svelte.js";
+  import { t } from "./lib/i18n.svelte.js";
 
   // Panels — Izle
   import Dashboard from "./panels/izle/Dashboard.svelte";
@@ -52,12 +53,12 @@
   <div class="login-page">
     <div class="login-card">
       <div class="login-logo">Q</div>
-      <h2>Qragy Admin</h2>
-      <p>Enter admin token to continue.</p>
+      <h2>{t("login.title")}</h2>
+      <p>{t("login.subtitle")}</p>
       <input
         type="password"
         class="login-input"
-        placeholder="Admin Token"
+        placeholder={t("login.placeholder")}
         onkeydown={(e) => {
           if (e.key === "Enter" && e.target.value.trim()) {
             setToken(e.target.value);
@@ -74,7 +75,7 @@
             window.location.reload();
           }
         }}
-      >Log In</button>
+      >{t("login.button")}</button>
     </div>
   </div>
 {:else}
@@ -132,8 +133,8 @@
       <div class="coming-soon-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
       </div>
-      <h2>Under Construction</h2>
-      <p>The <strong>{panel}</strong> panel is not ready yet.</p>
+      <h2>{t("common.underConstruction")}</h2>
+      <p>{t("common.panelNotReady", { panel })}</p>
     </div>
   {/if}
 </Shell>

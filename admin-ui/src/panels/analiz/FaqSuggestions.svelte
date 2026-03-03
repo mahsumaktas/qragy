@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { t } from "../../lib/i18n.svelte.js";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
   import Button from "../../components/ui/Button.svelte";
@@ -17,7 +18,7 @@
       const res = await api.get("admin/auto-faq");
       items = res.items || res.faqs || res || [];
     } catch (e) {
-      showToast("Failed to load FAQ: " + e.message, "error");
+      showToast(t("faq.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -26,64 +27,64 @@
   async function approve(id) {
     try {
       await api.post("admin/auto-faq/" + id + "/approve");
-      showToast("Approved", "success");
+      showToast(t("faq.approved"), "success");
       await loadFAQ();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
   async function reject(id) {
     try {
       await api.post("admin/auto-faq/" + id + "/reject");
-      showToast("Rejected", "info");
+      showToast(t("faq.rejected"), "info");
       await loadFAQ();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
   async function generate() {
     try {
       await api.post("admin/auto-faq/generate");
-      showToast("FAQ generation started", "info");
+      showToast(t("faq.generationStarted"), "info");
       setTimeout(loadFAQ, 3000);
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>FAQ Suggestions</h1><p>Auto-generated FAQ suggestions</p></div>
+  <div><h1>{t("faq.title")}</h1><p>{t("faq.subtitle")}</p></div>
   <div class="actions">
-    <Button onclick={generate} variant="secondary" size="sm">Generate New</Button>
-    <Button onclick={loadFAQ} variant="ghost" size="sm">Refresh</Button>
+    <Button onclick={generate} variant="secondary" size="sm">{t("faq.generateNew")}</Button>
+    <Button onclick={loadFAQ} variant="ghost" size="sm">{t("common.refresh")}</Button>
   </div>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="faq-list">
     {#each items as item}
       <div class="faq-card">
-        <div class="faq-q"><strong>Q:</strong> {item.question}</div>
-        <div class="faq-a"><strong>A:</strong> {item.answer}</div>
+        <div class="faq-q"><strong>{t("faq.question")}</strong> {item.question}</div>
+        <div class="faq-a"><strong>{t("faq.answer")}</strong> {item.answer}</div>
         <div class="faq-footer">
           <Badge variant={item.status === "approved" ? "green" : item.status === "rejected" ? "red" : "yellow"}>
-            {item.status || "pending"}
+            {item.status || t("faq.pending")}
           </Badge>
           {#if !item.status || item.status === "pending"}
             <div class="faq-actions">
-              <Button onclick={() => approve(item.id || item._id)} variant="primary" size="sm">Approve</Button>
-              <Button onclick={() => reject(item.id || item._id)} variant="ghost" size="sm">Reject</Button>
+              <Button onclick={() => approve(item.id || item._id)} variant="primary" size="sm">{t("faq.approve")}</Button>
+              <Button onclick={() => reject(item.id || item._id)} variant="ghost" size="sm">{t("faq.reject")}</Button>
             </div>
           {/if}
         </div>
       </div>
     {:else}
-      <div class="empty">No FAQ suggestions</div>
+      <div class="empty">{t("faq.empty")}</div>
     {/each}
   </div>
 {/if}

@@ -1,59 +1,63 @@
+import { t } from "./i18n.svelte.js";
+
 export const NAV_GROUPS = [
   {
     key: "izle",
-    label: "Monitor",
+    labelKey: "nav.monitor",
     items: [
-      { id: "dashboard", label: "Dashboard", icon: "dashboard" },
-      { id: "live-chats", label: "Live Chats", icon: "chat" },
-      { id: "closed-chats", label: "Closed Chats", icon: "archive" },
-      { id: "search", label: "Search", icon: "search" },
+      { id: "dashboard", labelKey: "nav.dashboard", icon: "dashboard" },
+      { id: "live-chats", labelKey: "nav.liveChats", icon: "chat" },
+      { id: "closed-chats", labelKey: "nav.closedChats", icon: "archive" },
+      { id: "search", labelKey: "nav.search", icon: "search" },
     ],
   },
   {
     key: "yonet",
-    label: "Manage",
+    labelKey: "nav.manage",
     items: [
-      { id: "agent-inbox", label: "Agent Inbox", icon: "inbox" },
-      { id: "knowledge-base", label: "Knowledge Base", icon: "book" },
-      { id: "topics", label: "Topics", icon: "tag" },
-      { id: "bot-settings", label: "Bot Settings", icon: "settings" },
-      { id: "bot-test", label: "Bot Test", icon: "test" },
-      { id: "chat-flow", label: "Chat Flow", icon: "flow" },
+      { id: "agent-inbox", labelKey: "nav.agentInbox", icon: "inbox" },
+      { id: "knowledge-base", labelKey: "nav.knowledgeBase", icon: "book" },
+      { id: "topics", labelKey: "nav.topics", icon: "tag" },
+      { id: "bot-settings", labelKey: "nav.botSettings", icon: "settings" },
+      { id: "bot-test", labelKey: "nav.botTest", icon: "test" },
+      { id: "chat-flow", labelKey: "nav.chatFlow", icon: "flow" },
     ],
   },
   {
     key: "ayarla",
-    label: "Configure",
+    labelKey: "nav.configure",
     items: [
-      { id: "site-settings", label: "Site Settings", icon: "globe" },
-      { id: "zendesk", label: "Zendesk", icon: "zendesk" },
-      { id: "whatsapp", label: "WhatsApp", icon: "whatsapp" },
-      { id: "webhooks", label: "Webhooks", icon: "webhook" },
-      { id: "env-vars", label: "Environment Variables", icon: "env" },
-      { id: "agent-files", label: "Agent Files", icon: "file" },
-      { id: "memory-templates", label: "Memory Templates", icon: "memory" },
+      { id: "site-settings", labelKey: "nav.siteSettings", icon: "globe" },
+      { id: "zendesk", labelKey: "nav.zendesk", icon: "zendesk" },
+      { id: "whatsapp", labelKey: "nav.whatsapp", icon: "whatsapp" },
+      { id: "webhooks", labelKey: "nav.webhooks", icon: "webhook" },
+      { id: "env-vars", labelKey: "nav.envVars", icon: "env" },
+      { id: "agent-files", labelKey: "nav.agentFiles", icon: "file" },
+      { id: "memory-templates", labelKey: "nav.memoryTemplates", icon: "memory" },
     ],
   },
   {
     key: "analiz",
-    label: "Analyze",
+    labelKey: "nav.analyze",
     items: [
-      { id: "analytics", label: "Analytics", icon: "chart" },
-      { id: "eval", label: "Eval Management", icon: "eval" },
-      { id: "faq-suggestions", label: "FAQ Suggestions", icon: "faq" },
-      { id: "feedback", label: "Feedback Report", icon: "feedback" },
-      { id: "content-gaps", label: "Content Gaps", icon: "gap" },
-      { id: "prompt-history", label: "Prompt History", icon: "history" },
-      { id: "system-status", label: "System Status", icon: "status" },
+      { id: "analytics", labelKey: "nav.analytics", icon: "chart" },
+      { id: "eval", labelKey: "nav.eval", icon: "eval" },
+      { id: "faq-suggestions", labelKey: "nav.faqSuggestions", icon: "faq" },
+      { id: "feedback", labelKey: "nav.feedback", icon: "feedback" },
+      { id: "content-gaps", labelKey: "nav.contentGaps", icon: "gap" },
+      { id: "prompt-history", labelKey: "nav.promptHistory", icon: "history" },
+      { id: "system-status", labelKey: "nav.systemStatus", icon: "status" },
     ],
   },
 ];
 
-export const PANEL_TITLES = {};
-for (const group of NAV_GROUPS) {
-  for (const item of group.items) {
-    PANEL_TITLES[item.id] = item.label;
+export function getPanelTitle(id) {
+  for (const group of NAV_GROUPS) {
+    for (const item of group.items) {
+      if (item.id === id) return t(item.labelKey);
+    }
   }
+  return id;
 }
 
 export const DEFAULT_PANEL = "dashboard";

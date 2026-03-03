@@ -4,6 +4,7 @@
   import { showToast } from "../../lib/toast.svelte.js";
   import { showConfirm } from "../../lib/confirm.svelte.js";
   import { fmtDate, truncate } from "../../lib/format.js";
+  import { t } from "../../lib/i18n.svelte.js";
   import Button from "../../components/ui/Button.svelte";
   import Modal from "../../components/ui/Modal.svelte";
   import FileUpload from "../../components/ui/FileUpload.svelte";
@@ -30,7 +31,7 @@
       const data = res.payload?.records || res.items || res.knowledge || res || [];
       items = Array.isArray(data) ? data : [];
     } catch (e) {
-      showToast("Failed to load knowledge base: " + e.message, "error");
+      showToast(t("kb.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -40,13 +41,13 @@
     if (!newQuestion.trim() || !newAnswer.trim()) return;
     try {
       await api.post("admin/knowledge", { question: newQuestion.trim(), answer: newAnswer.trim() });
-      showToast("Added", "success");
+      showToast(t("kb.added"), "success");
       newQuestion = "";
       newAnswer = "";
       addOpen = false;
       await loadKB();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
@@ -61,26 +62,26 @@
     if (!editQuestion.trim() || !editAnswer.trim()) return;
     try {
       await api.put("admin/knowledge/" + editId, { question: editQuestion.trim(), answer: editAnswer.trim() });
-      showToast("Updated", "success");
+      showToast(t("kb.updated"), "success");
       editOpen = false;
       editId = null;
       editQuestion = "";
       editAnswer = "";
       await loadKB();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
   async function deleteEntry(id) {
-    const ok = await showConfirm({ title: "Delete", message: "This entry will be deleted. Are you sure?", confirmText: "Delete", danger: true });
+    const ok = await showConfirm({ title: t("kb.deleteTitle"), message: t("kb.deleteMsg"), confirmText: t("common.delete"), danger: true });
     if (!ok) return;
     try {
       await api.delete("admin/knowledge/" + id);
-      showToast("Deleted", "success");
+      showToast(t("kb.deleted"), "success");
       await loadKB();
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
@@ -89,11 +90,11 @@
     for (const f of files) formData.append("files", f);
     try {
       await api.uploadForm("admin/knowledge/upload-batch", formData);
-      showToast(files.length + " files uploaded", "success");
+      showToast(t("kb.filesUploaded", { n: files.length }), "success");
       uploadOpen = false;
       await loadKB();
     } catch (e) {
-      showToast("Upload error: " + e.message, "error");
+      showToast(t("kb.uploadError", { msg: e.message }), "error");
     }
   }
 
@@ -101,46 +102,46 @@
     if (!importUrl.trim()) return;
     try {
       await api.post("admin/knowledge/import-url", { url: importUrl.trim() });
-      showToast("URL imported", "success");
+      showToast(t("kb.urlImported"), "success");
       importUrl = "";
       await loadKB();
     } catch (e) {
-      showToast("Import error: " + e.message, "error");
+      showToast(t("kb.importError", { msg: e.message }), "error");
     }
   }
 
   async function reingest() {
     try {
       await api.post("admin/knowledge/reingest", {});
-      showToast("Reingest started", "success");
+      showToast(t("kb.reingestStarted"), "success");
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 </script>
 
 <div class="page-header">
   <div>
-    <h1>Knowledge Base</h1>
-    <p>{items.length} entries</p>
+    <h1>{t("kb.title")}</h1>
+    <p>{t("kb.entries", { n: items.length })}</p>
   </div>
   <div class="header-actions">
-    <Button onclick={reingest} variant="ghost" size="sm">Reingest</Button>
-    <Button onclick={() => (uploadOpen = true)} variant="secondary" size="sm">Upload File</Button>
-    <Button onclick={() => (addOpen = true)} variant="primary" size="sm">+ Add</Button>
+    <Button onclick={reingest} variant="ghost" size="sm">{t("kb.reingest")}</Button>
+    <Button onclick={() => (uploadOpen = true)} variant="secondary" size="sm">{t("kb.uploadFile")}</Button>
+    <Button onclick={() => (addOpen = true)} variant="primary" size="sm">{t("kb.addEntry")}</Button>
   </div>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="card">
     <table>
       <thead>
         <tr>
-          <th>Question</th>
-          <th>Answer</th>
-          <th>Date</th>
+          <th>{t("kb.question")}</th>
+          <th>{t("kb.answer")}</th>
+          <th>{t("kb.date")}</th>
           <th></th>
         </tr>
       </thead>
@@ -151,12 +152,12 @@
             <td>{truncate(item.answer || item.content || "", 80)}</td>
             <td>{fmtDate(item.createdAt)}</td>
             <td class="actions">
-              <Button onclick={() => openEditEntry(item)} variant="ghost" size="sm">Edit</Button>
-              <Button onclick={() => deleteEntry(item.id || item._id)} variant="ghost" size="sm">Delete</Button>
+              <Button onclick={() => openEditEntry(item)} variant="ghost" size="sm">{t("common.edit")}</Button>
+              <Button onclick={() => deleteEntry(item.id || item._id)} variant="ghost" size="sm">{t("common.delete")}</Button>
             </td>
           </tr>
         {:else}
-          <tr><td colspan="4" class="empty-row">Knowledge base is empty</td></tr>
+          <tr><td colspan="4" class="empty-row">{t("kb.empty")}</td></tr>
         {/each}
       </tbody>
     </table>
@@ -164,52 +165,52 @@
 {/if}
 
 <!-- Add Entry Modal -->
-<Modal bind:open={addOpen} title="New Entry">
+<Modal bind:open={addOpen} title={t("kb.newEntry")}>
   <div class="form-group">
-    <label>Question
-      <input class="input" bind:value={newQuestion} placeholder="Question..." />
+    <label>{t("kb.question")}
+      <input class="input" bind:value={newQuestion} placeholder={t("kb.questionPlaceholder")} />
     </label>
   </div>
   <div class="form-group">
-    <label>Answer
-      <textarea class="textarea" bind:value={newAnswer} rows="4" placeholder="Answer..."></textarea>
+    <label>{t("kb.answer")}
+      <textarea class="textarea" bind:value={newAnswer} rows="4" placeholder={t("kb.answerPlaceholder")}></textarea>
     </label>
   </div>
   <div class="form-group">
-    <label>URL Import
+    <label>{t("kb.urlImport")}
       <div class="url-row">
         <input class="input" bind:value={importUrl} placeholder="https://..." />
-        <Button onclick={handleImportUrl} variant="secondary" size="sm">Import</Button>
+        <Button onclick={handleImportUrl} variant="secondary" size="sm">{t("common.import")}</Button>
       </div>
     </label>
   </div>
   <div class="modal-actions">
-    <Button onclick={() => (addOpen = false)} variant="secondary">Cancel</Button>
-    <Button onclick={addEntry} variant="primary">Save</Button>
+    <Button onclick={() => (addOpen = false)} variant="secondary">{t("common.cancel")}</Button>
+    <Button onclick={addEntry} variant="primary">{t("common.save")}</Button>
   </div>
 </Modal>
 
 <!-- Edit Entry Modal -->
-<Modal bind:open={editOpen} title="Edit Entry">
+<Modal bind:open={editOpen} title={t("kb.editEntry")}>
   <div class="form-group">
-    <label>Question
-      <input class="input" bind:value={editQuestion} placeholder="Question..." />
+    <label>{t("kb.question")}
+      <input class="input" bind:value={editQuestion} placeholder={t("kb.questionPlaceholder")} />
     </label>
   </div>
   <div class="form-group">
-    <label>Answer
-      <textarea class="textarea" bind:value={editAnswer} rows="4" placeholder="Answer..."></textarea>
+    <label>{t("kb.answer")}
+      <textarea class="textarea" bind:value={editAnswer} rows="4" placeholder={t("kb.answerPlaceholder")}></textarea>
     </label>
   </div>
   <div class="modal-actions">
-    <Button onclick={() => (editOpen = false)} variant="secondary">Cancel</Button>
-    <Button onclick={updateEntry} variant="primary">Save</Button>
+    <Button onclick={() => (editOpen = false)} variant="secondary">{t("common.cancel")}</Button>
+    <Button onclick={updateEntry} variant="primary">{t("common.save")}</Button>
   </div>
 </Modal>
 
 <!-- Upload Modal -->
-<Modal bind:open={uploadOpen} title="Upload File">
-  <FileUpload accept=".pdf,.docx,.xlsx,.csv,.txt" multiple onfiles={handleUpload} label="Upload PDF, DOCX, XLSX, CSV or TXT files" />
+<Modal bind:open={uploadOpen} title={t("kb.uploadFile")}>
+  <FileUpload accept=".pdf,.docx,.xlsx,.csv,.txt" multiple onfiles={handleUpload} label={t("kb.uploadHint")} />
 </Modal>
 
 <style>

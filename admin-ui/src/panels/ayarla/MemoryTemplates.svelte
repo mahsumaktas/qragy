@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
+  import { t } from "../../lib/i18n.svelte.js";
   import Button from "../../components/ui/Button.svelte";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
 
@@ -29,7 +30,7 @@
         files = [];
       }
     } catch (e) {
-      showToast("Failed to load memory templates: " + e.message, "error");
+      showToast(t("memoryTemplates.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -51,20 +52,20 @@
     if (!selectedFile) return;
     try {
       await api.put("admin/agent/memory/" + encodeURIComponent(selectedFile), { content });
-      showToast(selectedFile + " saved", "success");
+      showToast(t("common.saved", { name: selectedFile }), "success");
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>Memory Templates</h1><p>Memory file templates</p></div>
-  <Button onclick={save} variant="primary" size="sm" disabled={!selectedFile}>Save</Button>
+  <div><h1>{t("memoryTemplates.title")}</h1><p>{t("memoryTemplates.subtitle")}</p></div>
+  <Button onclick={save} variant="primary" size="sm" disabled={!selectedFile}>{t("common.save")}</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="split-layout">
     <div class="file-list">
@@ -75,7 +76,7 @@
           {f.name || f}
         </div>
       {:else}
-        <div class="empty-list">No files</div>
+        <div class="empty-list">{t("common.noFiles")}</div>
       {/each}
     </div>
     <div class="editor-panel">
@@ -83,14 +84,14 @@
         <div class="editor-toolbar">
           <span class="editor-filename">{selectedFile}</span>
           {#if jsonValid === true}
-            <span class="json-badge valid">JSON Valid</span>
+            <span class="json-badge valid">{t("memoryTemplates.jsonValid")}</span>
           {:else if jsonValid === false}
-            <span class="json-badge invalid">JSON Invalid</span>
+            <span class="json-badge invalid">{t("memoryTemplates.jsonInvalid")}</span>
           {/if}
         </div>
         <textarea class="mono-editor" bind:value={content} spellcheck="false" oninput={() => checkJson(content)}></textarea>
       {:else}
-        <div class="no-file">Select a template</div>
+        <div class="no-file">{t("memoryTemplates.selectTemplate")}</div>
       {/if}
     </div>
   </div>

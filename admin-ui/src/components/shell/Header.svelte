@@ -1,31 +1,39 @@
 <script>
-  import { PANEL_TITLES } from "../../lib/constants.js";
+  import { getPanelTitle } from "../../lib/constants.js";
   import { getPanel } from "../../lib/router.svelte.js";
   import { clearToken } from "../../lib/auth.svelte.js";
+  import { t, getLocale, setLocale } from "../../lib/i18n.svelte.js";
 
   let { onOpenCommandPalette = () => {}, onToggleMobile = () => {} } = $props();
 
-  let title = $derived(PANEL_TITLES[getPanel()] || "Dashboard");
+  let title = $derived(getPanelTitle(getPanel()));
+
+  function toggleLang() {
+    setLocale(getLocale() === "en" ? "tr" : "en");
+  }
 </script>
 
 <header class="header">
-  <button class="hamburger" onclick={onToggleMobile} aria-label="Menu">
+  <button class="hamburger" onclick={onToggleMobile} aria-label={t("header.menu")}>
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
   </button>
   <div class="header-title">{title}</div>
 
   <button class="header-search" onclick={onOpenCommandPalette}>
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <span>Quick search...</span>
+    <span>{t("header.quickSearch")}</span>
     <kbd>Cmd+K</kbd>
   </button>
 
   <div class="header-actions">
-    <button class="header-btn" title="Notifications">
+    <button class="header-btn lang-btn" title={t("header.language")} onclick={toggleLang}>
+      {getLocale() === "en" ? "TR" : "EN"}
+    </button>
+    <button class="header-btn" title={t("header.notifications")}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     </button>
-    <div class="avatar" title="Admin">MA</div>
-    <button class="header-btn logout-btn" title="Log Out" onclick={() => { clearToken(); window.location.reload(); }}>
+    <div class="avatar" title={t("header.admin")}>MA</div>
+    <button class="header-btn logout-btn" title={t("header.logout")} onclick={() => { clearToken(); window.location.reload(); }}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
     </button>
   </div>
@@ -105,6 +113,15 @@
   .logout-btn:hover {
     color: #ef4444;
     border-color: #ef4444;
+  }
+
+  .lang-btn {
+    width: auto;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: inherit;
+    letter-spacing: 0.5px;
   }
 
   .avatar {

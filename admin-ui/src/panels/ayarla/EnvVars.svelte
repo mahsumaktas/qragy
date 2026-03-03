@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
+  import { t } from "../../lib/i18n.svelte.js";
   import Button from "../../components/ui/Button.svelte";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
 
@@ -17,7 +18,7 @@
       const raw = res.env || res.config || res || {};
       entries = Object.entries(raw).map(([key, value]) => ({ key, value: String(value), masked: MASKED_KEYS.includes(key) }));
     } catch (e) {
-      showToast("Failed to load environment variables: " + e.message, "error");
+      showToast(t("envVars.loadError", { msg: e.message }), "error");
     } finally {
       loading = false;
     }
@@ -31,25 +32,25 @@
     if (!Object.keys(updates).length) return;
     try {
       await api.put("admin/env", { updates });
-      showToast("Saved — restart may be required", "success");
+      showToast(t("envVars.savedRestart"), "success");
       updates = {};
     } catch (e) {
-      showToast("Error: " + e.message, "error");
+      showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 </script>
 
 <div class="page-header">
-  <div><h1>Environment Variables</h1><p>Server .env values</p></div>
-  <Button onclick={save} variant="primary" size="sm" disabled={!Object.keys(updates).length}>Save</Button>
+  <div><h1>{t("envVars.title")}</h1><p>{t("envVars.subtitle")}</p></div>
+  <Button onclick={save} variant="primary" size="sm" disabled={!Object.keys(updates).length}>{t("common.save")}</Button>
 </div>
 
 {#if loading}
-  <LoadingSpinner message="Loading..." />
+  <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="card">
     <table>
-      <thead><tr><th>Key</th><th>Value</th></tr></thead>
+      <thead><tr><th>{t("envVars.key")}</th><th>{t("envVars.value")}</th></tr></thead>
       <tbody>
         {#each entries as entry}
           <tr>
@@ -63,7 +64,7 @@
             </td>
           </tr>
         {:else}
-          <tr><td colspan="2" class="empty-row">No variables</td></tr>
+          <tr><td colspan="2" class="empty-row">{t("envVars.empty")}</td></tr>
         {/each}
       </tbody>
     </table>
