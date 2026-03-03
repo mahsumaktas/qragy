@@ -42,7 +42,7 @@ function mount(app, deps) {
       logger.error("deploy", "deploy.sh not found");
     }
   });
-  logger.info("deploy", "Webhook endpoint aktif: POST /deploy");
+  logger.info("deploy", "Webhook endpoint active: POST /deploy");
 }
 
 module.exports = { mount };
