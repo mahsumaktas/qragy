@@ -1,5 +1,5 @@
 {
-  "baseUrl": "http://100.95.186.37:3001",
+  "baseUrl": "http://127.0.0.1:3001",
   "scenarios": [
     {
       "id": "S01-normal-troubleshoot",
@@ -35,14 +35,23 @@
     },
     {
       "id": "S02-early-escalation",
-      "title": "Basarisizlik ifadesi → sube kodu sor → aktarim",
-      "tags": ["escalation", "rapor"],
+      "title": "Ilk mesajda basarisizlik gecse bile once KB bilgisi ver",
+      "tags": ["escalation", "rapor", "kb-first"],
       "turns": [
         {
           "user": "Hesap fisi alamiyorum, lutfen sonra tekrar deneyiniz diyor. Yapamiyorum.",
           "expect": {
-            "shouldContainAny": ["kullanici ad", "sube kod", "firma", "yardimci"],
-            "shouldNotContainAny": ["islemler butonu", "dokumanlar butonu"],
+            "shouldContainAny": ["islemler", "dokumanlar", "hesap fisi"],
+            "shouldNotContain": ["sube kodu", "aktariyorum"],
+            "stateShouldBe": "topic_guided_support",
+            "handoffReady": false
+          }
+        },
+        {
+          "user": "Denedim, olmadi. Hala ayni hatayi aliyorum.",
+          "expect": {
+            "shouldContainAny": ["kullanici ad", "sube kod", "firma", "yardimci", "hata", "kontrol"],
+            "shouldNotContain": ["aktariyorum"],
             "handoffReady": false
           }
         },

@@ -6,7 +6,7 @@
 const http = require("http");
 const fs = require("fs");
 
-const BASE_URL = "http://100.95.186.37:3001/api/chat";
+const BASE_URL = process.env.STRESS_BASE_URL || "http://127.0.0.1:3001/api/chat";
 const TIMEOUT_MS = 15000;
 const DELAY_MS = 3200; // Rate limit: 20 req/min => 3s arasi guvenli
 const RESULTS_FILE = __dirname + "/stress-results.jsonl";

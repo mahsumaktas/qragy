@@ -1,8 +1,8 @@
 #!/bin/bash
 # Stress Test Script - 50 mesaj, 5 kategori
-# Target: http://100.95.186.37:3001/api/chat
+# Target: ${STRESS_BASE_URL:-http://127.0.0.1:3001/api/chat}
 
-BASE_URL="http://100.95.186.37:3001/api/chat"
+BASE_URL="${STRESS_BASE_URL:-http://127.0.0.1:3001/api/chat}"
 TIMEOUT=15
 RESULTS_FILE="/Users/mahsum/ObProjects/Qragy/tests/stress-results.jsonl"
 

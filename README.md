@@ -265,12 +265,12 @@ Keep `Qragy` public and customer deployments private by treating Qragy as the co
 
 - Keep public code in the Qragy repo.
 - Keep private KB, prompts, topics, branding, `.env`, uploads, and deploy scripts in a separate private instance directory.
-- Point Qragy to that directory with `QRAGY_INSTANCE_DIR=/srv/corpcx` or with explicit `QRAGY_*` path overrides.
+- Point Qragy to that directory with `QRAGY_INSTANCE_DIR=/srv/qragy-instance` or with explicit `QRAGY_*` path overrides.
 
 Example private instance layout:
 
 ```text
-/srv/corpcx/
+/srv/qragy-instance/
 ├── .env
 ├── agent/
 ├── memory/

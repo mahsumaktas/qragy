@@ -61,26 +61,26 @@ describe("Config", () => {
   });
   it("supports instance-root path overrides", () => {
     const { loadConfig } = require("../../src/config/index.js");
-    const cfg = loadConfig({ QRAGY_INSTANCE_DIR: "/srv/corpcx" });
-    expect(cfg.agentDir).toBe("/srv/corpcx/agent");
-    expect(cfg.topicsDir).toBe("/srv/corpcx/agent/topics");
-    expect(cfg.memoryDir).toBe("/srv/corpcx/memory");
-    expect(cfg.dataDir).toBe("/srv/corpcx/data");
-    expect(cfg.publicDir).toBe("/srv/corpcx/public");
-    expect(cfg.envDir).toBe("/srv/corpcx");
-    expect(cfg.knowledgeBaseCsvFile).toBe("/srv/corpcx/data/knowledge_base.csv");
+    const cfg = loadConfig({ QRAGY_INSTANCE_DIR: "/srv/qragy-instance" });
+    expect(cfg.agentDir).toBe("/srv/qragy-instance/agent");
+    expect(cfg.topicsDir).toBe("/srv/qragy-instance/agent/topics");
+    expect(cfg.memoryDir).toBe("/srv/qragy-instance/memory");
+    expect(cfg.dataDir).toBe("/srv/qragy-instance/data");
+    expect(cfg.publicDir).toBe("/srv/qragy-instance/public");
+    expect(cfg.envDir).toBe("/srv/qragy-instance");
+    expect(cfg.knowledgeBaseCsvFile).toBe("/srv/qragy-instance/data/knowledge_base.csv");
   });
   it("supports explicit QRAGY_* path overrides", () => {
     const { loadConfig } = require("../../src/config/index.js");
     const cfg = loadConfig({
-      QRAGY_INSTANCE_DIR: "/srv/corpcx",
+      QRAGY_INSTANCE_DIR: "/srv/qragy-instance",
       QRAGY_AGENT_DIR: "tenant/agent",
       QRAGY_PUBLIC_DIR: "tenant/public",
       QRAGY_KNOWLEDGE_BASE_CSV: "tenant/data/faq.csv",
     });
-    expect(cfg.agentDir).toBe("/srv/corpcx/tenant/agent");
-    expect(cfg.topicsDir).toBe("/srv/corpcx/tenant/agent/topics");
-    expect(cfg.publicDir).toBe("/srv/corpcx/tenant/public");
-    expect(cfg.knowledgeBaseCsvFile).toBe("/srv/corpcx/tenant/data/faq.csv");
+    expect(cfg.agentDir).toBe("/srv/qragy-instance/tenant/agent");
+    expect(cfg.topicsDir).toBe("/srv/qragy-instance/tenant/agent/topics");
+    expect(cfg.publicDir).toBe("/srv/qragy-instance/tenant/public");
+    expect(cfg.knowledgeBaseCsvFile).toBe("/srv/qragy-instance/tenant/data/faq.csv");
   });
 });

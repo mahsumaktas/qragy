@@ -80,7 +80,7 @@ function createAgentConfigService(deps) {
   let MEMORY_TEMPLATE = readJsonFileSafe(path.join(memoryDir, "ticket-template.json"), DEFAULT_MEMORY_TEMPLATE);
   let CONVERSATION_SCHEMA = readJsonFileSafe(
     path.join(memoryDir, "conversation-schema.json"),
-    { sessionFields: { currentTopic: null, conversationState: "welcome", collectedInfo: {}, turnCount: 0, escalationTriggered: false } }
+    { sessionFields: { currentTopic: null, conversationState: "welcome_or_greet", collectedInfo: {}, turnCount: 0, escalationTriggered: false } }
   );
   let TOPIC_INDEX = readJsonFileSafe(path.join(topicsDir, "_index.json"), { topics: [] });
   let TOPIC_INDEX_SUMMARY = TOPIC_INDEX.topics.map(
@@ -99,7 +99,7 @@ function createAgentConfigService(deps) {
     DOD_TEXT = readTextFileSafe(path.join(agentDir, "definition-of-done.md"));
     OUTPUT_FILTER_TEXT = readTextFileSafe(path.join(agentDir, "output-filter.md"));
     MEMORY_TEMPLATE = readJsonFileSafe(path.join(memoryDir, "ticket-template.json"), DEFAULT_MEMORY_TEMPLATE);
-    CONVERSATION_SCHEMA = readJsonFileSafe(path.join(memoryDir, "conversation-schema.json"), { sessionFields: { currentTopic: null, conversationState: "welcome", collectedInfo: {}, turnCount: 0, escalationTriggered: false } });
+    CONVERSATION_SCHEMA = readJsonFileSafe(path.join(memoryDir, "conversation-schema.json"), { sessionFields: { currentTopic: null, conversationState: "welcome_or_greet", collectedInfo: {}, turnCount: 0, escalationTriggered: false } });
     TOPIC_INDEX = readJsonFileSafe(path.join(topicsDir, "_index.json"), { topics: [] });
     TOPIC_INDEX_SUMMARY = TOPIC_INDEX.topics.map((t) => `[${t.id}] ${t.title}: ${t.keywords.join(", ")}`).join("\n");
     topicFileCache.clear();

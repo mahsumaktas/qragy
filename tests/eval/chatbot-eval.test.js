@@ -15,7 +15,8 @@
 const { judgeTurn } = require("./judge.js");
 const scenarioData = require("./scenarios.json");
 
-const BASE_URL = process.env.EVAL_BASE_URL || scenarioData.baseUrl;
+const DEFAULT_BASE_URL = "http://127.0.0.1:3001";
+const BASE_URL = process.env.EVAL_BASE_URL || scenarioData.baseUrl || DEFAULT_BASE_URL;
 const API_PATH = "/api/chat";
 
 // Her senaryo icin benzersiz session ID

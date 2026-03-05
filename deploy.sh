@@ -2,7 +2,7 @@
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PM2_APP_NAME="${QRAGY_PM2_APP_NAME:-corpcx}"
+PM2_APP_NAME="${QRAGY_PM2_APP_NAME:-qragy}"
 DEPLOY_REMOTE="${QRAGY_DEPLOY_REMOTE:-origin}"
 DEPLOY_BRANCH="${QRAGY_DEPLOY_BRANCH:-$(git -C "$APP_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo HEAD)}"
 BUILD_ADMIN_V2="${QRAGY_BUILD_ADMIN_V2:-0}"

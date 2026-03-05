@@ -2,7 +2,7 @@
  * Run all eval scenarios via SSE endpoint (3-run consensus)
  * Usage: node tests/eval/run-all-test.js
  */
-const BASE_URL = "http://100.95.186.37:3001";
+const BASE_URL = process.env.EVAL_BASE_URL || "http://127.0.0.1:3001";
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 
 async function main() {
