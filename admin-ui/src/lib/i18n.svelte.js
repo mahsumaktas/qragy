@@ -11,13 +11,16 @@ function detectInitialLocale() {
   return browserLang.startsWith("tr") ? "tr" : "en";
 }
 
-let locale = $state(detectInitialLocale());
+const initialLocale = detectInitialLocale();
+let locale = $state(initialLocale);
 
-$effect(() => {
+function syncDocumentLang(lang) {
   if (typeof document !== "undefined") {
-    document.documentElement.lang = locale;
+    document.documentElement.lang = lang;
   }
-});
+}
+
+syncDocumentLang(initialLocale);
 
 export function getLocale() {
   return locale;
@@ -27,6 +30,7 @@ export function setLocale(lang) {
   if (!LANGS[lang]) return;
   locale = lang;
   globalThis.localStorage?.setItem(STORAGE_KEY, lang);
+  syncDocumentLang(lang);
 }
 
 export function getDateLocale() {
