@@ -6,7 +6,6 @@
   import { getBotSettingsQualityReport } from "../../lib/agentConfigQuality.js";
   import ExpandCard from "../../components/ui/ExpandCard.svelte";
   import Button from "../../components/ui/Button.svelte";
-  import Toggle from "../../components/ui/Toggle.svelte";
   import Badge from "../../components/ui/Badge.svelte";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
 
@@ -53,12 +52,17 @@
     },
   ];
 
+  const DEFAULT_RUNTIME_IDENTITY = {
+    botName: "QRAGY Bot",
+    companyName: "",
+  };
+
   let loading = $state(true);
   let search = $state("");
   let files = $state({});
   let memoryFiles = $state({});
-  let chatFlow = $state({});
-  let siteConfig = $state({});
+  let identityConfig = $state({ ...DEFAULT_RUNTIME_IDENTITY });
+  let identitySaving = $state(false);
 
   const parsedMemoryFiles = $derived(Object.fromEntries(
     FILE_GROUPS
@@ -127,11 +131,10 @@
         api.get("admin/agent/files/" + item.filename).catch(() => ({ content: "" }))
       );
 
-      const [fileResponses, memoryResponse, flowResponse, siteResponse] = await Promise.all([
+      const [fileResponses, memoryResponse, identityResponse] = await Promise.all([
         Promise.all(requests),
         api.get("admin/agent/memory").catch(() => ({ files: {} })),
-        api.get("admin/chat-flow").catch(() => ({})),
-        api.get("admin/site-config").catch(() => ({})),
+        api.get("admin/runtime-identity").catch(() => ({ config: DEFAULT_RUNTIME_IDENTITY })),
       ]);
 
       files = Object.fromEntries(
@@ -144,8 +147,10 @@
         "conversation-schema.json": JSON.stringify(memoryPayload["conversation-schema.json"] || {}, null, 2),
       };
 
-      chatFlow = flowResponse.config || flowResponse || {};
-      siteConfig = siteResponse.config || siteResponse || {};
+      identityConfig = {
+        ...DEFAULT_RUNTIME_IDENTITY,
+        ...(identityResponse.config || identityResponse || {}),
+      };
     } catch (e) {
       showToast(t("botSettings.loadError", { msg: e.message }), "error");
     } finally {
@@ -182,21 +187,23 @@
     }
   }
 
-  async function saveChatFlow() {
+  async function saveIdentity() {
+    identitySaving = true;
     try {
-      await api.put("admin/chat-flow", { config: chatFlow });
-      showToast(t("botSettings.chatFlowSaved"), "success");
+      const payload = {
+        botName: String(identityConfig.botName || "").trim() || DEFAULT_RUNTIME_IDENTITY.botName,
+        companyName: String(identityConfig.companyName || "").trim(),
+      };
+      const res = await api.put("admin/runtime-identity", { config: payload });
+      identityConfig = {
+        ...DEFAULT_RUNTIME_IDENTITY,
+        ...(res.config || payload),
+      };
+      showToast(t("botSettings.runtimeIdentitySaved"), "success");
     } catch (e) {
       showToast(t("common.error", { msg: e.message }), "error");
-    }
-  }
-
-  async function saveSiteConfig() {
-    try {
-      await api.put("admin/site-config", { config: siteConfig });
-      showToast(t("botSettings.siteConfigSaved"), "success");
-    } catch (e) {
-      showToast(t("common.error", { msg: e.message }), "error");
+    } finally {
+      identitySaving = false;
     }
   }
 
@@ -240,6 +247,68 @@
       <strong>{qualityReport.warningCount}</strong>
       <p>{t("botSettings.qualityWarningsHelp")}</p>
     </div>
+  </div>
+
+  <div class="ops-grid">
+    <section class="config-card">
+      <div class="group-head">
+        <div>
+          <h2>{t("botSettings.runtimeIdentityTitle")}</h2>
+          <p>{t("botSettings.runtimeIdentityText")}</p>
+        </div>
+      </div>
+
+      <div class="flow-grid">
+        <label class="form-group">
+          <span>{t("botSettings.botName")}</span>
+          <input class="input" bind:value={identityConfig.botName} />
+        </label>
+        <label class="form-group">
+          <span>{t("botSettings.companyName")}</span>
+          <input class="input" bind:value={identityConfig.companyName} />
+        </label>
+      </div>
+
+      <div class="meta-badges identity-meta">
+        <Badge variant="gray">BOT_NAME</Badge>
+        <Badge variant="gray">COMPANY_NAME</Badge>
+      </div>
+      <p class="identity-help">{t("botSettings.runtimeIdentityHelp")}</p>
+
+      <div class="card-actions">
+        <Button onclick={saveIdentity} variant="primary" size="sm" disabled={identitySaving}>
+          {identitySaving ? t("common.saving") : t("common.save")}
+        </Button>
+      </div>
+    </section>
+
+    <section class="config-card">
+      <div class="group-head">
+        <div>
+          <h2>{t("botSettings.editMapTitle")}</h2>
+          <p>{t("botSettings.editMapIntro")}</p>
+        </div>
+      </div>
+
+      <div class="guide-list ownership-list">
+        <div class="guide-item">
+          <strong>{t("botSettings.editMapBotTitle")}</strong>
+          <span>{t("botSettings.editMapBotText")}</span>
+        </div>
+        <div class="guide-item">
+          <strong>{t("botSettings.editMapFlowTitle")}</strong>
+          <span>{t("botSettings.editMapFlowText")}</span>
+        </div>
+        <div class="guide-item">
+          <strong>{t("botSettings.editMapSiteTitle")}</strong>
+          <span>{t("botSettings.editMapSiteText")}</span>
+        </div>
+        <div class="guide-item">
+          <strong>{t("botSettings.editMapEnvTitle")}</strong>
+          <span>{t("botSettings.editMapEnvText")}</span>
+        </div>
+      </div>
+    </section>
   </div>
 
   <div class="guide-card">
@@ -298,6 +367,21 @@
             </div>
           </div>
 
+          {#if item.kind === "memory"}
+            <div class="memory-note">
+              <strong>
+                {item.filename === "ticket-template.json"
+                  ? t("botSettings.memoryPrimaryTitle")
+                  : t("botSettings.memorySchemaTitle")}
+              </strong>
+              <span>
+                {item.filename === "ticket-template.json"
+                  ? t("botSettings.memoryPrimaryText")
+                  : t("botSettings.memorySchemaText")}
+              </span>
+            </div>
+          {/if}
+
           {#if getWarnings(item.filename).length}
             <div class="warning-list">
               {#each getWarnings(item.filename) as warning}
@@ -326,68 +410,6 @@
   {:else}
     <div class="empty-state">{t("common.noData")}</div>
   {/each}
-
-  <section class="group-section">
-    <div class="group-head">
-      <div>
-        <h2>{t("botSettings.chatFlow")}</h2>
-        <p>{t("botSettings.chatFlowSummary")}</p>
-      </div>
-    </div>
-    <div class="config-card">
-      <div class="flow-grid">
-        <div class="form-group">
-          <label>{t("botSettings.greetingMessage")}
-            <input class="input" bind:value={chatFlow.greetingMessage} />
-          </label>
-        </div>
-        <div class="form-group">
-          <label>{t("botSettings.offHoursMessage")}
-            <input class="input" bind:value={chatFlow.offHoursMessage} />
-          </label>
-        </div>
-        <div class="form-group">
-          <label>{t("botSettings.autoClose")}
-            <input class="input" type="number" bind:value={chatFlow.autoCloseMinutes} />
-          </label>
-        </div>
-        <div class="form-row">
-          <label>{t("botSettings.greetingEnabled")}
-            <Toggle bind:checked={chatFlow.greetingEnabled} />
-          </label>
-        </div>
-      </div>
-      <div class="card-actions">
-        <Button onclick={saveChatFlow} variant="primary" size="sm">{t("common.save")}</Button>
-      </div>
-    </div>
-  </section>
-
-  <section class="group-section">
-    <div class="group-head">
-      <div>
-        <h2>{t("botSettings.generalSettings")}</h2>
-        <p>{t("botSettings.generalSettingsSummary")}</p>
-      </div>
-    </div>
-    <div class="config-card">
-      <div class="flow-grid">
-        <div class="form-group">
-          <label>{t("botSettings.botName")}
-            <input class="input" bind:value={siteConfig.botName} />
-          </label>
-        </div>
-        <div class="form-group">
-          <label>{t("botSettings.companyName")}
-            <input class="input" bind:value={siteConfig.companyName} />
-          </label>
-        </div>
-      </div>
-      <div class="card-actions">
-        <Button onclick={saveSiteConfig} variant="primary" size="sm">{t("common.save")}</Button>
-      </div>
-    </div>
-  </section>
 {/if}
 
 <style>
@@ -461,6 +483,13 @@
     display: grid;
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
     gap: 18px;
+    margin-bottom: 16px;
+  }
+
+  .ops-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
     margin-bottom: 16px;
   }
 
@@ -556,6 +585,28 @@
     margin-bottom: 12px;
   }
 
+  .memory-note {
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+    background: rgba(37, 99, 235, 0.06);
+    border: 1px solid rgba(37, 99, 235, 0.12);
+  }
+
+  .memory-note strong {
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .memory-note span,
+  .identity-help {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
   .warning-item {
     padding: 10px 12px;
     border-radius: 12px;
@@ -604,6 +655,14 @@
     margin-top: 12px;
   }
 
+  .identity-meta {
+    margin-top: 12px;
+  }
+
+  .ownership-list {
+    height: 100%;
+  }
+
   .flow-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -616,17 +675,10 @@
     gap: 4px;
   }
 
-  .form-group label,
-  .form-row label {
+  .form-group > span {
     font-size: 12px;
     font-weight: 600;
     color: var(--text-secondary);
-  }
-
-  .form-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
   }
 
   .input {
@@ -658,6 +710,7 @@
 
   @media (max-width: 980px) {
     .summary-grid,
+    .ops-grid,
     .guide-card,
     .flow-grid {
       grid-template-columns: 1fr;

@@ -41,10 +41,13 @@
 {:else}
   <div class="card">
     <div class="form-grid">
-      <div class="form-group"><span class="lbl">{t("whatsapp.apiToken")}</span><input class="input" type="password" bind:value={config.accessToken} /></div>
+      <div class="form-group">
+        <span class="lbl">{t("whatsapp.apiToken")}</span>
+        <input class="input" type="password" bind:value={config.accessToken} />
+        <span class="hint">{t("whatsapp.tokenHint")}</span>
+      </div>
       <div class="form-group"><span class="lbl">{t("whatsapp.phoneId")}</span><input class="input" bind:value={config.phoneNumberId} /></div>
       <div class="form-group"><span class="lbl">{t("whatsapp.verifyToken")}</span><input class="input" bind:value={config.verifyToken} /></div>
-      <div class="form-group"><span class="lbl">{t("whatsapp.businessAccountId")}</span><input class="input" bind:value={config.businessAccountId} /></div>
       <div class="form-row"><span class="lbl">{t("whatsapp.active")}</span><Toggle bind:checked={config.enabled} /></div>
     </div>
   </div>
@@ -66,6 +69,7 @@
   .form-row { display: flex; align-items: center; justify-content: space-between; }
   .lbl { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
   .input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; color: var(--text); outline: none; }
+  .hint { font-size: 11px; color: var(--text-muted); }
   .webhook-card { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
   .card-title { font-size: 14px; font-weight: 600; margin: 0; }
   .desc { font-size: 12px; color: var(--text-secondary); margin: 0; }

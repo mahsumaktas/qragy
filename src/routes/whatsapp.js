@@ -20,10 +20,17 @@ function mount(app, deps) {
 
   app.put("/api/admin/whatsapp", requireAdminAccess, (req, res) => {
     const body = req.body || {};
+    const currentConfig = getWhatsAppConfig();
+    const rawAccessToken = (body.accessToken || "").trim();
+    const accessToken =
+      rawAccessToken.includes("...") && currentConfig.accessToken
+        ? currentConfig.accessToken
+        : rawAccessToken;
+
     saveWhatsAppConfig({
       enabled: Boolean(body.enabled),
       phoneNumberId: (body.phoneNumberId || "").trim(),
-      accessToken: (body.accessToken || "").trim(),
+      accessToken,
       verifyToken: (body.verifyToken || "").trim(),
     });
     res.json({ ok: true });

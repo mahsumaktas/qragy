@@ -26,8 +26,6 @@
   import WhatsApp from "./panels/ayarla/WhatsApp.svelte";
   import Webhooks from "./panels/ayarla/Webhooks.svelte";
   import EnvVars from "./panels/ayarla/EnvVars.svelte";
-  import AgentFiles from "./panels/ayarla/AgentFiles.svelte";
-  import MemoryTemplates from "./panels/ayarla/MemoryTemplates.svelte";
   // Panels — Analiz
   import Analytics from "./panels/analiz/Analytics.svelte";
   import Eval from "./panels/analiz/Eval.svelte";
@@ -111,10 +109,6 @@
     <Webhooks />
   {:else if panel === "env-vars"}
     <EnvVars />
-  {:else if panel === "agent-files"}
-    <AgentFiles />
-  {:else if panel === "memory-templates"}
-    <MemoryTemplates />
   {:else if panel === "analytics"}
     <Analytics />
   {:else if panel === "eval"}

@@ -1,10 +1,15 @@
 import { DEFAULT_PANEL } from "./constants.js";
 
+const PANEL_ALIASES = {
+  "agent-files": "bot-settings",
+  "memory-templates": "bot-settings",
+};
+
 let currentPanel = $state(parseHash());
 
 function parseHash() {
   const hash = window.location.hash.slice(1);
-  return hash || DEFAULT_PANEL;
+  return PANEL_ALIASES[hash] || hash || DEFAULT_PANEL;
 }
 
 export function getPanel() {

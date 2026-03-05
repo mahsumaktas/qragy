@@ -35,8 +35,6 @@ export const NAV_GROUPS = [
       { id: "whatsapp", labelKey: "nav.whatsapp", icon: "whatsapp" },
       { id: "webhooks", labelKey: "nav.webhooks", icon: "webhook" },
       { id: "env-vars", labelKey: "nav.envVars", icon: "env" },
-      { id: "agent-files", labelKey: "nav.agentFiles", icon: "file" },
-      { id: "memory-templates", labelKey: "nav.memoryTemplates", icon: "memory" },
     ],
   },
   {

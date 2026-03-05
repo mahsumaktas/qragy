@@ -80,6 +80,11 @@
   <LoadingSpinner message={t("common.loading")} />
 {:else}
   <div class="card">
+    <div class="card-title">{t("zendesk.sourceOfTruthTitle")}</div>
+    <p class="desc">{t("zendesk.sourceOfTruthHint")}</p>
+  </div>
+
+  <div class="card">
     <div class="card-title">{t("zendesk.connectionSettings")}</div>
     <div class="form-grid">
       <div class="form-group"><span class="lbl">{t("zendesk.subdomain")}</span><input class="input" bind:value={config.subdomain} oninput={() => testPassed = false} placeholder={t("zendesk.subdomainPlaceholder")} /></div>

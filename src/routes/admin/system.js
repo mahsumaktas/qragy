@@ -175,6 +175,21 @@ function mount(app, deps) {
     }
   });
 
+  app.get("/api/admin/runtime-identity", requireAdminAccess, (_req, res) => {
+    try {
+      const env = readEnvFile();
+      return res.json({
+        ok: true,
+        config: {
+          botName: (env.BOT_NAME || "QRAGY Bot").trim() || "QRAGY Bot",
+          companyName: (env.COMPANY_NAME || "").trim(),
+        },
+      });
+    } catch (err) {
+      return res.status(500).json({ error: safeError(err, "api") });
+    }
+  });
+
   // ── Env: Update ─────────────────────────────────────────────────────────
   app.put("/api/admin/env", requireAdminAccess, (req, res) => {
     try {
@@ -195,6 +210,33 @@ function mount(app, deps) {
         setTimeout(checkLLMHealth, 500);
       }
       return res.json({ ok: true, message: "Env updated and applied immediately." });
+    } catch (err) {
+      return res.status(500).json({ error: safeError(err, "api") });
+    }
+  });
+
+  app.put("/api/admin/runtime-identity", requireAdminAccess, (req, res) => {
+    try {
+      const config = req.body?.config;
+      if (!config || typeof config !== "object") {
+        return res.status(400).json({ error: "config object is required." });
+      }
+
+      const botName = String(config.botName || "").trim() || "QRAGY Bot";
+      const companyName = String(config.companyName || "").trim();
+
+      writeEnvFile({
+        BOT_NAME: botName,
+        COMPANY_NAME: companyName,
+      });
+      reloadRuntimeEnv();
+      loadAllAgentConfig();
+
+      return res.json({
+        ok: true,
+        config: { botName, companyName },
+        message: "Runtime identity updated.",
+      });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });
     }
