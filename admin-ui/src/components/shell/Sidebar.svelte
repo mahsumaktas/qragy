@@ -3,7 +3,14 @@
   import { getPanel, navigate } from "../../lib/router.svelte.js";
   import { t } from "../../lib/i18n.svelte.js";
 
-  let { mobileOpen = $bindable(false) } = $props();
+  let {
+    mobileOpen = $bindable(false),
+    onOpenCommandPalette = () => {},
+  } = $props();
+
+  const shortcutLabel = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform)
+    ? "Cmd+K"
+    : "Ctrl+K";
 
   const ICONS = {
     dashboard: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`,
@@ -32,8 +39,8 @@
     status: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
   };
 
-  function handleClick(e, id) {
-    e.preventDefault();
+  function handleClick(event, id) {
+    event.preventDefault();
     navigate(id);
     mobileOpen = false;
   }
@@ -45,143 +52,277 @@
 {/if}
 
 <aside class="sidebar" class:mobile-open={mobileOpen}>
-  <div class="logo">
-    <span class="logo-icon">Q</span>
-    <span class="logo-text">Qragy</span>
-  </div>
+  <button class="brand" onclick={(e) => handleClick(e, "dashboard")}>
+    <span class="brand-mark">Q</span>
+    <span class="brand-copy">
+      <span class="brand-title">Qragy Admin</span>
+      <span class="brand-subtitle">{t("shell.productTagline")}</span>
+    </span>
+  </button>
+
+  <button class="jump-button" onclick={onOpenCommandPalette}>
+    <span class="jump-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </span>
+    <span class="jump-copy">
+      <span class="jump-title">{t("sidebar.search")}</span>
+      <span class="jump-subtitle">{t("sidebar.shortcutHint", { shortcut: shortcutLabel })}</span>
+    </span>
+    <kbd>{shortcutLabel}</kbd>
+  </button>
 
   <nav class="nav">
     {#each NAV_GROUPS as group}
-      <div class="nav-group-label">{t(group.labelKey)}</div>
-      {#each group.items as item}
-        <a
-          href="#{item.id}"
-          class="nav-item"
-          class:active={getPanel() === item.id}
-          onclick={(e) => handleClick(e, item.id)}
-        >
-          <span class="nav-icon">{@html ICONS[item.icon] || ""}</span>
-          <span class="nav-label">{t(item.labelKey)}</span>
-        </a>
-      {/each}
+      <section class="nav-group">
+        <div class="nav-group-head">
+          <div class="nav-group-label">{t(group.labelKey)}</div>
+          <div class="nav-group-desc">{t(group.descriptionKey)}</div>
+        </div>
+
+        <div class="nav-list">
+          {#each group.items as item}
+            <a
+              href={"#" + item.id}
+              class="nav-item"
+              class:active={getPanel() === item.id}
+              onclick={(event) => handleClick(event, item.id)}
+            >
+              <span class="nav-icon">{@html ICONS[item.icon] || ""}</span>
+              <span class="nav-label">{t(item.labelKey)}</span>
+              {#if getPanel() === item.id}
+                <span class="nav-active-dot"></span>
+              {/if}
+            </a>
+          {/each}
+        </div>
+      </section>
     {/each}
   </nav>
+
+  <div class="sidebar-footer">
+    <div class="footer-title">{t("sidebar.footerTitle")}</div>
+    <div class="footer-text">{t("sidebar.footerText")}</div>
+  </div>
 </aside>
 
 <style>
   .sidebar {
     width: var(--sidebar-w);
-    background: var(--bg-card);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.98));
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
     overflow: hidden;
-    transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 100;
-  }
-  .sidebar:hover {
-    width: var(--sidebar-exp);
+    backdrop-filter: blur(10px);
   }
 
-  .logo {
-    height: var(--header-h);
+  .brand {
+    height: auto;
+    padding: 18px 18px 16px;
     display: flex;
     align-items: center;
-    padding: 0 14px;
-    gap: 10px;
+    gap: 12px;
+    border: none;
     border-bottom: 1px solid var(--border-light);
-    flex-shrink: 0;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
   }
-  .logo-icon {
-    width: 28px;
-    height: 28px;
-    background: var(--accent);
+
+  .brand-mark {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), #4f8df5);
     color: #fff;
-    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
+    font-size: 20px;
+    font-weight: 800;
+    flex-shrink: 0;
+    box-shadow: 0 10px 24px rgba(15, 108, 189, 0.22);
+  }
+
+  .brand-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .brand-title {
     font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .brand-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .jump-button {
+    margin: 14px 14px 8px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .jump-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--accent-light);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
   }
-  .logo-text {
-    font-weight: 700;
-    font-size: 16px;
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity 0.15s;
+
+  .jump-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
   }
-  .sidebar:hover .logo-text {
-    opacity: 1;
+
+  .jump-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .jump-subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  kbd {
+    padding: 2px 7px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: inherit;
+    white-space: nowrap;
   }
 
   .nav {
     flex: 1;
     overflow-y: auto;
-    overflow-x: hidden;
-    padding: 8px 8px 16px;
+    padding: 6px 12px 16px;
+  }
+
+  .nav-group + .nav-group {
+    margin-top: 12px;
+  }
+
+  .nav-group-head {
+    padding: 10px 8px 8px;
   }
 
   .nav-group-label {
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--text-muted);
-    padding: 12px 8px 4px;
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity 0.15s;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 2px;
   }
-  .sidebar:hover .nav-group-label {
-    opacity: 1;
+
+  .nav-group-desc {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--text-secondary);
+  }
+
+  .nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .nav-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: var(--radius-sm);
+    gap: 12px;
+    padding: 11px 12px;
+    border-radius: 14px;
     color: var(--text-secondary);
-    font-size: 13px;
-    font-weight: 500;
     text-decoration: none;
-    white-space: nowrap;
-    transition: all 0.15s;
-    border-left: 3px solid transparent;
+    transition: all 0.15s ease;
     cursor: pointer;
+    position: relative;
   }
+
   .nav-item:hover {
     background: var(--bg-hover);
     color: var(--text);
   }
+
   .nav-item.active {
-    background: var(--accent-light);
+    background: linear-gradient(180deg, var(--accent-light), #ffffff);
     color: var(--accent);
-    border-left-color: var(--accent);
+    box-shadow: inset 0 0 0 1px rgba(15, 108, 189, 0.12);
   }
 
   .nav-icon {
-    flex-shrink: 0;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
 
   .nav-label {
-    opacity: 0;
-    transition: opacity 0.15s;
-  }
-  .sidebar:hover .nav-label {
-    opacity: 1;
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
   }
 
-  /* Mobile overlay */
+  .nav-active-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .sidebar-footer {
+    margin: 0 14px 14px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.72);
+  }
+
+  .footer-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .footer-text {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+
   .sidebar-overlay {
     display: none;
   }
@@ -194,23 +335,19 @@
       bottom: 0;
       width: 0;
       z-index: 200;
+      box-shadow: none;
     }
-    .sidebar:hover {
-      width: 0;
-    }
+
     .sidebar.mobile-open {
-      width: var(--sidebar-exp);
+      width: min(88vw, 320px);
+      box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
     }
-    .sidebar.mobile-open .logo-text,
-    .sidebar.mobile-open .nav-group-label,
-    .sidebar.mobile-open .nav-label {
-      opacity: 1;
-    }
+
     .sidebar-overlay {
       display: block;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.3);
+      background: rgba(15, 23, 42, 0.3);
       z-index: 199;
     }
   }

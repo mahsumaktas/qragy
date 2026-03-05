@@ -5,6 +5,7 @@
   import { t } from "../../lib/i18n.svelte.js";
   import { showConfirm } from "../../lib/confirm.svelte.js";
   import { fmtRelative } from "../../lib/format.js";
+  import { formatMessageCount, translateSource, translateStatus } from "../../lib/labels.js";
   import ChatBubble from "../../components/chat/ChatBubble.svelte";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
   import Badge from "../../components/ui/Badge.svelte";
@@ -79,11 +80,11 @@
         >
           <div class="conv-top">
             <span class="conv-session">{conv.sessionId?.slice(-8) || "?"}</span>
-            <Badge variant={conv.status === "active" ? "green" : "yellow"}>{conv.status}</Badge>
+            <Badge variant={conv.status === "active" ? "green" : "yellow"}>{translateStatus(conv.status)}</Badge>
           </div>
           <div class="conv-msg">{conv.lastUserMessage || "..."}</div>
           <div class="conv-meta">
-            <span>{conv.messageCount || 0} messages</span>
+            <span>{formatMessageCount(conv.messageCount)}</span>
             <span>{fmtRelative(conv.updatedAt)}</span>
           </div>
         </div>
@@ -97,7 +98,7 @@
       {#if selected}
         <div class="chat-header">
           <strong>{selected.sessionId?.slice(-8)}</strong>
-          <span class="chat-meta">{selected.source || "web"} &middot; {selected.messageCount} messages</span>
+          <span class="chat-meta">{translateSource(selected.source)} &middot; {formatMessageCount(selected.messageCount)}</span>
         </div>
         <div class="chat-body">
           {#each selected.chatHistory || [] as msg}
@@ -125,11 +126,11 @@
           </div>
           <div class="detail-row">
             <span class="detail-label">{t("liveChats.status")}</span>
-            <span class="detail-val">{selected.status}</span>
+            <span class="detail-val">{translateStatus(selected.status)}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">{t("liveChats.source")}</span>
-            <span class="detail-val">{selected.source || "web"}</span>
+            <span class="detail-val">{translateSource(selected.source)}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">{t("liveChats.created")}</span>

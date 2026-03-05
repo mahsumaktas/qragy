@@ -1,6 +1,7 @@
 <script>
   import ChatBubble from "./ChatBubble.svelte";
   import { onMount } from "svelte";
+  import { t } from "../../lib/i18n.svelte.js";
 
   let { messages = [] } = $props();
   let container;
@@ -24,7 +25,7 @@
   {#each messages as msg}
     <ChatBubble sender={msg.sender || msg.role} message={msg.text || msg.content || msg.message} timestamp={msg.timestamp || ""} />
   {:else}
-    <div class="empty-chat">Henuz mesaj yok</div>
+    <div class="empty-chat">{t("common.noMessages")}</div>
   {/each}
 </div>
 

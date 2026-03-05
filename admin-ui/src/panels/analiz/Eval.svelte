@@ -204,7 +204,7 @@
                 <td>{h.total}</td>
                 <td class="pass-cell">{h.passed}</td>
                 <td class="fail-cell">{h.failed}</td>
-                <td><Badge variant={h.green ? "green" : "red"}>%{h.passRate}</Badge></td>
+                <td><Badge variant={h.green ? "green" : "red"}>{h.passRate}%</Badge></td>
                 <td class="muted">{h.durationMs ? (h.durationMs / 1000).toFixed(1) + "s" : "-"}</td>
               </tr>
             {/each}

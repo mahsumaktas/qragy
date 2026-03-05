@@ -5,6 +5,7 @@
   import { t } from "../../lib/i18n.svelte.js";
   import { fmtDate, truncate } from "../../lib/format.js";
   import { getToken } from "../../lib/auth.svelte.js";
+  import { translatePriority, translateSource, translateStatus } from "../../lib/labels.js";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
   import Badge from "../../components/ui/Badge.svelte";
   import Button from "../../components/ui/Button.svelte";
@@ -173,7 +174,7 @@
     <Button onclick={() => (selectedTicket = null)} variant="ghost" size="sm">{t("common.back")}</Button>
     <div class="detail-header">
       <h2>{selectedTicket.id}</h2>
-      <Badge variant={statusColors[selectedTicket.status] || "gray"}>{selectedTicket.status?.replace(/_/g, " ")}</Badge>
+      <Badge variant={statusColors[selectedTicket.status] || "gray"}>{translateStatus(selectedTicket.status)}</Badge>
     </div>
     <div class="ticket-actions">
       <div class="action-group">
@@ -210,8 +211,8 @@
         <div class="info-row"><span>{t("search.company")}</span><span>{selectedTicket.companyName || "-"}</span></div>
         <div class="info-row"><span>{t("search.fullName")}</span><span>{selectedTicket.fullName || "-"}</span></div>
         <div class="info-row"><span>{t("search.phone")}</span><span>{selectedTicket.phone || "-"}</span></div>
-        <div class="info-row"><span>{t("search.source")}</span><span>{selectedTicket.source || "-"}</span></div>
-        <div class="info-row"><span>{t("search.priority")}</span><span>{selectedTicket.priority || "normal"}</span></div>
+        <div class="info-row"><span>{t("search.source")}</span><span>{selectedTicket.source ? translateSource(selectedTicket.source) : "-"}</span></div>
+        <div class="info-row"><span>{t("search.priority")}</span><span>{translatePriority(selectedTicket.priority)}</span></div>
         <div class="info-row"><span>{t("search.assignedTo")}</span><span>{selectedTicket.assignedTo || "-"}</span></div>
         <div class="info-row"><span>{t("search.created")}</span><span>{fmtDate(selectedTicket.createdAt)}</span></div>
         <div class="info-row"><span>{t("search.summary")}</span><span>{selectedTicket.issueSummary || "-"}</span></div>
@@ -256,17 +257,17 @@
         {#each tickets as tk}
           <tr>
             <td class="mono">{tk.id}</td>
-            <td><Badge variant={statusColors[tk.status] || "gray"}>{tk.status?.replace(/_/g, " ")}</Badge></td>
+            <td><Badge variant={statusColors[tk.status] || "gray"}>{translateStatus(tk.status)}</Badge></td>
             <td>
               <span class="priority" class:high={tk.priority === "high"} class:low={tk.priority === "low"}>
-                {tk.priority || "normal"}
+                {translatePriority(tk.priority)}
               </span>
             </td>
             <td>{tk.branchCode || "-"}</td>
             <td>{truncate(tk.issueSummary || "", 40)}</td>
-            <td>{tk.source || "web"}</td>
+            <td>{translateSource(tk.source)}</td>
             <td>{fmtDate(tk.createdAt)}</td>
-            <td><Button onclick={() => openTicket(tk.id)} variant="ghost" size="sm">Open</Button></td>
+            <td><Button onclick={() => openTicket(tk.id)} variant="ghost" size="sm">{t("common.open")}</Button></td>
           </tr>
         {:else}
           <tr><td colspan="8" class="empty-row">{t("search.noResults")}</td></tr>

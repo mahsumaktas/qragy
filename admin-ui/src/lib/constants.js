@@ -4,6 +4,7 @@ export const NAV_GROUPS = [
   {
     key: "izle",
     labelKey: "nav.monitor",
+    descriptionKey: "nav.monitorDesc",
     items: [
       { id: "dashboard", labelKey: "nav.dashboard", icon: "dashboard" },
       { id: "live-chats", labelKey: "nav.liveChats", icon: "chat" },
@@ -14,6 +15,7 @@ export const NAV_GROUPS = [
   {
     key: "yonet",
     labelKey: "nav.manage",
+    descriptionKey: "nav.manageDesc",
     items: [
       { id: "agent-inbox", labelKey: "nav.agentInbox", icon: "inbox" },
       { id: "knowledge-base", labelKey: "nav.knowledgeBase", icon: "book" },
@@ -26,6 +28,7 @@ export const NAV_GROUPS = [
   {
     key: "ayarla",
     labelKey: "nav.configure",
+    descriptionKey: "nav.configureDesc",
     items: [
       { id: "site-settings", labelKey: "nav.siteSettings", icon: "globe" },
       { id: "zendesk", labelKey: "nav.zendesk", icon: "zendesk" },
@@ -39,6 +42,7 @@ export const NAV_GROUPS = [
   {
     key: "analiz",
     labelKey: "nav.analyze",
+    descriptionKey: "nav.analyzeDesc",
     items: [
       { id: "analytics", labelKey: "nav.analytics", icon: "chart" },
       { id: "eval", labelKey: "nav.eval", icon: "eval" },
@@ -51,13 +55,21 @@ export const NAV_GROUPS = [
   },
 ];
 
-export function getPanelTitle(id) {
+export function getPanelMeta(id) {
   for (const group of NAV_GROUPS) {
     for (const item of group.items) {
-      if (item.id === id) return t(item.labelKey);
+      if (item.id === id) return { group, item };
     }
   }
-  return id;
+  return null;
+}
+
+export function getPanelGroup(id) {
+  return getPanelMeta(id)?.group || null;
+}
+
+export function getPanelTitle(id) {
+  return t(getPanelMeta(id)?.item?.labelKey || id);
 }
 
 export const DEFAULT_PANEL = "dashboard";

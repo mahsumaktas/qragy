@@ -4,7 +4,20 @@ import tr from "../i18n/tr.js";
 const LANGS = { en, tr };
 const STORAGE_KEY = "qragy_admin_lang";
 
-let locale = $state(localStorage.getItem(STORAGE_KEY) || "en");
+function detectInitialLocale() {
+  const stored = globalThis.localStorage?.getItem(STORAGE_KEY);
+  if (stored && LANGS[stored]) return stored;
+  const browserLang = (globalThis.navigator?.language || "en").toLowerCase();
+  return browserLang.startsWith("tr") ? "tr" : "en";
+}
+
+let locale = $state(detectInitialLocale());
+
+$effect(() => {
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = locale;
+  }
+});
 
 export function getLocale() {
   return locale;
@@ -13,8 +26,7 @@ export function getLocale() {
 export function setLocale(lang) {
   if (!LANGS[lang]) return;
   locale = lang;
-  localStorage.setItem(STORAGE_KEY, lang);
-  document.documentElement.lang = lang;
+  globalThis.localStorage?.setItem(STORAGE_KEY, lang);
 }
 
 export function getDateLocale() {

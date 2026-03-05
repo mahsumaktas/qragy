@@ -4,6 +4,7 @@
   import { showToast } from "../../lib/toast.svelte.js";
   import { t } from "../../lib/i18n.svelte.js";
   import { fmtRelative, truncate } from "../../lib/format.js";
+  import { formatMessageCount, translateSource, translateStatus } from "../../lib/labels.js";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
   import Badge from "../../components/ui/Badge.svelte";
   import Button from "../../components/ui/Button.svelte";
@@ -57,11 +58,11 @@
           <tr>
             <td class="mono">{conv.sessionId?.slice(-8) || "?"}</td>
             <td>{conv.messageCount || 0}</td>
-            <td>{conv.source || "web"}</td>
+            <td>{translateSource(conv.source)}</td>
             <td>{truncate(conv.lastUserMessage || "", 50)}</td>
             <td>{fmtRelative(conv.updatedAt)}</td>
             <td>
-              <Button onclick={() => (selectedId = conv.sessionId)} variant="ghost" size="sm">Open</Button>
+              <Button onclick={() => (selectedId = conv.sessionId)} variant="ghost" size="sm">{t("common.open")}</Button>
             </td>
           </tr>
         {:else}
@@ -76,12 +77,12 @@
 
     <div class="detail-header">
       <h2>{selected.sessionId?.slice(-8)}</h2>
-      <Badge variant="gray">closed</Badge>
+      <Badge variant="gray">{translateStatus("closed")}</Badge>
     </div>
 
     <div class="detail-meta">
-      <span>Source: {selected.source || "web"}</span>
-      <span>{selected.messageCount} messages</span>
+      <span>{t("common.sourceLabel")}: {translateSource(selected.source)}</span>
+      <span>{formatMessageCount(selected.messageCount)}</span>
       <span>{fmtRelative(selected.createdAt)}</span>
     </div>
 
