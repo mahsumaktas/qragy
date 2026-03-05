@@ -4,6 +4,8 @@
   import { showToast } from "../../lib/toast.svelte.js";
   import { showConfirm } from "../../lib/confirm.svelte.js";
   import { t } from "../../lib/i18n.svelte.js";
+  import { generateSlug, getTopicCoverage } from "../../lib/contentQuality.js";
+  import { truncate } from "../../lib/format.js";
   import Button from "../../components/ui/Button.svelte";
   import Modal from "../../components/ui/Modal.svelte";
   import Tag from "../../components/ui/Tag.svelte";
@@ -13,19 +15,50 @@
 
   let loading = $state(true);
   let topics = $state([]);
+  let knowledgeItems = $state([]);
+  let topicContents = $state({});
+  let query = $state("");
+  let filter = $state("all");
   let editOpen = $state(false);
-  let editTopic = $state({ title: "", description: "", keywords: [], enabled: true, requiresEscalation: false, canResolveDirectly: true, requiredInfo: [] });
+  let editTopic = $state({
+    id: "",
+    title: "",
+    description: "",
+    keywords: [],
+    requiresEscalation: false,
+    canResolveDirectly: false,
+    requiredInfo: [],
+    content: "",
+  });
   let editId = $state(null);
   let newKeyword = $state("");
   let requiredInfoText = $state("");
+  let manualSlugEdited = $state(false);
 
-  onMount(() => loadTopics());
+  onMount(() => loadData());
 
-  async function loadTopics() {
+  async function loadData() {
     loading = true;
     try {
-      const res = await api.get("admin/agent/topics");
-      topics = res.topics || res || [];
+      const [topicsRes, knowledgeRes] = await Promise.all([
+        api.get("admin/agent/topics"),
+        api.get("admin/knowledge").catch(() => ({ records: [] })),
+      ]);
+      const loadedTopics = topicsRes.topics || topicsRes || [];
+      topics = loadedTopics;
+      knowledgeItems = knowledgeRes.records || [];
+
+      const contentEntries = await Promise.all(
+        loadedTopics.map(async (topic) => {
+          try {
+            const res = await api.get(`admin/agent/topics/${encodeURIComponent(topic.id)}`);
+            return [topic.id, res.content || ""];
+          } catch (_err) {
+            return [topic.id, ""];
+          }
+        })
+      );
+      topicContents = Object.fromEntries(contentEntries);
     } catch (e) {
       showToast(t("topics.loadError", { msg: e.message }), "error");
     } finally {
@@ -33,75 +66,144 @@
     }
   }
 
+  let decoratedTopics = $derived(
+    topics.map((topic) => {
+      const content = topicContents[topic.id] || "";
+      const coverage = getTopicCoverage(topic, knowledgeItems, content);
+      return {
+        ...topic,
+        content,
+        matchedEntries: coverage.matchedEntries,
+        warnings: coverage.warnings,
+      };
+    })
+  );
+
+  let filteredTopics = $derived(
+    decoratedTopics.filter((topic) => {
+      const haystack = [topic.title, topic.description, topic.content, ...(topic.keywords || [])].join(" ").toLowerCase();
+      const matchesQuery = !query.trim() || haystack.includes(query.trim().toLowerCase());
+      const matchesFilter =
+        filter === "all" ||
+        (filter === "coverage" && topic.matchedEntries.length === 0) ||
+        (filter === "warnings" && topic.warnings.length > 0) ||
+        (filter === "direct" && topic.canResolveDirectly) ||
+        (filter === "escalation" && topic.requiresEscalation);
+      return matchesQuery && matchesFilter;
+    })
+  );
+
+  let noCoverageCount = $derived(decoratedTopics.filter((topic) => topic.matchedEntries.length === 0).length);
+  let warningCount = $derived(decoratedTopics.filter((topic) => topic.warnings.length > 0).length);
+  let escalationNeedsInfoCount = $derived(
+    decoratedTopics.filter((topic) => topic.requiresEscalation && (topic.requiredInfo || []).length === 0).length
+  );
+
   function openNew() {
     editId = null;
-    editTopic = { title: "", description: "", keywords: [], enabled: true, requiresEscalation: false, canResolveDirectly: true, requiredInfo: [] };
+    editTopic = {
+      id: "",
+      title: "",
+      description: "",
+      keywords: [],
+      requiresEscalation: false,
+      canResolveDirectly: false,
+      requiredInfo: [],
+      content: `# ${t("topics.playbookTemplateTitle")}\n\n## ${t("topics.playbookSectionScope")}\n- \n\n## ${t("topics.playbookSectionSteps")}\n1. \n2. \n\n## ${t("topics.playbookSectionEscalation")}\n- \n\n## ${t("topics.playbookSectionDo")}\n- \n\n## ${t("topics.playbookSectionDont")}\n- `,
+    };
+    newKeyword = "";
     requiredInfoText = "";
+    manualSlugEdited = false;
     editOpen = true;
   }
 
-  function openEdit(topic) {
-    editId = topic.id || topic._id;
-    editTopic = {
-      title: topic.title,
-      description: topic.description || "",
-      keywords: [...(topic.keywords || [])],
-      enabled: topic.enabled !== false,
-      requiresEscalation: topic.requiresEscalation || false,
-      canResolveDirectly: topic.canResolveDirectly !== false,
-      requiredInfo: [...(topic.requiredInfo || [])]
-    };
-    requiredInfoText = (topic.requiredInfo || []).join(", ");
-    editOpen = true;
+  async function openEdit(topic) {
+    try {
+      const res = await api.get(`admin/agent/topics/${encodeURIComponent(topic.id || topic._id)}`);
+      const loadedTopic = res.topic || topic;
+      editId = loadedTopic.id || loadedTopic._id;
+      editTopic = {
+        id: loadedTopic.id || "",
+        title: loadedTopic.title || "",
+        description: loadedTopic.description || "",
+        keywords: [...(loadedTopic.keywords || [])],
+        requiresEscalation: Boolean(loadedTopic.requiresEscalation),
+        canResolveDirectly: Boolean(loadedTopic.canResolveDirectly),
+        requiredInfo: [...(loadedTopic.requiredInfo || [])],
+        content: res.content || topicContents[loadedTopic.id] || "",
+      };
+      requiredInfoText = (loadedTopic.requiredInfo || []).join(", ");
+      newKeyword = "";
+      manualSlugEdited = true;
+      editOpen = true;
+    } catch (e) {
+      showToast(t("common.error", { msg: e.message }), "error");
+    }
   }
 
   async function save() {
-    if (!editTopic.title.trim()) return;
-    editTopic.requiredInfo = requiredInfoText.split(",").map(s => s.trim()).filter(Boolean);
+    if (!editTopic.id.trim() || !editTopic.title.trim()) return;
+
+    const payload = {
+      id: editTopic.id.trim(),
+      title: editTopic.title.trim(),
+      description: editTopic.description.trim(),
+      keywords: editTopic.keywords,
+      requiresEscalation: editTopic.requiresEscalation,
+      canResolveDirectly: editTopic.canResolveDirectly,
+      requiredInfo: requiredInfoText.split(",").map((item) => item.trim()).filter(Boolean),
+      content: editTopic.content.trim(),
+    };
+
     try {
       if (editId) {
-        await api.put("admin/agent/topics/" + editId, editTopic);
+        await api.put(`admin/agent/topics/${editId}`, payload);
         showToast(t("common.updated"), "success");
       } else {
-        await api.post("admin/agent/topics", editTopic);
+        await api.post("admin/agent/topics", payload);
         showToast(t("common.created"), "success");
       }
       editOpen = false;
-      await loadTopics();
+      await loadData();
     } catch (e) {
       showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
   async function deleteTopic(id) {
-    const ok = await showConfirm({ title: t("topics.deleteTitle"), message: t("topics.deleteMsg"), confirmText: t("common.delete"), danger: true });
+    const ok = await showConfirm({
+      title: t("topics.deleteTitle"),
+      message: t("topics.deleteMsg"),
+      confirmText: t("common.delete"),
+      danger: true,
+    });
     if (!ok) return;
     try {
-      await api.delete("admin/agent/topics/" + id);
+      await api.delete(`admin/agent/topics/${id}`);
       showToast(t("common.deleted"), "success");
-      await loadTopics();
+      await loadData();
     } catch (e) {
       showToast(t("common.error", { msg: e.message }), "error");
     }
   }
 
   function addKeyword() {
-    const kw = newKeyword.trim();
-    if (kw && !editTopic.keywords.includes(kw)) {
-      editTopic.keywords = [...editTopic.keywords, kw];
+    const keyword = newKeyword.trim();
+    if (keyword && !editTopic.keywords.includes(keyword)) {
+      editTopic.keywords = [...editTopic.keywords, keyword];
     }
     newKeyword = "";
   }
 
-  function removeKeyword(kw) {
-    editTopic.keywords = editTopic.keywords.filter((k) => k !== kw);
+  function removeKeyword(keyword) {
+    editTopic.keywords = editTopic.keywords.filter((item) => item !== keyword);
   }
 
   async function suggestKeywords() {
     if (!editTopic.title.trim()) return;
     try {
-      const res = await api.post("admin/topics/suggest-keywords", { title: editTopic.title });
-      const suggested = res.keywords || [];
+      const res = await api.post("admin/topics/suggest-keywords", { title: editTopic.title.trim() });
+      const suggested = Array.isArray(res.keywords) ? res.keywords : [];
       const merged = [...new Set([...editTopic.keywords, ...suggested])];
       editTopic.keywords = merged;
       showToast(t("topics.keywordsSuggested", { n: suggested.length }), "info");
@@ -109,6 +211,28 @@
       showToast(t("topics.suggestError", { msg: e.message }), "error");
     }
   }
+
+  function updateTitle(value) {
+    editTopic.title = value;
+    if (!editId && !manualSlugEdited) {
+      editTopic.id = generateSlug(value);
+    }
+  }
+
+  function topicWarningLabel(key) {
+    return t(`topics.warning.${key}`);
+  }
+
+  let editCoverage = $derived(
+    getTopicCoverage(
+      {
+        ...editTopic,
+        requiredInfo: requiredInfoText.split(",").map((item) => item.trim()).filter(Boolean),
+      },
+      knowledgeItems,
+      editTopic.content
+    )
+  );
 </script>
 
 <div class="page-header">
@@ -122,37 +246,103 @@
 {#if loading}
   <LoadingSpinner message={t("common.loading")} />
 {:else}
+  <div class="summary-grid">
+    <div class="summary-card">
+      <span>{t("topics.summary.total")}</span>
+      <strong>{topics.length}</strong>
+    </div>
+    <div class="summary-card warn">
+      <span>{t("topics.summary.noCoverage")}</span>
+      <strong>{noCoverageCount}</strong>
+    </div>
+    <div class="summary-card">
+      <span>{t("topics.summary.needsReview")}</span>
+      <strong>{warningCount}</strong>
+    </div>
+    <div class="summary-card warn">
+      <span>{t("topics.summary.escalationMissingInfo")}</span>
+      <strong>{escalationNeedsInfoCount}</strong>
+    </div>
+  </div>
+
+  <div class="guide-card">
+    <div>
+      <div class="guide-eyebrow">{t("topics.guideTitle")}</div>
+      <h2>{t("topics.guideSubtitle")}</h2>
+      <p>{t("topics.guideText")}</p>
+    </div>
+    <div class="guide-points">
+      <span>{t("topics.guidePoint1")}</span>
+      <span>{t("topics.guidePoint2")}</span>
+      <span>{t("topics.guidePoint3")}</span>
+      <span>{t("topics.guidePoint4")}</span>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input
+      class="search-input"
+      bind:value={query}
+      placeholder={t("topics.searchPlaceholder")}
+      aria-label={t("topics.searchPlaceholder")}
+    />
+    <select class="select" bind:value={filter}>
+      <option value="all">{t("topics.filter.all")}</option>
+      <option value="warnings">{t("topics.filter.warnings")}</option>
+      <option value="coverage">{t("topics.filter.coverage")}</option>
+      <option value="direct">{t("topics.filter.direct")}</option>
+      <option value="escalation">{t("topics.filter.escalation")}</option>
+    </select>
+  </div>
+
   <div class="topics-grid">
-    {#each topics as topic}
+    {#each filteredTopics as topic}
       <div class="topic-card">
         <div class="topic-header">
-          <h3>{topic.title}</h3>
-          <Badge variant={topic.enabled !== false ? "green" : "gray"}>{topic.enabled !== false ? t("topics.active") : t("topics.inactive")}</Badge>
+          <div>
+            <h3>{topic.title}</h3>
+            <div class="topic-id">{topic.id}</div>
+          </div>
+          <Badge variant={topic.warnings.length ? "yellow" : "green"}>
+            {topic.warnings.length ? t("topics.needsReviewBadge") : t("topics.readyBadge")}
+          </Badge>
         </div>
-        {#if topic.description}
-          <p class="topic-desc">{topic.description}</p>
-        {/if}
+
+        <p class="topic-desc">
+          {topic.description || truncate(topic.content || "", 180) || t("topics.noDescription")}
+        </p>
+
         <div class="topic-meta">
-          {#if topic.requiresEscalation}
-            <Badge variant="orange">{t("topics.escalation")}</Badge>
-          {/if}
-          {#if topic.canResolveDirectly !== false}
-            <Badge variant="blue">{t("topics.directResolution")}</Badge>
-          {/if}
+          <Badge variant={topic.requiresEscalation ? "yellow" : "gray"}>{t("topics.escalation")}</Badge>
+          <Badge variant={topic.canResolveDirectly ? "blue" : "gray"}>{t("topics.directResolution")}</Badge>
+          <Badge variant={topic.matchedEntries.length ? "green" : "yellow"}>
+            {t("topics.coverageCount", { n: topic.matchedEntries.length })}
+          </Badge>
         </div>
+
         {#if topic.requiredInfo?.length}
           <p class="topic-info">{t("topics.required", { info: topic.requiredInfo.join(", ") })}</p>
         {/if}
+
         {#if topic.keywords?.length}
           <div class="topic-tags">
-            {#each topic.keywords.slice(0, 5) as kw}
-              <Tag>{kw}</Tag>
+            {#each topic.keywords.slice(0, 6) as keyword}
+              <Tag>{keyword}</Tag>
             {/each}
-            {#if topic.keywords.length > 5}
-              <span class="more">+{topic.keywords.length - 5}</span>
+            {#if topic.keywords.length > 6}
+              <span class="more">+{topic.keywords.length - 6}</span>
             {/if}
           </div>
         {/if}
+
+        {#if topic.warnings.length}
+          <div class="warning-list">
+            {#each topic.warnings.slice(0, 2) as warning}
+              <span>{topicWarningLabel(warning)}</span>
+            {/each}
+          </div>
+        {/if}
+
         <div class="topic-actions">
           <Button onclick={() => openEdit(topic)} variant="ghost" size="sm">{t("common.edit")}</Button>
           <Button onclick={() => deleteTopic(topic.id || topic._id)} variant="ghost" size="sm">{t("common.delete")}</Button>
@@ -164,46 +354,126 @@
   </div>
 {/if}
 
-<Modal bind:open={editOpen} title={editId ? t("topics.editTopic") : t("topics.newTopicTitle")}>
-  <div class="form-group">
-    <label>{t("topics.topicTitle")}
-      <input class="input" bind:value={editTopic.title} placeholder={t("topics.titlePlaceholder")} />
-    </label>
-  </div>
-  <div class="form-group">
-    <label>{t("topics.description")}
-      <textarea class="textarea" bind:value={editTopic.description} rows="3" placeholder={t("topics.descPlaceholder")}></textarea>
-    </label>
-  </div>
-  <div class="form-group">
-    <label>{t("topics.keywords")}
-      <div class="kw-input-row">
-        <input class="input" bind:value={newKeyword} placeholder={t("topics.keywordPlaceholder")} onkeydown={(e) => { if (e.key === "Enter") { e.preventDefault(); addKeyword(); } }} />
-        <Button onclick={addKeyword} variant="secondary" size="sm">{t("common.add")}</Button>
-        <Button onclick={suggestKeywords} variant="ghost" size="sm">{t("topics.aiSuggest")}</Button>
+<Modal bind:open={editOpen} title={editId ? t("topics.editTopic") : t("topics.newTopicTitle")} width="1080px">
+  <div class="editor-grid">
+    <div class="editor-main">
+      <div class="form-row two">
+        <div class="form-group">
+          <label>{t("topics.topicTitle")}
+            <input
+              class="input"
+              value={editTopic.title}
+              placeholder={t("topics.titlePlaceholder")}
+              oninput={(event) => updateTitle(event.target.value)}
+            />
+          </label>
+        </div>
+        <div class="form-group">
+          <label>{t("topics.slug")}
+            <input
+              class="input mono"
+              value={editTopic.id}
+              placeholder="topic-slug"
+              oninput={(event) => {
+                manualSlugEdited = true;
+                editTopic.id = generateSlug(event.target.value);
+              }}
+            />
+          </label>
+        </div>
       </div>
-    </label>
-    <div class="kw-tags">
-      {#each editTopic.keywords as kw}
-        <Tag removable onremove={() => removeKeyword(kw)}>{kw}</Tag>
-      {/each}
+
+      <div class="form-group">
+        <label>{t("topics.description")}
+          <textarea class="textarea" bind:value={editTopic.description} rows="3" placeholder={t("topics.descPlaceholder")}></textarea>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label>{t("topics.keywords")}
+          <div class="kw-input-row">
+            <input
+              class="input"
+              bind:value={newKeyword}
+              placeholder={t("topics.keywordPlaceholder")}
+              onkeydown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  addKeyword();
+                }
+              }}
+            />
+            <Button onclick={addKeyword} variant="secondary" size="sm">{t("common.add")}</Button>
+            <Button onclick={suggestKeywords} variant="ghost" size="sm">{t("topics.aiSuggest")}</Button>
+          </div>
+        </label>
+        <div class="kw-tags">
+          {#each editTopic.keywords as keyword}
+            <Tag removable onremove={() => removeKeyword(keyword)}>{keyword}</Tag>
+          {/each}
+        </div>
+      </div>
+
+      <div class="form-row two">
+        <div class="form-group">
+          <label>{t("topics.requiredInfo")}
+            <input class="input" bind:value={requiredInfoText} placeholder={t("topics.requiredPlaceholder")} />
+          </label>
+        </div>
+        <div class="toggle-grid">
+          <div class="toggle-card">
+            <div>
+              <strong>{t("topics.requiresEscalation")}</strong>
+              <p>{t("topics.requiresEscalationHint")}</p>
+            </div>
+            <Toggle bind:checked={editTopic.requiresEscalation} />
+          </div>
+          <div class="toggle-card">
+            <div>
+              <strong>{t("topics.canResolve")}</strong>
+              <p>{t("topics.canResolveHint")}</p>
+            </div>
+            <Toggle bind:checked={editTopic.canResolveDirectly} />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>{t("topics.playbook")}
+          <textarea class="textarea code" bind:value={editTopic.content} rows="18" placeholder={t("topics.playbookPlaceholder")}></textarea>
+        </label>
+      </div>
+    </div>
+
+    <div class="editor-side">
+      <div class="review-card">
+        <div class="review-title">{t("topics.reviewTitle")}</div>
+        <p>{t("topics.reviewText")}</p>
+        <div class="warning-list stacked">
+          {#if editCoverage.warnings.length}
+            {#each editCoverage.warnings as warning}
+              <span>{topicWarningLabel(warning)}</span>
+            {/each}
+          {:else}
+            <span class="success">{t("topics.reviewLooksGood")}</span>
+          {/if}
+        </div>
+      </div>
+
+      <div class="review-card">
+        <div class="review-title">{t("topics.linkedKnowledgeTitle")}</div>
+        <p>{t("topics.linkedKnowledgeText")}</p>
+        <div class="linked-list">
+          {#each editCoverage.matchedEntries.slice(0, 8) as entry}
+            <div class="linked-item">{truncate(entry.question, 96)}</div>
+          {:else}
+            <div class="linked-empty">{t("topics.linkedKnowledgeEmpty")}</div>
+          {/each}
+        </div>
+      </div>
     </div>
   </div>
-  <div class="form-group">
-    <label>{t("topics.requiredInfo")}
-      <input class="input" bind:value={requiredInfoText} placeholder={t("topics.requiredPlaceholder")} />
-    </label>
-  </div>
-  <div class="form-row">
-    <label>{t("topics.requiresEscalation")}
-      <Toggle bind:checked={editTopic.requiresEscalation} />
-    </label>
-  </div>
-  <div class="form-row">
-    <label>{t("topics.canResolve")}
-      <Toggle bind:checked={editTopic.canResolveDirectly} />
-    </label>
-  </div>
+
   <div class="modal-actions">
     <Button onclick={() => (editOpen = false)} variant="secondary">{t("common.cancel")}</Button>
     <Button onclick={save} variant="primary">{t("common.save")}</Button>
@@ -211,33 +481,385 @@
 </Modal>
 
 <style>
-  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  .page-header h1 { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-  .page-header p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
 
-  .topics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .topic-card { background: var(--bg-card); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); border: 1px solid var(--border-light); }
-  .topic-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .topic-header h3 { font-size: 14px; font-weight: 600; }
-  .topic-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
-  .topic-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
-  .topic-info { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
-  .topic-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
-  .more { font-size: 11px; color: var(--text-muted); }
-  .topic-actions { display: flex; gap: 4px; }
-  .empty-state { grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted); }
+  .page-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-  .form-group { margin-bottom: 14px; }
-  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
-  .input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; color: var(--text); outline: none; }
-  .input:focus { border-color: var(--accent); }
-  .textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; color: var(--text); resize: vertical; outline: none; }
-  .form-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-  .form-row label { font-size: 12px; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between; width: 100%; }
-  .kw-input-row { display: flex; gap: 8px; margin-bottom: 8px; }
-  .kw-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .page-header p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
 
-  @media (max-width: 1024px) { .topics-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 768px) { .topics-grid { grid-template-columns: 1fr; } }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .summary-card {
+    padding: 16px 18px;
+    border-radius: 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .summary-card.warn {
+    background: linear-gradient(180deg, #fffaf0, #ffffff);
+  }
+
+  .summary-card span {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .summary-card strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 24px;
+    color: var(--text);
+  }
+
+  .guide-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 18px;
+    padding: 20px;
+    border-radius: 22px;
+    background:
+      linear-gradient(135deg, rgba(15, 108, 189, 0.06), transparent 42%),
+      var(--bg-card);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+
+  .guide-eyebrow {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .guide-card h2 {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  .guide-card p {
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  .guide-points {
+    display: grid;
+    gap: 8px;
+    align-content: start;
+  }
+
+  .guide-points span,
+  .warning-list span,
+  .linked-item {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 10px;
+    border-radius: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .search-input,
+  .select,
+  .input,
+  .textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--bg-card);
+    outline: none;
+  }
+
+  .search-input {
+    flex: 1;
+    min-width: 240px;
+  }
+
+  .select {
+    width: auto;
+    min-width: 220px;
+  }
+
+  .search-input:focus,
+  .select:focus,
+  .input:focus,
+  .textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(15, 108, 189, 0.1);
+  }
+
+  .topics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .topic-card {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-light);
+    display: grid;
+    gap: 12px;
+  }
+
+  .topic-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .topic-header h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .topic-id {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  .topic-desc,
+  .topic-info {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .topic-meta,
+  .topic-tags,
+  .warning-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .warning-list span {
+    background: #fff7e7;
+    border-color: #f1d8a5;
+    color: #8a5a00;
+  }
+
+  .warning-list.stacked {
+    flex-direction: column;
+  }
+
+  .warning-list .success {
+    background: var(--success-bg);
+    border-color: rgba(5, 150, 105, 0.2);
+    color: var(--success);
+  }
+
+  .topic-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: auto;
+  }
+
+  .more {
+    font-size: 12px;
+    color: var(--text-muted);
+    align-self: center;
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+  }
+
+  .editor-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr);
+    gap: 18px;
+  }
+
+  .editor-main {
+    min-width: 0;
+  }
+
+  .editor-side {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+  }
+
+  .form-row.two {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+    gap: 12px;
+  }
+
+  .form-group {
+    margin-bottom: 14px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+
+  .textarea {
+    resize: vertical;
+  }
+
+  .textarea.code {
+    min-height: 360px;
+    font-family: "JetBrains Mono", monospace;
+    line-height: 1.6;
+  }
+
+  .kw-input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .kw-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .toggle-grid {
+    display: grid;
+    gap: 10px;
+  }
+
+  .toggle-card {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+
+  .toggle-card strong {
+    display: block;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .toggle-card p,
+  .review-card p,
+  .linked-empty {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .review-card {
+    padding: 16px;
+    border-radius: 18px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: grid;
+    gap: 12px;
+  }
+
+  .review-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .linked-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .linked-item {
+    border-radius: 14px;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .mono {
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  @media (max-width: 1200px) {
+    .topics-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .guide-card,
+    .editor-grid,
+    .form-row.two {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .page-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .topics-grid,
+    .summary-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .topic-actions {
+      flex-direction: column;
+    }
+  }
 </style>

@@ -77,10 +77,41 @@ function mount(app, deps) {
     }
   });
 
+  // ── Topics: Read single topic with content ─────────────────────────────
+  app.get("/api/admin/agent/topics/:topicId", requireAdminAccess, (req, res) => {
+    try {
+      const indexPath = path.join(TOPICS_DIR, "_index.json");
+      const index = readJsonFileSafe(indexPath, { topics: [] });
+      const topic = index.topics.find(t => t.id === req.params.topicId);
+      if (!topic) return res.status(404).json({ error: "Topic not found." });
+
+      let content = "";
+      if (topic.file) {
+        try {
+          content = fs.readFileSync(path.join(TOPICS_DIR, topic.file), "utf8");
+        } catch (_err) {
+          content = "";
+        }
+      }
+
+      return res.json({ ok: true, topic, content });
+    } catch (err) {
+      return res.status(500).json({ error: safeError(err, "api") });
+    }
+  });
+
   // ── Topics: Update ──────────────────────────────────────────────────────
   app.put("/api/admin/agent/topics/:topicId", requireAdminAccess, (req, res) => {
     try {
-      const { title, keywords, requiresEscalation, canResolveDirectly, requiredInfo, content } = req.body || {};
+      const {
+        title,
+        description,
+        keywords,
+        requiresEscalation,
+        canResolveDirectly,
+        requiredInfo,
+        content,
+      } = req.body || {};
       const indexPath = path.join(TOPICS_DIR, "_index.json");
       const index = readJsonFileSafe(indexPath, { topics: [] });
       const topicIdx = index.topics.findIndex(t => t.id === req.params.topicId);
@@ -88,6 +119,7 @@ function mount(app, deps) {
 
       const topic = index.topics[topicIdx];
       if (title !== undefined) topic.title = title;
+      if (description !== undefined) topic.description = description;
       if (Array.isArray(keywords)) topic.keywords = keywords;
       if (typeof requiresEscalation === "boolean") topic.requiresEscalation = requiresEscalation;
       if (typeof canResolveDirectly === "boolean") topic.canResolveDirectly = canResolveDirectly;
@@ -110,7 +142,16 @@ function mount(app, deps) {
   // ── Topics: Create ──────────────────────────────────────────────────────
   app.post("/api/admin/agent/topics", requireAdminAccess, (req, res) => {
     try {
-      const { id, title, keywords, requiresEscalation, canResolveDirectly, requiredInfo, content } = req.body || {};
+      const {
+        id,
+        title,
+        description,
+        keywords,
+        requiresEscalation,
+        canResolveDirectly,
+        requiredInfo,
+        content,
+      } = req.body || {};
       if (!id || !title) return res.status(400).json({ error: "id and title are required." });
       if (!/^[a-z0-9-]+$/.test(id)) return res.status(400).json({ error: "Invalid topic ID format." });
 
@@ -122,6 +163,7 @@ function mount(app, deps) {
       const newTopic = {
         id,
         title,
+        description: description || "",
         keywords: Array.isArray(keywords) ? keywords : [],
         file: filename,
         requiresEscalation: Boolean(requiresEscalation),
@@ -178,8 +220,12 @@ function mount(app, deps) {
         "Suggest keywords for a customer support topic. You will receive the topic title. Think about how customers might ask this topic and suggest 8-12 keywords/phrases. Write as a single line separated by commas. Write only the keywords, nothing else.",
         128
       );
-      const keywords = (result.reply || "").trim();
-      return res.json({ ok: true, keywords });
+      const raw = (result.reply || "").trim();
+      const keywords = raw
+        .split(",")
+        .map(k => k.trim())
+        .filter(Boolean);
+      return res.json({ ok: true, keywords, raw });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });
     }

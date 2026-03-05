@@ -92,7 +92,15 @@ function mount(app, deps) {
   app.get("/api/admin/knowledge", requireAdminAccess, (_req, res) => {
     try {
       const rows = loadCSVData();
-      return res.json({ ok: true, records: rows.map((r, i) => ({ id: i + 1, question: r.question || "", answer: r.answer || "" })) });
+      return res.json({
+        ok: true,
+        records: rows.map((r, i) => ({
+          id: i + 1,
+          question: r.question || "",
+          answer: r.answer || "",
+          source: r.source || "",
+        })),
+      });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });
     }
@@ -101,11 +109,11 @@ function mount(app, deps) {
   // ── KB: Add new ─────────────────────────────────────────────────────────
   app.post("/api/admin/knowledge", requireAdminAccess, async (req, res) => {
     try {
-      const { question, answer } = req.body || {};
+      const { question, answer, source } = req.body || {};
       if (!question || !answer) return res.status(400).json({ error: "question and answer are required." });
 
       const rows = loadCSVData();
-      rows.push({ question, answer });
+      rows.push({ question, answer, source: source || "admin-manual" });
       saveCSVData(rows);
 
       await reingestKnowledgeBase();
@@ -132,14 +140,14 @@ function mount(app, deps) {
   app.put("/api/admin/knowledge/:id", requireAdminAccess, async (req, res) => {
     try {
       const id = Number(req.params.id);
-      const { question, answer } = req.body || {};
+      const { question, answer, source } = req.body || {};
       if (!question || !answer) return res.status(400).json({ error: "question and answer are required." });
 
       const rows = loadCSVData();
       const idx = id - 1;
       if (idx < 0 || idx >= rows.length) return res.status(404).json({ error: "Record not found." });
 
-      rows[idx] = { question, answer };
+      rows[idx] = { ...rows[idx], question, answer, source: source || rows[idx].source || "admin-manual" };
       saveCSVData(rows);
 
       await reingestKnowledgeBase();
