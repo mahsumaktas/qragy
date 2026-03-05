@@ -21,7 +21,7 @@ function mount(app, deps) {
     getZendeskScVars,
     setZendeskScEnabled,
     safeError,
-    AGENT_DIR,
+    PUBLIC_DIR,
   } = deps;
 
   const LOGO_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/svg+xml", "image/webp", "image/gif"]);
@@ -84,9 +84,10 @@ function mount(app, deps) {
         return res.status(400).json({ error: "Unsupported file type. Use JPEG, PNG, SVG, WebP, or GIF." });
       }
       const ext = contentType.split("/")[1] === "svg+xml" ? "svg" : contentType.split("/")[1];
-      const logoPath = path.join(path.dirname(AGENT_DIR), "public", "custom-logo." + ext);
+      if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR, { recursive: true });
+      const logoPath = path.join(PUBLIC_DIR, "custom-logo." + ext);
       for (const old of ["custom-logo.jpeg", "custom-logo.png", "custom-logo.svg", "custom-logo.webp", "custom-logo.gif"]) {
-        const oldPath = path.join(path.dirname(AGENT_DIR), "public", old);
+        const oldPath = path.join(PUBLIC_DIR, old);
         if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
       }
       fs.writeFileSync(logoPath, req.body);

@@ -5,7 +5,7 @@
 
   let { open = $bindable(false) } = $props();
   let query = $state("");
-  let inputRef;
+  let inputRef = $state(null);
   let selectedIdx = $state(0);
 
   let allItems = $derived(

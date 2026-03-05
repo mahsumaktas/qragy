@@ -259,6 +259,28 @@ Direct WhatsApp Business Cloud API integration. Configure from the admin panel �
 
 Long-polling Telegram bot. Enable with `TELEGRAM_ENABLED=true` and your bot token.
 
+## Private Instance Mode
+
+Keep `Qragy` public and customer deployments private by treating Qragy as the core app and each tenant as an overlay.
+
+- Keep public code in the Qragy repo.
+- Keep private KB, prompts, topics, branding, `.env`, uploads, and deploy scripts in a separate private instance directory.
+- Point Qragy to that directory with `QRAGY_INSTANCE_DIR=/srv/corpcx` or with explicit `QRAGY_*` path overrides.
+
+Example private instance layout:
+
+```text
+/srv/corpcx/
+├── .env
+├── agent/
+├── memory/
+├── public/
+├── data/
+└── knowledge_base.example.csv
+```
+
+At runtime Qragy will read `agent/`, `memory/`, `data/`, `public/`, and the knowledge-base CSV from the private instance directory while the application code stays in the public repo.
+
 ### Webhooks
 
 Send signed events to any endpoint (Slack, n8n, Zapier, custom):

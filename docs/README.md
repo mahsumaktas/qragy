@@ -74,4 +74,4 @@ qragy/
 
 ## Lisans
 
-[MIT](../LICENSE) — istediginiz gibi kullanin.
+[AGPL-3.0](../LICENSE) — degisikliklerle dagitim ve ag uzerinden kullanimda ayni lisans kosullari gecerli olur.

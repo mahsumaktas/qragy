@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import Shell from "./components/shell/Shell.svelte";
+  import AdminAssistant from "./components/shell/AdminAssistant.svelte";
   import Toast from "./components/ui/Toast.svelte";
   import ConfirmDialog from "./components/ui/ConfirmDialog.svelte";
   import { getPanel, initRouter } from "./lib/router.svelte.js";
@@ -138,6 +139,7 @@
     </div>
   {/if}
 </Shell>
+  <AdminAssistant />
 {/if}
 
 <Toast />

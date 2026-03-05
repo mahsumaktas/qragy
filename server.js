@@ -1,17 +1,16 @@
-﻿require("dotenv").config();
+﻿const path = require("path");
+const { resolveAppPaths } = require("./src/config/paths");
+require("dotenv").config({ path: path.join(resolveAppPaths(process.env).envDir, ".env") });
 
 const fs = require("fs");
 const crypto = require("crypto");
 const express = require("express");
-const path = require("path");
 const { callLLM, callLLMWithFallback, embedText, getProviderConfig } = require("./lib/providers");
 const { chunkText } = require("./lib/chunker");
 const sqliteDb = require("./lib/db");
 const lancedb = require("@lancedb/lancedb");
 const Papa = require("papaparse");
 const multer = require("multer");
-const CSV_EXAMPLE_FILE = path.join(__dirname, "knowledge_base.example.csv");
-const CSV_FILE = path.join(__dirname, "data", "knowledge_base.csv");
 
 // ── Config ───────────────────────────────────────────────────────────────
 const { loadConfig, validateConfigStrict } = require("./src/config");
@@ -136,6 +135,12 @@ const TOPICS_DIR = config.topicsDir;
 const MEMORY_DIR = config.memoryDir;
 const DATA_DIR = config.dataDir;
 const LANCE_DB_PATH = config.lanceDbPath;
+const PUBLIC_DIR = config.publicDir;
+const BUNDLED_PUBLIC_DIR = config.bundledPublicDir;
+const ENV_DIR = config.envDir;
+const OPENAPI_FILE = config.openApiFile;
+const CSV_EXAMPLE_FILE = config.knowledgeBaseExampleFile;
+const CSV_FILE = config.knowledgeBaseCsvFile;
 const TELEGRAM_SESSIONS_FILE = path.join(DATA_DIR, "telegram-sessions.json");
 const PROMPT_VERSIONS_FILE = path.join(DATA_DIR, "prompt-versions.json");
 const UPLOADS_DIR = config.uploadsDir;
@@ -147,6 +152,33 @@ const WHATSAPP_CONFIG_FILE = path.join(DATA_DIR, "whatsapp-config.json");
 const SETUP_COMPLETE_FILE = path.join(DATA_DIR, "setup-complete.json");
 const FEEDBACK_FILE = path.join(DATA_DIR, "feedback.json");
 const CONTENT_GAPS_FILE = path.join(DATA_DIR, "content-gaps.json");
+
+function uniqueExistingDirs(...dirs) {
+  return [...new Set(dirs.map((dir) => path.resolve(dir)))]
+    .filter((dir) => fs.existsSync(dir));
+}
+
+const STATIC_PUBLIC_DIRS = uniqueExistingDirs(PUBLIC_DIR, BUNDLED_PUBLIC_DIR);
+const ADMIN_V2_DIRS = uniqueExistingDirs(
+  path.join(PUBLIC_DIR, "admin-v2"),
+  config.bundledAdminV2Dir
+);
+
+function resolvePublicFile(relativePath) {
+  for (const dir of STATIC_PUBLIC_DIRS) {
+    const candidate = path.join(dir, relativePath);
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return path.join(BUNDLED_PUBLIC_DIR, relativePath);
+}
+
+function resolveAdminV2File(relativePath = "index.html") {
+  for (const dir of ADMIN_V2_DIRS) {
+    const candidate = path.join(dir, relativePath);
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return path.join(config.bundledAdminV2Dir, relativePath);
+}
 
 // ── Rate Limiter (modular) ──────────────────────────────────────────────
 const rateLimiter = createRateLimiter({ maxRequests: RATE_LIMIT_MAX, windowMs: RATE_LIMIT_WINDOW_MS });
@@ -239,7 +271,7 @@ const { TICKET_STATUS, HANDOFF_RESULT_STATUS_MAP, ACTIVE_TICKET_STATUSES,
 const requireAdminAccess = createAuthMiddleware(() => ADMIN_TOKEN);
 
 const adminHelpers = createAdminHelpers({
-  fs, path, Papa, logger, csvFile: CSV_FILE, envDir: __dirname,
+  fs, path, Papa, logger, csvFile: CSV_FILE, envDir: ENV_DIR,
 });
 const { loadCSVData, saveCSVData, readEnvFile, writeEnvFile, isValidFilename } = adminHelpers;
 
@@ -530,27 +562,33 @@ app.use(express.json({ limit: "1mb", type: (req) => {
 }}));
 // ── OpenAPI / Swagger UI ──────────────────────────────────────────────────
 app.get("/api-docs.json", (_req, res) => {
-  res.sendFile(path.join(__dirname, "openapi.json"));
+  res.sendFile(OPENAPI_FILE);
 });
 app.get("/api-docs", (_req, res) => {
-  res.sendFile(path.join(__dirname, "public", "api-docs.html"));
+  res.sendFile(resolvePublicFile("api-docs.html"));
 });
 
 // Admin v2 — reverse proxy prefix kaybi sorununu onlemek icin redirect YOK
 // /admin-v2 (slash'siz) icin <base> tag inject ederek asset path'leri duzelt
-const ADMIN_V2_DIR = path.join(__dirname, "public", "admin-v2");
 let _adminV2Html = "";
+let _adminV2HtmlFile = "";
 app.get("/admin-v2", (_req, res) => {
-  if (!_adminV2Html) {
-    _adminV2Html = fs.readFileSync(path.join(ADMIN_V2_DIR, "index.html"), "utf8");
+  const adminV2IndexFile = resolveAdminV2File();
+  if (!_adminV2Html || _adminV2HtmlFile !== adminV2IndexFile) {
+    _adminV2Html = fs.readFileSync(adminV2IndexFile, "utf8");
+    _adminV2HtmlFile = adminV2IndexFile;
   }
   // <base href="admin-v2/"> relative — browser mevcut URL'e gore cozumler
   // /proxy-prefix/admin-v2 → base = /proxy-prefix/admin-v2/ → asset'ler dogru yuklenir
   res.type("html").send(_adminV2Html.replace("<head>", '<head><base href="admin-v2/">'));
 });
-app.use("/admin-v2", express.static(ADMIN_V2_DIR, { redirect: false }));
+for (const dir of ADMIN_V2_DIRS) {
+  app.use("/admin-v2", express.static(dir, { redirect: false }));
+}
 
-app.use(express.static(path.join(__dirname, "public")));
+for (const dir of STATIC_PUBLIC_DIRS) {
+  app.use(express.static(dir));
+}
 
 // ── Setup Wizard Redirect ────────────────────────────────────────────────
 app.use((req, res, next) => {
@@ -865,7 +903,7 @@ require("./src/routes/admin").mount(app, {
   getTopicIndex: agentConfig.getTopicIndex,
   getLlmHealthStatus: () => llmHealth.getLlmHealthStatus(),
   getSupportTimezone: () => SUPPORT_TIMEZONE,
-  AGENT_DIR, TOPICS_DIR, MEMORY_DIR, UPLOADS_DIR, DATA_DIR,
+  AGENT_DIR, TOPICS_DIR, MEMORY_DIR, UPLOADS_DIR, DATA_DIR, PUBLIC_DIR,
   SLA_FIRST_RESPONSE_MIN: config.slaFirstResponseMin, SLA_RESOLUTION_MIN: config.slaResolutionMin,
   logger, searchKnowledge, validateBotResponse,
   loadSiteConfig, loadSunshineConfig,
@@ -889,16 +927,16 @@ require("./src/routes/whatsapp").mount(app, {
 });
 
 app.get("/setup", (_req, res) => {
-  res.sendFile(path.join(__dirname, "public", "setup.html"));
+  res.sendFile(resolvePublicFile("setup.html"));
 });
 
 app.get("/admin", (_req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin.html"));
+  res.sendFile(resolvePublicFile("admin.html"));
 });
 
 app.get("*", (_req, res) => {
   res.set("Cache-Control", "no-cache, no-store, must-revalidate");
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(resolvePublicFile("index.html"));
 });
 
 (async () => {

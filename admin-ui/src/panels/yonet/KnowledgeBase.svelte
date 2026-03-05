@@ -28,7 +28,7 @@
     loading = true;
     try {
       const res = await api.get("admin/knowledge");
-      const data = res.payload?.records || res.items || res.knowledge || res || [];
+      const data = res.records || res.payload?.records || res.items || res.knowledge || [];
       items = Array.isArray(data) ? data : [];
     } catch (e) {
       showToast(t("kb.loadError", { msg: e.message }), "error");

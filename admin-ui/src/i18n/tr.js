@@ -230,6 +230,21 @@ export default {
   "kb.uploadError": "Yükleme hatası: {msg}",
   "kb.importError": "İçe aktarma hatası: {msg}",
 
+  // ── Admin Assistant ────────────────────────────────────
+  "assistant.title": "Qragy Assistant",
+  "assistant.subtitle": "Admin yardımcısı",
+  "assistant.placeholder": "Soru yazın veya dosya ekleyin...",
+  "assistant.attach": "Dosya ekle",
+  "assistant.send": "Gönder",
+  "assistant.thinking": "Düşünüyor...",
+  "assistant.confirm": "Onayla",
+  "assistant.cancel": "İptal",
+  "assistant.confirmed": "(Onaylandı)",
+  "assistant.cancelled": "(İptal edildi)",
+  "assistant.pending": "Bekleyen işlemler",
+  "assistant.empty": "Buradan bilgi bankasını sorun, dosya yükleyin veya admin işlemleri yaptırın.",
+  "assistant.error": "Hata: {msg}",
+
   // ── Konular ────────────────────────────────────────────
   "topics.title": "Konular",
   "topics.subtitle": "Bot bilgi konuları",

@@ -1,4 +1,4 @@
-const path = require("path");
+const { resolveAppPaths } = require("./paths");
 
 const parseBool = (val, defaultVal = false) => {
   if (val === undefined || val === null || val === "") return defaultVal;
@@ -13,6 +13,7 @@ const parseNumberArray = (val, defaultVal = "1,2,3,4,5,6,7") =>
 
 function loadConfig(env = process.env) {
   const zendeskSnippetKey = (env.ZENDESK_SNIPPET_KEY || "").trim();
+  const appPaths = resolveAppPaths(env);
   return {
     port: Number(env.PORT || 3000),
     googleApiKey: env.GOOGLE_API_KEY || env.GEMINI_API_KEY || "",
@@ -51,12 +52,19 @@ function loadConfig(env = process.env) {
     allowedOrigin: (env.ALLOWED_ORIGIN || "").trim(),
     slaFirstResponseMin: Number(env.SLA_FIRST_RESPONSE_MIN || 5),
     slaResolutionMin: Number(env.SLA_RESOLUTION_MIN || 60),
-    agentDir: path.join(__dirname, "..", "..", "agent"),
-    topicsDir: path.join(__dirname, "..", "..", "agent", "topics"),
-    memoryDir: path.join(__dirname, "..", "..", "memory"),
-    dataDir: path.join(__dirname, "..", "..", "data"),
-    lanceDbPath: path.join(__dirname, "..", "..", "data", "lancedb"),
-    uploadsDir: path.join(__dirname, "..", "..", "data", "uploads"),
+    agentDir: appPaths.agentDir,
+    topicsDir: appPaths.topicsDir,
+    memoryDir: appPaths.memoryDir,
+    dataDir: appPaths.dataDir,
+    lanceDbPath: appPaths.lanceDbPath,
+    uploadsDir: appPaths.uploadsDir,
+    publicDir: appPaths.publicDir,
+    bundledPublicDir: appPaths.bundledPublicDir,
+    bundledAdminV2Dir: appPaths.bundledAdminV2Dir,
+    envDir: appPaths.envDir,
+    knowledgeBaseCsvFile: appPaths.knowledgeBaseCsvFile,
+    knowledgeBaseExampleFile: appPaths.knowledgeBaseExampleFile,
+    openApiFile: appPaths.openApiFile,
   };
 }
 

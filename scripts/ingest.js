@@ -9,17 +9,19 @@
  * Hedef: data/lancedb/knowledge_qa tablosu
  */
 
-require("dotenv").config();
-
 const fs = require("fs");
 const path = require("path");
 const Papa = require("papaparse");
 const lancedb = require("@lancedb/lancedb");
 const { embedText, getProviderConfig } = require("../lib/providers");
+const { resolveAppPaths } = require("../src/config/paths");
 
-const CSV_EXAMPLE = path.join(__dirname, "..", "knowledge_base.example.csv");
-const CSV_PATH = path.join(__dirname, "..", "data", "knowledge_base.csv");
-const LANCE_DB_PATH = path.join(__dirname, "..", "data", "lancedb");
+require("dotenv").config({ path: path.join(resolveAppPaths(process.env).envDir, ".env") });
+
+const appPaths = resolveAppPaths(process.env);
+const CSV_EXAMPLE = appPaths.knowledgeBaseExampleFile;
+const CSV_PATH = appPaths.knowledgeBaseCsvFile;
+const LANCE_DB_PATH = appPaths.lanceDbPath;
 const TABLE_NAME = "knowledge_qa";
 const EMBED_DELAY_MS = 250;
 const MAX_RETRIES = 5;

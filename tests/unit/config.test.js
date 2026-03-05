@@ -59,4 +59,28 @@ describe("Config", () => {
     const { loadConfig } = require("../../src/config/index.js");
     expect(loadConfig({ DETERMINISTIC_COLLECTION_MODE: "false" }).deterministicCollectionMode).toBe(false);
   });
+  it("supports instance-root path overrides", () => {
+    const { loadConfig } = require("../../src/config/index.js");
+    const cfg = loadConfig({ QRAGY_INSTANCE_DIR: "/srv/corpcx" });
+    expect(cfg.agentDir).toBe("/srv/corpcx/agent");
+    expect(cfg.topicsDir).toBe("/srv/corpcx/agent/topics");
+    expect(cfg.memoryDir).toBe("/srv/corpcx/memory");
+    expect(cfg.dataDir).toBe("/srv/corpcx/data");
+    expect(cfg.publicDir).toBe("/srv/corpcx/public");
+    expect(cfg.envDir).toBe("/srv/corpcx");
+    expect(cfg.knowledgeBaseCsvFile).toBe("/srv/corpcx/data/knowledge_base.csv");
+  });
+  it("supports explicit QRAGY_* path overrides", () => {
+    const { loadConfig } = require("../../src/config/index.js");
+    const cfg = loadConfig({
+      QRAGY_INSTANCE_DIR: "/srv/corpcx",
+      QRAGY_AGENT_DIR: "tenant/agent",
+      QRAGY_PUBLIC_DIR: "tenant/public",
+      QRAGY_KNOWLEDGE_BASE_CSV: "tenant/data/faq.csv",
+    });
+    expect(cfg.agentDir).toBe("/srv/corpcx/tenant/agent");
+    expect(cfg.topicsDir).toBe("/srv/corpcx/tenant/agent/topics");
+    expect(cfg.publicDir).toBe("/srv/corpcx/tenant/public");
+    expect(cfg.knowledgeBaseCsvFile).toBe("/srv/corpcx/tenant/data/faq.csv");
+  });
 });

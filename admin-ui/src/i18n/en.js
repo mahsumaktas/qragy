@@ -230,6 +230,21 @@ export default {
   "kb.uploadError": "Upload error: {msg}",
   "kb.importError": "Import error: {msg}",
 
+  // ── Admin Assistant ────────────────────────────────────
+  "assistant.title": "Qragy Assistant",
+  "assistant.subtitle": "Admin copilot",
+  "assistant.placeholder": "Ask a question or attach a file...",
+  "assistant.attach": "Attach file",
+  "assistant.send": "Send",
+  "assistant.thinking": "Thinking...",
+  "assistant.confirm": "Confirm",
+  "assistant.cancel": "Cancel",
+  "assistant.confirmed": "(Confirmed)",
+  "assistant.cancelled": "(Cancelled)",
+  "assistant.pending": "Pending actions",
+  "assistant.empty": "Ask about the knowledge base, upload a file, or make admin changes from here.",
+  "assistant.error": "Error: {msg}",
+
   // ── Topics ─────────────────────────────────────────────
   "topics.title": "Topics",
   "topics.subtitle": "Bot knowledge topics",

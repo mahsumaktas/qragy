@@ -177,16 +177,16 @@
     </div>
     <div class="ticket-actions">
       <div class="action-group">
-        <label>{t("search.assign")}</label>
+        <label for="ticket-assign-input">{t("search.assign")}</label>
         <div class="action-row">
-          <input class="input action-input" type="text" placeholder={t("search.agentName")} bind:value={assignInput} />
+          <input id="ticket-assign-input" class="input action-input" type="text" placeholder={t("search.agentName")} bind:value={assignInput} />
           <Button onclick={assignTicket} variant="primary" size="sm">{t("search.assign")}</Button>
         </div>
       </div>
       <div class="action-group">
-        <label>{t("search.priority")}</label>
+        <label for="ticket-priority-input">{t("search.priority")}</label>
         <div class="action-row">
-          <select class="select" bind:value={priorityInput}>
+          <select id="ticket-priority-input" class="select" bind:value={priorityInput}>
             <option value="">{t("search.selectPriority")}</option>
             <option value="low">{t("search.low")}</option>
             <option value="normal">{t("search.normal")}</option>
@@ -196,9 +196,9 @@
         </div>
       </div>
       <div class="action-group">
-        <label>{t("search.addNote")}</label>
+        <label for="ticket-note-input">{t("search.addNote")}</label>
         <div class="action-row">
-          <textarea class="input action-textarea" placeholder={t("search.notePlaceholder")} bind:value={noteInput} rows="2"></textarea>
+          <textarea id="ticket-note-input" class="input action-textarea" placeholder={t("search.notePlaceholder")} bind:value={noteInput} rows="2"></textarea>
           <Button onclick={addNote} variant="primary" size="sm">{t("common.add")}</Button>
         </div>
       </div>
