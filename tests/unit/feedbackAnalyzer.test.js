@@ -85,6 +85,23 @@ describe("feedbackAnalyzer", () => {
     expect(result.negative).toHaveLength(2);
   });
 
+  it("analyze supports rating-based entries and reports coverage metrics", () => {
+    const analyzer = makeAnalyzer();
+    const entries = [
+      { rating: "up", timestamp: new Date().toISOString(), userMessage: "tamam oldu", botResponse: "Harika" },
+      { rating: "down", timestamp: new Date().toISOString(), userMessage: "hala yetkim yok", botResponse: "Tekrar deneyin" },
+      { rating: "down", timestamp: new Date().toISOString() },
+    ];
+
+    const result = analyzer.analyze(entries, { days: 7 });
+
+    expect(result.summary.total).toBe(3);
+    expect(result.summary.positive).toBe(1);
+    expect(result.summary.negative).toBe(2);
+    expect(result.summary.negativeRate).toBe(67);
+    expect(result.summary.contextCoverage).toBe(67);
+  });
+
   it("analyze limits examples per group to 3", () => {
     const analyzer = makeAnalyzer();
     const entries = [];

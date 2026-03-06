@@ -138,6 +138,43 @@ describe("conversation route - intelligence wiring", () => {
     });
   });
 
+  it("feedback saves contextual metadata for later review", () => {
+    const writeFileSync = vi.fn();
+    const deps = makeDeps({
+      fs: { existsSync: () => false, readFileSync: () => "", writeFileSync },
+      loadConversations: vi.fn(() => ({
+        conversations: [{
+          sessionId: "sess-ctx",
+          source: "web",
+          chatHistory: [
+            { role: "user", parts: [{ text: "Yazıcı çalışmıyor" }] },
+            { role: "assistant", parts: [{ text: "Lütfen test çıktısı alın." }] },
+          ],
+        }],
+      })),
+    });
+
+    const app = createMockApp();
+    mount(app, deps);
+
+    const result = app._call("POST", "/api/chat/feedback", {
+      sessionId: "sess-ctx",
+      messageIndex: 1,
+      rating: "down",
+    });
+
+    expect(result.statusCode).toBe(200);
+    const saved = JSON.parse(writeFileSync.mock.calls[0][1]);
+    expect(saved.entries[0]).toMatchObject({
+      sessionId: "sess-ctx",
+      rating: "down",
+      type: "negative",
+      userMessage: "Yazıcı çalışmıyor",
+      botResponse: "Lütfen test çıktısı alın.",
+      source: "web",
+    });
+  });
+
   it("up feedback does NOT trigger reflexion.analyze", () => {
     const analyze = vi.fn().mockResolvedValue();
     const deps = makeDeps({

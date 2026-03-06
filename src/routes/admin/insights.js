@@ -14,6 +14,8 @@ function mount(app, deps) {
     saveCSVData,
     reingestKnowledgeBase,
     loadContentGaps,
+    getContentGapReport,
+    pruneContentGaps,
     loadFeedback,
     callLLM,
     getProviderConfig,
@@ -49,6 +51,26 @@ function mount(app, deps) {
   function saveSuggestedFAQs(data) {
     if (data.faqs.length > 200) data.faqs = data.faqs.slice(-200);
     fs.writeFileSync(SUGGESTED_FAQS_FILE, JSON.stringify(data, null, 2), "utf8");
+  }
+
+  function getSuggestedFaqStats(data, ticketsDb) {
+    const faqs = Array.isArray(data?.faqs) ? data.faqs : [];
+    const eligibleResolved = (ticketsDb?.tickets || [])
+      .filter((ticket) => ticket.status === "handoff_success" && Array.isArray(ticket.chatHistory) && ticket.chatHistory.length >= 3);
+
+    const latestCreatedAt = faqs
+      .map((faq) => String(faq.createdAt || ""))
+      .filter(Boolean)
+      .sort()
+      .slice(-1)[0] || "";
+
+    return {
+      pending: faqs.filter((faq) => faq.status === "pending" || !faq.status).length,
+      approved: faqs.filter((faq) => faq.status === "approved").length,
+      rejected: faqs.filter((faq) => faq.status === "rejected").length,
+      eligibleResolvedCount: eligibleResolved.length,
+      latestCreatedAt,
+    };
   }
 
   // ── SLA Tracking ────────────────────────────────────────────────────────
@@ -101,7 +123,12 @@ function mount(app, deps) {
       .slice(-10);
 
     if (!resolved.length) {
-      return res.json({ ok: true, generated: 0, message: "No eligible resolved tickets found." });
+      return res.json({
+        ok: true,
+        generated: 0,
+        message: "No eligible resolved tickets found.",
+        stats: getSuggestedFaqStats(loadSuggestedFAQs(), db),
+      });
     }
 
     const data = loadSuggestedFAQs();
@@ -138,13 +165,23 @@ function mount(app, deps) {
     }
 
     saveSuggestedFAQs(data);
-    return res.json({ ok: true, generated });
+    return res.json({
+      ok: true,
+      generated,
+      message: generated > 0 ? `${generated} FAQ suggestion(s) generated.` : "No FAQ could be generated from the selected conversations.",
+      stats: getSuggestedFaqStats(data, db),
+    });
   });
 
   // ── Auto-FAQ: List ──────────────────────────────────────────────────────
   app.get("/api/admin/auto-faq", requireAdminAccess, (_req, res) => {
     const data = loadSuggestedFAQs();
-    return res.json({ ok: true, faqs: (data.faqs || []).filter(f => f.status === "pending") });
+    const db = loadTicketsDb();
+    return res.json({
+      ok: true,
+      faqs: (data.faqs || []).filter(f => f.status === "pending"),
+      stats: getSuggestedFaqStats(data, db),
+    });
   });
 
   // ── Auto-FAQ: Approve ───────────────────────────────────────────────────
@@ -177,9 +214,20 @@ function mount(app, deps) {
 
   // ── Content Gaps ────────────────────────────────────────────────────────
   app.get("/api/admin/content-gaps", requireAdminAccess, (_req, res) => {
-    const data = loadContentGaps();
-    const sorted = (data.gaps || []).sort((a, b) => b.count - a.count).slice(0, 100);
-    return res.json({ ok: true, gaps: sorted });
+    const report = typeof getContentGapReport === "function"
+      ? getContentGapReport({ limit: 100 })
+      : { summary: { rawCount: (loadContentGaps()?.gaps || []).length }, gaps: (loadContentGaps()?.gaps || []).slice(0, 100), filtered: [] };
+    return res.json({ ok: true, ...report });
+  });
+
+  app.post("/api/admin/content-gaps/prune", requireAdminAccess, (req, res) => {
+    if (typeof pruneContentGaps !== "function") {
+      return res.status(400).json({ error: "Content gap pruning is unavailable." });
+    }
+    const result = pruneContentGaps();
+    const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "";
+    recordAuditEvent("content_gap_prune", `removed=${result.removedCount}`, clientIp);
+    return res.json({ ok: true, ...result });
   });
 
   // ── Feedback ────────────────────────────────────────────────────────────

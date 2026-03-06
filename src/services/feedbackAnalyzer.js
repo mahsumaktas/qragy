@@ -10,6 +10,19 @@
 function createFeedbackAnalyzer(deps) {
   const { logger: _logger } = deps;
 
+  function getFeedbackSignal(entry) {
+    const raw = String(entry?.type || entry?.rating || entry?.reaction || "").toLowerCase().trim();
+    if (raw === "up" || raw === "positive" || raw === "thumbs_up") return "positive";
+    if (raw === "down" || raw === "negative" || raw === "thumbs_down") return "negative";
+
+    const numeric = Number(entry?.rating);
+    if (Number.isFinite(numeric)) {
+      if (numeric >= 4) return "positive";
+      if (numeric <= 2) return "negative";
+    }
+    return "neutral";
+  }
+
   /**
    * Analyze feedback data and group by patterns
    * @param {Array} feedbackEntries - Array of { sessionId, messageIndex, type, timestamp, userMessage, botResponse }
@@ -18,7 +31,18 @@ function createFeedbackAnalyzer(deps) {
    */
   function analyze(feedbackEntries, options = {}) {
     if (!Array.isArray(feedbackEntries) || feedbackEntries.length === 0) {
-      return { negative: [], summary: { total: 0, negative: 0, positive: 0, topIssues: [] } };
+      return {
+        negative: [],
+        summary: {
+          total: 0,
+          negative: 0,
+          positive: 0,
+          neutral: 0,
+          negativeRate: 0,
+          contextCoverage: 0,
+          topIssues: [],
+        },
+      };
     }
 
     const days = options.days || 7;
@@ -27,8 +51,9 @@ function createFeedbackAnalyzer(deps) {
     // Filter by time range
     const recent = feedbackEntries.filter(f => (f.timestamp || "") >= cutoff);
 
-    const positive = recent.filter(f => f.type === "up" || f.type === "positive");
-    const negative = recent.filter(f => f.type === "down" || f.type === "negative");
+    const positive = recent.filter(f => getFeedbackSignal(f) === "positive");
+    const negative = recent.filter(f => getFeedbackSignal(f) === "negative");
+    const withContext = recent.filter((entry) => entry.userMessage || entry.botResponse);
 
     // Group negative feedback by similar user messages (simple keyword grouping)
     const groups = {};
@@ -60,6 +85,9 @@ function createFeedbackAnalyzer(deps) {
     return {
       negative: negative.map(f => ({
         sessionId: f.sessionId,
+        messageIndex: f.messageIndex,
+        rating: f.rating,
+        type: getFeedbackSignal(f),
         userMessage: f.userMessage || "",
         botResponse: (f.botResponse || "").slice(0, 200),
         timestamp: f.timestamp || "",
@@ -68,6 +96,9 @@ function createFeedbackAnalyzer(deps) {
         total: recent.length,
         negative: negative.length,
         positive: positive.length,
+        neutral: Math.max(0, recent.length - positive.length - negative.length),
+        negativeRate: recent.length > 0 ? Math.round((negative.length / recent.length) * 100) : 0,
+        contextCoverage: recent.length > 0 ? Math.round((withContext.length / recent.length) * 100) : 0,
         topIssues,
       },
     };

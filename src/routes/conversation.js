@@ -154,19 +154,43 @@ function mount(app, deps) {
     if (!rating || !["up", "down"].includes(rating)) {
       return res.status(400).json({ error: "rating must be 'up' or 'down'." });
     }
-    const data = loadFeedback();
-    data.entries.push({
+
+    const feedbackEntry = {
       sessionId: String(sessionId || "").slice(0, 100),
       messageIndex: Number(messageIndex) || 0,
       rating,
-      timestamp: nowIso()
-    });
+      type: rating === "up" ? "positive" : "negative",
+      timestamp: nowIso(),
+    };
+
+    let conv = null;
+    if (sessionId) {
+      const convData = loadConversations();
+      conv = convData.conversations.find(c => c.sessionId === sessionId) || null;
+      if (conv) {
+        const history = Array.isArray(conv.chatHistory) ? conv.chatHistory : [];
+        const idx = Number(messageIndex) || 0;
+        const botMsg = history[idx] || history[history.length - 1];
+        let userQuery = "";
+        for (let i = (idx || history.length) - 1; i >= 0; i--) {
+          if (history[i]?.role === "user") {
+            userQuery = history[i].parts?.[0]?.text || history[i].content || "";
+            break;
+          }
+        }
+        const botAnswer = botMsg?.parts?.[0]?.text || botMsg?.content || "";
+        if (userQuery) feedbackEntry.userMessage = String(userQuery).slice(0, 1000);
+        if (botAnswer) feedbackEntry.botResponse = String(botAnswer).slice(0, 1000);
+        if (conv.source) feedbackEntry.source = String(conv.source).slice(0, 100);
+      }
+    }
+
+    const data = loadFeedback();
+    data.entries.push(feedbackEntry);
     saveFeedback(data);
 
     // Trigger reflexion analysis on negative feedback (fire-and-forget)
     if (rating === "down" && ngReflexion && sessionId) {
-      const convData = loadConversations();
-      const conv = convData.conversations.find(c => c.sessionId === sessionId);
       if (conv) {
         const history = Array.isArray(conv.chatHistory) ? conv.chatHistory : [];
         const idx = Number(messageIndex) || 0;

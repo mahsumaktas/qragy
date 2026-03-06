@@ -533,7 +533,7 @@ const convUtils = createConversationUtils({
 });
 const {
   analyzeSentiment, calculateQualityScore,
-  loadContentGaps, saveContentGaps, recordContentGap,
+  loadContentGaps, saveContentGaps, getContentGapReport, pruneContentGaps, recordContentGap,
   generateEscalationSummary, compressConversationHistory,
 } = convUtils;
 
@@ -897,7 +897,7 @@ require("./src/routes/admin").mount(app, {
   setZendeskScEnabled: (val) => { ZENDESK_SC_ENABLED = val; },
   readEnvFile, writeEnvFile, reloadRuntimeEnv, checkLLMHealth: llmHealth.checkLLMHealth,
   loadWebhooks, saveWebhooks, loadWebhookDeliveryLog,
-  loadContentGaps, saveContentGaps,
+  loadContentGaps, saveContentGaps, getContentGapReport, pruneContentGaps,
   loadFeedback: conversationLifecycle.loadFeedback,
   feedbackAnalyzer,
   safeError, invalidateTopicCache,
