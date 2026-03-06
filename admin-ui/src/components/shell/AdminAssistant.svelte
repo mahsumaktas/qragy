@@ -11,6 +11,12 @@
   let history = $state([]);
   let messageSeq = 0;
   let scrollEl = $state(null);
+  let starterPrompts = $derived([
+    t("assistant.suggestionKb"),
+    t("assistant.suggestionTopics"),
+    t("assistant.suggestionBot"),
+    t("assistant.suggestionCoverage"),
+  ]);
 
   function nextId() {
     messageSeq += 1;
@@ -125,6 +131,13 @@
     });
   }
 
+  async function sendPreset(prompt) {
+    if (sending) return;
+    input = "";
+    file = null;
+    await sendRequest({ message: prompt, displayMessage: prompt });
+  }
+
   async function confirmActions(messageId, pendingActions) {
     setMessagePatch(messageId, { pendingActions: null, pendingResolved: true });
     await sendRequest({
@@ -163,7 +176,16 @@
 
       <div class="assistant-messages" bind:this={scrollEl}>
         {#if !messages.length}
-          <div class="assistant-empty">{t("assistant.empty")}</div>
+          <div class="assistant-empty">
+            <div>{t("assistant.empty")}</div>
+            <div class="assistant-starters">
+              {#each starterPrompts as prompt}
+                <button class="starter-chip" onclick={() => sendPreset(prompt)} disabled={sending}>
+                  {prompt}
+                </button>
+              {/each}
+            </div>
+          </div>
         {/if}
 
         {#each messages as message}
@@ -320,7 +342,40 @@
     color: var(--text-muted);
     font-size: 13px;
     text-align: center;
-    max-width: 240px;
+    max-width: 280px;
+    display: grid;
+    gap: 12px;
+  }
+
+  .assistant-starters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .starter-chip {
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    background: rgba(37, 99, 235, 0.06);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 12px;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .starter-chip:hover {
+    background: rgba(37, 99, 235, 0.11);
+    border-color: rgba(37, 99, 235, 0.28);
+    transform: translateY(-1px);
+  }
+
+  .starter-chip:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
   }
 
   .message-row {

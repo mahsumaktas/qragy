@@ -332,6 +332,10 @@ export default {
   "assistant.pending": "Pending actions",
   "assistant.empty": "Ask about the knowledge base, upload a file, or make admin changes from here.",
   "assistant.error": "Error: {msg}",
+  "assistant.suggestionKb": "Review the knowledge base quality",
+  "assistant.suggestionTopics": "Find topic gaps",
+  "assistant.suggestionBot": "Check bot settings for contradictions",
+  "assistant.suggestionCoverage": "List unmatched records and weak topic coverage",
 
   // ── Topics ─────────────────────────────────────────────
   "topics.title": "Topics",

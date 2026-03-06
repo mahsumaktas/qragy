@@ -332,6 +332,10 @@ export default {
   "assistant.pending": "Bekleyen işlemler",
   "assistant.empty": "Buradan bilgi bankasını sorun, dosya yükleyin veya admin işlemleri yaptırın.",
   "assistant.error": "Hata: {msg}",
+  "assistant.suggestionKb": "Bilgi bankasını kalite açısından incele",
+  "assistant.suggestionTopics": "Konulardaki boşlukları bul",
+  "assistant.suggestionBot": "Bot ayarlarında çelişki var mı kontrol et",
+  "assistant.suggestionCoverage": "Eşleşmeyen kayıtları ve zayıf topic kapsamasını çıkar",
 
   // ── Konular ────────────────────────────────────────────
   "topics.title": "Konular",
