@@ -44,6 +44,7 @@ describe("conversationUtils content gaps", () => {
       gaps: [
         { query: "asdfjkl qwerty zxcvbn", count: 74, lastSeen: "2026-02-28T10:13:49.365Z" },
         { query: "tamam, deneyecegim tesekkurler", count: 26, lastSeen: "2026-03-01T14:32:47.388Z" },
+        { query: "olmuyor, denedim ama ayni hatayi veriyor", count: 12, lastSeen: "2026-03-03T11:00:00.000Z" },
         { query: "Bilet yazdıramıyorum", count: 4, lastSeen: "2026-03-05T10:00:00.000Z" },
         { query: "bilet yazdiramiyorum", count: 3, lastSeen: "2026-03-06T10:00:00.000Z" },
       ],
@@ -53,9 +54,10 @@ describe("conversationUtils content gaps", () => {
     const report = fixture.utils.getContentGapReport({ limit: 20 });
 
     expect(report.summary.actionableCount).toBe(1);
-    expect(report.summary.filteredCount).toBe(2);
+    expect(report.summary.filteredCount).toBe(3);
     expect(report.summary.filteredReasonCounts.test_or_gibberish).toBe(1);
     expect(report.summary.filteredReasonCounts.acknowledgement).toBe(1);
+    expect(report.summary.filteredReasonCounts.generic_followup).toBe(1);
     expect(report.gaps[0].count).toBe(7);
     expect(report.gaps[0].suggestionKey).toBe("expand_existing_coverage");
   });

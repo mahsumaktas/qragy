@@ -906,6 +906,7 @@ export default {
   "contentGaps.reason.acknowledgement": "teşekkür / kapanış",
   "contentGaps.reason.test_or_gibberish": "test / anlamsız mesaj",
   "contentGaps.reason.too_short": "çok kısa",
+  "contentGaps.reason.generic_followup": "genel takip mesajı",
   "contentGaps.loadError": "İçerik eksikleri yüklenemedi: {msg}",
 
   // ── Prompt Geçmişi ─────────────────────────────────────

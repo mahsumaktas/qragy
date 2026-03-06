@@ -906,6 +906,7 @@ export default {
   "contentGaps.reason.acknowledgement": "thanks / closure",
   "contentGaps.reason.test_or_gibberish": "test / gibberish",
   "contentGaps.reason.too_short": "too short",
+  "contentGaps.reason.generic_followup": "generic follow-up",
   "contentGaps.loadError": "Failed to load content gaps: {msg}",
 
   // ── Prompt History ─────────────────────────────────────

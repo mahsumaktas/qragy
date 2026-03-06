@@ -94,6 +94,18 @@ function createConversationUtils(deps) {
     "500",
     "kurulum",
   ];
+  const CONTENT_GAP_GENERIC_FOLLOWUP_PATTERNS = [
+    "olmuyor",
+    "hala ayni",
+    "ayni hatayi veriyor",
+    "denedim ama",
+    "duzelmedi",
+    "yardim edin",
+    "cozulemedi",
+    "devam ediyor",
+    "hala sorun var",
+    "tekrar denedim",
+  ];
 
   function containsAnyPattern(normalizedText, patterns) {
     return patterns.some((pattern) => normalizedText.includes(pattern));
@@ -190,6 +202,19 @@ function createConversationUtils(deps) {
       };
     }
 
+    if (containsAnyPattern(normalizedQuery, CONTENT_GAP_GENERIC_FOLLOWUP_PATTERNS)
+      && !containsAnyPattern(normalizedQuery, CONTENT_GAP_EXPAND_HINTS)) {
+      return {
+        actionable: false,
+        reason: "generic_followup",
+        query: rawQuery,
+        normalizedQuery,
+        count,
+        firstSeen: entry?.firstSeen || "",
+        lastSeen: entry?.lastSeen || "",
+      };
+    }
+
     const signal = count >= 20 ? "high" : count >= 8 ? "medium" : "low";
     const suggestionKey = containsAnyPattern(normalizedQuery, CONTENT_GAP_EXPAND_HINTS)
       ? "expand_existing_coverage"
@@ -266,7 +291,7 @@ function createConversationUtils(deps) {
     const merged = mergeContentGapEntries(data.gaps || []);
     const actionable = [];
     const filtered = [];
-    const filteredReasonCounts = { acknowledgement: 0, test_or_gibberish: 0, too_short: 0 };
+    const filteredReasonCounts = { acknowledgement: 0, test_or_gibberish: 0, too_short: 0, generic_followup: 0 };
 
     for (const entry of merged) {
       const classified = classifyContentGapEntry(entry);
