@@ -1,6 +1,7 @@
 "use strict";
 
 const { createAdminContentCopilot } = require("../../services/adminContentCopilot");
+const { adminError } = require("../../utils/adminLocale");
 
 function mount(app, deps) {
   const {
@@ -15,7 +16,7 @@ function mount(app, deps) {
     try {
       const { surface, locale, selection } = req.body || {};
       if (!surface || !["knowledge", "topics", "bot-settings"].includes(surface)) {
-        return res.status(400).json({ error: "surface is required." });
+        return adminError(res, req, 400, "copilot.surfaceRequired");
       }
 
       const review = copilot.reviewSurface({
@@ -26,7 +27,7 @@ function mount(app, deps) {
       });
 
       if (!review) {
-        return res.status(400).json({ error: "Unsupported surface." });
+        return adminError(res, req, 400, "copilot.unsupportedSurface");
       }
 
       recordAuditEvent?.("copilot_review", { surface, selection: selection || null }, req.ip);
@@ -40,10 +41,10 @@ function mount(app, deps) {
     try {
       const { surface, locale, target, goal } = req.body || {};
       if (!surface || !["knowledge", "topics", "bot-settings"].includes(surface)) {
-        return res.status(400).json({ error: "surface is required." });
+        return adminError(res, req, 400, "copilot.surfaceRequired");
       }
       if (!target || typeof target !== "object") {
-        return res.status(400).json({ error: "target is required." });
+        return adminError(res, req, 400, "copilot.targetRequired");
       }
 
       const draft = await copilot.buildDraft({

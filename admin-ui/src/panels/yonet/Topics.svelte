@@ -49,6 +49,7 @@
   let copilotLabel = $state("");
   let copilotRequestKey = $state("");
   let copilotApplying = $state(false);
+  const BLOCKING_WARNINGS = new Set(["missingRequiredInfo", "directWithoutKb"]);
 
   onMount(() => loadData());
 
@@ -185,6 +186,7 @@
       requiredInfo: requiredInfoText.split(",").map((item) => item.trim()).filter(Boolean),
       content: editTopic.content.trim(),
     };
+    if (!ensureGuardrail(editCoverage)) return;
 
     busyAction = "save";
     try {
@@ -262,6 +264,17 @@
 
   function topicWarningLabel(key) {
     return t(`topics.warning.${key}`);
+  }
+
+  function getBlockingWarnings(coverage) {
+    return (coverage?.warnings || []).filter((warning) => BLOCKING_WARNINGS.has(warning));
+  }
+
+  function ensureGuardrail(coverage) {
+    const blocking = getBlockingWarnings(coverage);
+    if (!blocking.length) return true;
+    showToast(t("topics.guardrailBlocked", { reasons: blocking.map(topicWarningLabel).join(" · ") }), "error");
+    return false;
   }
 
   function openCopilot(topic, mode = "review", goalText = "", requestId = "") {
@@ -544,6 +557,9 @@
             <span class="success">{t("topics.reviewLooksGood")}</span>
           {/if}
         </div>
+        {#if getBlockingWarnings(editCoverage).length}
+          <div class="guardrail-note">{t("topics.guardrailNote")}</div>
+        {/if}
       </div>
 
       <div class="review-card">
@@ -790,6 +806,17 @@
     background: var(--success-bg);
     border-color: rgba(5, 150, 105, 0.2);
     color: var(--success);
+  }
+
+  .guardrail-note {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    color: #9a3412;
+    font-size: 12px;
+    line-height: 1.5;
   }
 
   .topic-actions {

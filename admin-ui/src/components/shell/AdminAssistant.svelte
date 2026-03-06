@@ -44,7 +44,10 @@
   }
 
   function buildHeaders() {
-    const headers = { "Bypass-Tunnel-Reminder": "true" };
+    const headers = {
+      "Bypass-Tunnel-Reminder": "true",
+      "x-admin-locale": getLocale(),
+    };
     const token = getToken();
     if (token) headers["x-admin-token"] = token;
     return headers;
@@ -113,6 +116,7 @@
         text: reply,
         actions: payload.actions_executed || [],
         pendingActions: payload.pending_actions || null,
+        degraded: Boolean(payload.degraded),
       });
       history = [...history, { role: "assistant", content: reply }];
     } catch (error) {
@@ -204,6 +208,10 @@
           <div class:message-row={true} class:user={message.role === "user"} class:assistant={message.role === "assistant"} class:loading={message.role === "loading"}>
             <div class="bubble">
               <div class="bubble-text">{message.text}</div>
+
+              {#if message.degraded}
+                <div class="degraded-note">{t("assistant.degraded")}</div>
+              {/if}
 
               {#if message.actions?.length}
                 <div class="action-list">
@@ -434,6 +442,17 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+
+  .degraded-note {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    color: #9a3412;
+    font-size: 12px;
+    line-height: 1.45;
   }
 
   .action-pill {

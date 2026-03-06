@@ -3,11 +3,15 @@
 /**
  * Admin Agent Routes — agent files CRUD, topics CRUD, memory config
  */
+const { getTopicCoverage } = require("../../services/adminContentCopilot");
+const { adminError } = require("../../utils/adminLocale");
+
 function mount(app, deps) {
   const {
     requireAdminAccess,
     fs,
     path,
+    loadCSVData,
     loadAllAgentConfig,
     readJsonFileSafe,
     isValidFilename,
@@ -22,6 +26,36 @@ function mount(app, deps) {
     recordAuditEvent,
   } = deps;
 
+  function buildTopicPayload(baseTopic, body = {}) {
+    return {
+      ...baseTopic,
+      title: body.title !== undefined ? body.title : baseTopic.title,
+      description: body.description !== undefined ? body.description : baseTopic.description,
+      keywords: Array.isArray(body.keywords) ? body.keywords : (baseTopic.keywords || []),
+      requiresEscalation: typeof body.requiresEscalation === "boolean"
+        ? body.requiresEscalation
+        : Boolean(baseTopic.requiresEscalation),
+      canResolveDirectly: typeof body.canResolveDirectly === "boolean"
+        ? body.canResolveDirectly
+        : Boolean(baseTopic.canResolveDirectly),
+      requiredInfo: Array.isArray(body.requiredInfo) ? body.requiredInfo : (baseTopic.requiredInfo || []),
+      content: typeof body.content === "string" ? body.content : (baseTopic.content || ""),
+    };
+  }
+
+  function getTopicBlockingWarning(topic, allTopics) {
+    const knowledgeItems = loadCSVData().map((item, index) => ({
+      id: index + 1,
+      question: item.question || "",
+      answer: item.answer || "",
+      source: item.source || "",
+    }));
+    const coverage = getTopicCoverage(topic, knowledgeItems, topic.content || "", allTopics);
+    if (coverage.warnings.includes("missingRequiredInfo")) return "missingRequiredInfo";
+    if (coverage.warnings.includes("directWithoutKb")) return "directWithoutKb";
+    return null;
+  }
+
   // ── Agent Files: List ───────────────────────────────────────────────────
   app.get("/api/admin/agent/files", requireAdminAccess, (_req, res) => {
     try {
@@ -35,24 +69,24 @@ function mount(app, deps) {
   // ── Agent Files: Read ───────────────────────────────────────────────────
   app.get("/api/admin/agent/files/:filename", requireAdminAccess, (req, res) => {
     const filename = req.params.filename;
-    if (!isValidFilename(filename)) return res.status(400).json({ error: "Invalid filename." });
+    if (!isValidFilename(filename)) return adminError(res, req, 400, "topics.invalidFilename");
 
     const filePath = path.join(AGENT_DIR, filename);
     try {
       const content = fs.readFileSync(filePath, "utf8");
       return res.json({ ok: true, filename, content });
     } catch (_err) {
-      return res.status(404).json({ error: "File not found." });
+      return adminError(res, req, 404, "topics.fileNotFound");
     }
   });
 
   // ── Agent Files: Save ───────────────────────────────────────────────────
   app.put("/api/admin/agent/files/:filename", requireAdminAccess, (req, res) => {
     const filename = req.params.filename;
-    if (!isValidFilename(filename)) return res.status(400).json({ error: "Invalid filename." });
+    if (!isValidFilename(filename)) return adminError(res, req, 400, "topics.invalidFilename");
 
     const { content, auditContext } = req.body || {};
-    if (typeof content !== "string") return res.status(400).json({ error: "content is required." });
+    if (typeof content !== "string") return adminError(res, req, 400, "topics.contentRequired");
 
     const filePath = path.join(AGENT_DIR, filename);
     try {
@@ -107,7 +141,7 @@ function mount(app, deps) {
       const indexPath = path.join(TOPICS_DIR, "_index.json");
       const index = readJsonFileSafe(indexPath, { topics: [] });
       const topic = index.topics.find(t => t.id === req.params.topicId);
-      if (!topic) return res.status(404).json({ error: "Topic not found." });
+      if (!topic) return adminError(res, req, 404, "topics.topicNotFound");
 
       let content = "";
       if (topic.file) {
@@ -140,9 +174,33 @@ function mount(app, deps) {
       const indexPath = path.join(TOPICS_DIR, "_index.json");
       const index = readJsonFileSafe(indexPath, { topics: [] });
       const topicIdx = index.topics.findIndex(t => t.id === req.params.topicId);
-      if (topicIdx < 0) return res.status(404).json({ error: "Topic not found." });
+      if (topicIdx < 0) return adminError(res, req, 404, "topics.topicNotFound");
 
       const topic = index.topics[topicIdx];
+      const draftTopic = buildTopicPayload(
+        {
+          ...topic,
+          content: typeof content === "string"
+            ? content
+            : (() => {
+                try {
+                  return fs.readFileSync(path.join(TOPICS_DIR, topic.file), "utf8");
+                } catch (_err) {
+                  return "";
+                }
+              })(),
+        },
+        { title, description, keywords, requiresEscalation, canResolveDirectly, requiredInfo, content }
+      );
+      const allTopics = index.topics.map((item, idx) => (idx === topicIdx ? draftTopic : item));
+      const blockingWarning = getTopicBlockingWarning(draftTopic, allTopics);
+      if (blockingWarning === "missingRequiredInfo") {
+        return adminError(res, req, 400, "guardrail.topics.missingRequiredInfo");
+      }
+      if (blockingWarning === "directWithoutKb") {
+        return adminError(res, req, 400, "guardrail.topics.directWithoutKb");
+      }
+
       if (title !== undefined) topic.title = title;
       if (description !== undefined) topic.description = description;
       if (Array.isArray(keywords)) topic.keywords = keywords;
@@ -187,12 +245,12 @@ function mount(app, deps) {
         content,
         auditContext,
       } = req.body || {};
-      if (!id || !title) return res.status(400).json({ error: "id and title are required." });
-      if (!/^[a-z0-9-]+$/.test(id)) return res.status(400).json({ error: "Invalid topic ID format." });
+      if (!id || !title) return adminError(res, req, 400, "topics.idTitleRequired");
+      if (!/^[a-z0-9-]+$/.test(id)) return adminError(res, req, 400, "topics.invalidIdFormat");
 
       const indexPath = path.join(TOPICS_DIR, "_index.json");
       const index = readJsonFileSafe(indexPath, { topics: [] });
-      if (index.topics.find(t => t.id === id)) return res.status(400).json({ error: "This ID already exists." });
+      if (index.topics.find(t => t.id === id)) return adminError(res, req, 400, "topics.duplicateId");
 
       const filename = `${id}.md`;
       const newTopic = {
@@ -203,8 +261,18 @@ function mount(app, deps) {
         file: filename,
         requiresEscalation: Boolean(requiresEscalation),
         requiredInfo: Array.isArray(requiredInfo) ? requiredInfo : [],
-        canResolveDirectly: Boolean(canResolveDirectly)
+        canResolveDirectly: Boolean(canResolveDirectly),
       };
+      const blockingWarning = getTopicBlockingWarning(
+        { ...newTopic, content: content || "" },
+        [...index.topics, newTopic]
+      );
+      if (blockingWarning === "missingRequiredInfo") {
+        return adminError(res, req, 400, "guardrail.topics.missingRequiredInfo");
+      }
+      if (blockingWarning === "directWithoutKb") {
+        return adminError(res, req, 400, "guardrail.topics.directWithoutKb");
+      }
 
       index.topics.push(newTopic);
       fs.writeFileSync(indexPath, JSON.stringify(index, null, 2), "utf8");
@@ -232,7 +300,7 @@ function mount(app, deps) {
       const indexPath = path.join(TOPICS_DIR, "_index.json");
       const index = readJsonFileSafe(indexPath, { topics: [] });
       const topicIdx = index.topics.findIndex(t => t.id === req.params.topicId);
-      if (topicIdx < 0) return res.status(404).json({ error: "Topic not found." });
+      if (topicIdx < 0) return adminError(res, req, 404, "topics.topicNotFound");
 
       const topic = index.topics[topicIdx];
       index.topics.splice(topicIdx, 1);

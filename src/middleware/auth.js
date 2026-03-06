@@ -1,14 +1,13 @@
 // src/middleware/auth.js
 const crypto = require("crypto");
+const { adminError } = require("../utils/adminLocale");
 
 function createAuthMiddleware(getAdminToken) {
   return function requireAdminAccess(req, res, next) {
     const adminToken = getAdminToken();
 
     if (!adminToken) {
-      return res
-        .status(503)
-        .json({ error: "Admin panel yapilandirilmamis. ADMIN_TOKEN ayarlayin." });
+      return adminError(res, req, 503, "auth.notConfigured");
     }
 
     const headerToken = String(req.headers["x-admin-token"] || "").trim();
@@ -16,18 +15,14 @@ function createAuthMiddleware(getAdminToken) {
     const candidate = headerToken || queryToken;
 
     if (!candidate || candidate.length !== adminToken.length) {
-      return res
-        .status(401)
-        .json({ error: "Admin erisimi icin token gerekli." });
+      return adminError(res, req, 401, "auth.tokenRequired");
     }
 
     const candidateBuf = Buffer.from(candidate);
     const tokenBuf = Buffer.from(adminToken);
 
     if (!crypto.timingSafeEqual(candidateBuf, tokenBuf)) {
-      return res
-        .status(401)
-        .json({ error: "Admin erisimi icin token gerekli." });
+      return adminError(res, req, 401, "auth.tokenRequired");
     }
 
     next();

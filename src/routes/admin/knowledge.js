@@ -3,6 +3,9 @@
 /**
  * Admin Knowledge Base Routes — list, add, update, delete, reingest, file upload
  */
+const { getKnowledgeWarnings } = require("../../services/adminContentCopilot");
+const { adminError } = require("../../utils/adminLocale");
+
 function mount(app, deps) {
   const {
     requireAdminAccess,
@@ -17,6 +20,8 @@ function mount(app, deps) {
     multer,
     chunkText,
     UPLOADS_DIR,
+    TOPICS_DIR,
+    readJsonFileSafe,
     logger,
     contextualChunker,
     urlExtractor,
@@ -24,6 +29,17 @@ function mount(app, deps) {
   } = deps;
 
   const upload = multer({ dest: UPLOADS_DIR, limits: { fileSize: 10 * 1024 * 1024 } });
+
+  function getTopicList() {
+    const index = readJsonFileSafe(path.join(TOPICS_DIR, "_index.json"), { topics: [] });
+    return Array.isArray(index?.topics) ? index.topics : [];
+  }
+
+  function getKnowledgeBlockingWarning(question, answer) {
+    const { warnings } = getKnowledgeWarnings(question, answer, getTopicList());
+    if (warnings.includes("noTopicMatch")) return "noTopicMatch";
+    return null;
+  }
 
   async function extractTextFromFile(filePath, mimetype, originalname) {
     const ext = path.extname(originalname).toLowerCase();
@@ -111,7 +127,10 @@ function mount(app, deps) {
   app.post("/api/admin/knowledge", requireAdminAccess, async (req, res) => {
     try {
       const { question, answer, source } = req.body || {};
-      if (!question || !answer) return res.status(400).json({ error: "question and answer are required." });
+      if (!question || !answer) return adminError(res, req, 400, "knowledge.questionAnswerRequired");
+      if (getKnowledgeBlockingWarning(question, answer) === "noTopicMatch") {
+        return adminError(res, req, 400, "guardrail.knowledge.noTopicMatch");
+      }
 
       const rows = loadCSVData();
       rows.push({ question, answer, source: source || "admin-manual" });
@@ -143,11 +162,14 @@ function mount(app, deps) {
     try {
       const id = Number(req.params.id);
       const { question, answer, source, auditContext } = req.body || {};
-      if (!question || !answer) return res.status(400).json({ error: "question and answer are required." });
+      if (!question || !answer) return adminError(res, req, 400, "knowledge.questionAnswerRequired");
+      if (getKnowledgeBlockingWarning(question, answer) === "noTopicMatch") {
+        return adminError(res, req, 400, "guardrail.knowledge.noTopicMatch");
+      }
 
       const rows = loadCSVData();
       const idx = id - 1;
-      if (idx < 0 || idx >= rows.length) return res.status(404).json({ error: "Record not found." });
+      if (idx < 0 || idx >= rows.length) return adminError(res, req, 404, "knowledge.recordNotFound");
 
       rows[idx] = { ...rows[idx], question, answer, source: source || rows[idx].source || "admin-manual" };
       saveCSVData(rows);
@@ -175,7 +197,7 @@ function mount(app, deps) {
       const id = Number(req.params.id);
       const rows = loadCSVData();
       const idx = id - 1;
-      if (idx < 0 || idx >= rows.length) return res.status(404).json({ error: "Record not found." });
+      if (idx < 0 || idx >= rows.length) return adminError(res, req, 404, "knowledge.recordNotFound");
 
       rows.splice(idx, 1);
       saveCSVData(rows);

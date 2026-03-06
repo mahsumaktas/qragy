@@ -41,6 +41,7 @@
   let copilotLabel = $state("");
   let copilotRequestKey = $state("");
   let copilotApplying = $state(false);
+  const BLOCKING_WARNINGS = new Set(["noTopicMatch"]);
 
   onMount(() => loadData());
 
@@ -155,6 +156,7 @@
 
   async function addEntry() {
     if (!newQuestion.trim() || !newAnswer.trim() || busyAction) return;
+    if (!ensureGuardrail(reviewFor(newQuestion, newAnswer))) return;
     busyAction = "add";
     try {
       await api.post("admin/knowledge", {
@@ -174,6 +176,7 @@
 
   async function updateEntry() {
     if (!editQuestion.trim() || !editAnswer.trim() || busyAction) return;
+    if (!ensureGuardrail(reviewFor(editQuestion, editAnswer))) return;
     busyAction = "update";
     try {
       const existing = items.find((item) => (item.id || item._id) === editId);
@@ -266,6 +269,17 @@
 
   function warningLabel(key) {
     return t(`kb.warning.${key}`);
+  }
+
+  function getBlockingWarnings(review) {
+    return (review?.warnings || []).filter((warning) => BLOCKING_WARNINGS.has(warning));
+  }
+
+  function ensureGuardrail(review) {
+    const blocking = getBlockingWarnings(review);
+    if (!blocking.length) return true;
+    showToast(t("kb.guardrailBlocked", { reasons: blocking.map(warningLabel).join(" · ") }), "error");
+    return false;
   }
 
   async function applyCopilotDraft(event) {
@@ -464,6 +478,9 @@
             <span class="success">{t("kb.reviewLooksGood")}</span>
           {/if}
         </div>
+        {#if getBlockingWarnings(reviewFor(newQuestion, newAnswer)).length}
+          <div class="guardrail-note">{t("kb.guardrailNote")}</div>
+        {/if}
       </div>
     </div>
   </div>
@@ -517,6 +534,9 @@
             <span class="success">{t("kb.reviewLooksGood")}</span>
           {/if}
         </div>
+        {#if getBlockingWarnings(reviewFor(editQuestion, editAnswer)).length}
+          <div class="guardrail-note">{t("kb.guardrailNote")}</div>
+        {/if}
       </div>
     </div>
   </div>
@@ -761,6 +781,17 @@
     background: var(--success-bg);
     border-color: rgba(5, 150, 105, 0.2);
     color: var(--success);
+  }
+
+  .guardrail-note {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    color: #9a3412;
+    font-size: 12px;
+    line-height: 1.5;
   }
 
   .match-list {

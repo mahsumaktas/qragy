@@ -317,6 +317,8 @@ export default {
   "kb.warning.answerShort": "Cevap çok kısa; çözüm yolunu daha net yazın.",
   "kb.warning.answerNeedsStructure": "Uzun cevapta görünür adım yok; numaralı akış ekleyin.",
   "kb.warning.noTopicMatch": "Bu kayıt mevcut konu anahtar kelimeleriyle eşleşmiyor.",
+  "kb.guardrailNote": "Yüksek riskli kalite uyarısı varken kayıt engellenir. Önce konu eşleşmesini netleştirin.",
+  "kb.guardrailBlocked": "Kayıt durduruldu: {reasons}",
 
   // ── Admin Assistant ────────────────────────────────────
   "assistant.title": "Qragy Assistant",
@@ -332,6 +334,7 @@ export default {
   "assistant.pending": "Bekleyen işlemler",
   "assistant.empty": "Buradan bilgi bankasını sorun, dosya yükleyin veya admin işlemleri yaptırın.",
   "assistant.error": "Hata: {msg}",
+  "assistant.degraded": "Bu cevap güvenli yedek modda üretildi. İsterseniz aynı işi sayfadaki copilot panelinden sürdürebilirsiniz.",
   "assistant.suggestionKb": "Bilgi bankasını kalite açısından incele",
   "assistant.suggestionTopics": "Konulardaki boşlukları bul",
   "assistant.suggestionBot": "Bot ayarlarında çelişki var mı kontrol et",
@@ -403,6 +406,8 @@ export default {
   "topics.warning.playbookShort": "Konu playbook'u kısa; akışı daha detaylı yazın.",
   "topics.warning.directWithoutKb": "Konu doğrudan çözülebilir işaretli ama eşleşen KB kaydı yok.",
   "topics.warning.keywordOverlap": "Bu konu başka konularla aynı anahtar kelimeleri paylaşıyor; kapsamı netleştirin.",
+  "topics.guardrailNote": "Yüksek riskli kalite uyarısı varken kayıt engellenir. Gerekli bilgileri doldurun veya ilgili KB kapsamını tamamlayın.",
+  "topics.guardrailBlocked": "Kayıt durduruldu: {reasons}",
   "topics.playbookTemplateTitle": "Konu Playbook'u",
   "topics.playbookSectionScope": "Kapsam",
   "topics.playbookSectionSteps": "Çözüm Adımları",

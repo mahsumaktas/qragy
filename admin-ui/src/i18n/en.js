@@ -317,6 +317,8 @@ export default {
   "kb.warning.answerShort": "Answer is too short; make the resolution path clearer.",
   "kb.warning.answerNeedsStructure": "Long answer has no visible steps; consider numbered troubleshooting.",
   "kb.warning.noTopicMatch": "This record does not match any current topic keyword.",
+  "kb.guardrailNote": "Saving is blocked while a high-risk quality warning is active. Clarify the topic match first.",
+  "kb.guardrailBlocked": "Save blocked: {reasons}",
 
   // ── Admin Assistant ────────────────────────────────────
   "assistant.title": "Qragy Assistant",
@@ -332,6 +334,7 @@ export default {
   "assistant.pending": "Pending actions",
   "assistant.empty": "Ask about the knowledge base, upload a file, or make admin changes from here.",
   "assistant.error": "Error: {msg}",
+  "assistant.degraded": "This answer was generated in safe fallback mode. If needed, continue from the page copilot panel.",
   "assistant.suggestionKb": "Review the knowledge base quality",
   "assistant.suggestionTopics": "Find topic gaps",
   "assistant.suggestionBot": "Check bot settings for contradictions",
@@ -403,6 +406,8 @@ export default {
   "topics.warning.playbookShort": "Topic playbook is too short; document the flow in more detail.",
   "topics.warning.directWithoutKb": "Topic is marked directly solvable but has no matching KB record.",
   "topics.warning.keywordOverlap": "This topic shares keywords with other topics; narrow the scope.",
+  "topics.guardrailNote": "Saving is blocked while a high-risk quality warning is active. Fill the required information or complete the linked KB coverage first.",
+  "topics.guardrailBlocked": "Save blocked: {reasons}",
   "topics.playbookTemplateTitle": "Topic Playbook",
   "topics.playbookSectionScope": "Scope",
   "topics.playbookSectionSteps": "Resolution Steps",
