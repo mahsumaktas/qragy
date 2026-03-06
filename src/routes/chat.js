@@ -74,8 +74,20 @@ function mount(app, deps) {
         return res.status(400).json({ error: "messages field cannot be empty." });
       }
 
+      const MAX_MESSAGES_PER_REQUEST = 50;
+      if (rawMessages.length > MAX_MESSAGES_PER_REQUEST) {
+        return res.status(400).json({ error: `Too many messages. Maximum ${MAX_MESSAGES_PER_REQUEST} messages allowed.` });
+      }
+
       // Message length limit
       const MAX_MESSAGE_LENGTH = 1000;
+      const totalChars = rawMessages.reduce((sum, item) => (
+        sum + (typeof item?.content === "string" ? item.content.length : 0)
+      ), 0);
+      const MAX_TOTAL_REQUEST_CHARS = 12000;
+      if (totalChars > MAX_TOTAL_REQUEST_CHARS) {
+        return res.status(400).json({ error: `Conversation payload too large. Maximum ${MAX_TOTAL_REQUEST_CHARS} characters allowed.` });
+      }
       const latestUserMsg = rawMessages[rawMessages.length - 1];
       if (latestUserMsg && latestUserMsg.role === "user" && typeof latestUserMsg.content === "string" && latestUserMsg.content.length > MAX_MESSAGE_LENGTH) {
         return res.status(400).json({ error: `Message too long. Maximum ${MAX_MESSAGE_LENGTH} characters allowed.` });

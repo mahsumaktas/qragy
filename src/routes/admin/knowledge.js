@@ -4,6 +4,7 @@
  * Admin Knowledge Base Routes — list, add, update, delete, reingest, file upload
  */
 const { getKnowledgeWarnings } = require("../../services/adminContentCopilot");
+const { buildEntriesFromChunks, prepareKnowledgeImport } = require("../../services/knowledgeImport");
 const { adminError } = require("../../utils/adminLocale");
 
 function mount(app, deps) {
@@ -41,68 +42,25 @@ function mount(app, deps) {
     return null;
   }
 
-  async function extractTextFromFile(filePath, mimetype, originalname) {
-    const ext = path.extname(originalname).toLowerCase();
-    if (ext === ".txt" || mimetype === "text/plain") {
-      return fs.readFileSync(filePath, "utf8");
+  function mergeImportedEntries(rows, entries) {
+    let added = 0;
+    for (const entry of entries) {
+      const question = String(entry.question || "").trim();
+      const answer = String(entry.answer || "").trim();
+      if (!question || !answer) continue;
+      const exists = rows.some((row) =>
+        (row.question || "").trim().toLowerCase() === question.toLowerCase()
+        && (row.answer || "").trim().toLowerCase() === answer.toLowerCase()
+      );
+      if (exists) continue;
+      rows.push({
+        question,
+        answer,
+        source: entry.source || "file-import",
+      });
+      added += 1;
     }
-    if (ext === ".pdf" || mimetype === "application/pdf") {
-      const pdfParse = require("pdf-parse");
-      const buffer = fs.readFileSync(filePath);
-      const data = await pdfParse(buffer);
-      return data.text || "";
-    }
-    if (ext === ".docx" || mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-      const mammoth = require("mammoth");
-      const result = await mammoth.extractRawText({ path: filePath });
-      return result.value || "";
-    }
-    throw new Error("Unsupported file format:" + ext);
-  }
-
-  /**
-   * Extract Q&A pairs from XLSX/XLS file.
-   * Header detection: looks for soru/question + cevap/answer columns.
-   * Fallback: col 1 = question, col 2 = answer.
-   * @returns {Array<{ question: string, answer: string }>}
-   */
-  function extractQAFromXlsx(filePath) {
-    const XLSX = require("xlsx");
-    const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) throw new Error("No sheet found in XLSX file.");
-
-    const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-    if (!rows.length) throw new Error("XLSX file is empty.");
-
-    // Try to detect Q/A columns from headers
-    const headers = Object.keys(rows[0]).map(h => h.toLowerCase().trim());
-    const qHeaders = ["soru", "question", "q"];
-    const aHeaders = ["cevap", "answer", "a", "yanit"];
-
-    let qCol = null;
-    let aCol = null;
-    for (const h of headers) {
-      if (!qCol && qHeaders.some(qh => h.includes(qh))) qCol = Object.keys(rows[0])[headers.indexOf(h)];
-      if (!aCol && aHeaders.some(ah => h.includes(ah))) aCol = Object.keys(rows[0])[headers.indexOf(h)];
-    }
-
-    // Fallback: first column = question, second column = answer
-    if (!qCol || !aCol) {
-      const keys = Object.keys(rows[0]);
-      qCol = keys[0];
-      aCol = keys[1] || keys[0];
-    }
-
-    const pairs = [];
-    for (const row of rows) {
-      const q = String(row[qCol] || "").trim();
-      const a = String(row[aCol] || "").trim();
-      if (q && a) pairs.push({ question: q, answer: a });
-    }
-
-    return pairs;
+    return added;
   }
 
   // ── KB: List all ────────────────────────────────────────────────────────
@@ -211,84 +169,42 @@ function mount(app, deps) {
     }
   });
 
-  // ── KB: File Upload (PDF/DOCX/TXT/XLSX) ──────────────────────────────────
+  // ── KB: File Upload (PDF/DOCX/TXT/CSV/XLSX) ──────────────────────────────
   app.post("/api/admin/knowledge/upload", requireAdminAccess, upload.single("file"), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "File is required." });
     try {
-      const ext = path.extname(req.file.originalname).toLowerCase();
-
-      // XLSX/XLS: extract Q&A pairs directly (no chunking needed)
-      if (ext === ".xlsx" || ext === ".xls") {
-        const pairs = extractQAFromXlsx(req.file.path);
-        if (!pairs.length) {
-          try { fs.unlinkSync(req.file.path); } catch (_) { /* cleanup */ }
-          return res.status(400).json({ error: "Could not extract Q&A pairs from XLSX file." });
-        }
-
-        const rows = loadCSVData();
-        let added = 0;
-        for (const pair of pairs) {
-          const exists = rows.some(r =>
-            (r.question || "").trim().toLowerCase() === pair.question.trim().toLowerCase()
-          );
-          if (!exists) {
-            rows.push({ question: pair.question, answer: pair.answer, source: req.file.originalname });
-            added++;
-          }
-        }
-
-        saveCSVData(rows);
-        await reingestKnowledgeBase();
-        try { fs.unlinkSync(req.file.path); } catch (_) { /* cleanup */ }
-        return res.json({ ok: true, chunksAdded: added, totalRecords: rows.length });
-      }
-
-      const text = await extractTextFromFile(req.file.path, req.file.mimetype, req.file.originalname);
-      if (!text.trim()) return res.status(400).json({ error: "Could not extract text from file." });
-
-      let chunks = chunkText(text, { filename: req.file.originalname });
-      if (!chunks.length) return res.status(400).json({ error: "Insufficient content found." });
-
-      // Optional contextual enrichment (adds LLM-generated context prefix to each chunk)
       const contextualEnrich = req.body?.contextualEnrich === "true" || req.body?.contextualEnrich === true;
-      if (contextualEnrich && contextualChunker) {
-        try {
-          const chunkObjs = chunks.map(c => ({ question: "", answer: c }));
-          const enriched = await contextualChunker.enrichBatch(chunkObjs, req.file.originalname);
-          chunks = enriched.map(e => e.contextualContent || e.originalContent || e.answer);
-        } catch (err) {
-          logger.warn("fileUpload", "Contextual enrichment error, using original chunks", err);
-        }
-      }
-
+      const importPlan = await prepareKnowledgeImport(req.file, {
+        fs,
+        path,
+        chunkText,
+        callLLM,
+        contextualChunker,
+        logger,
+      }, {
+        contextualEnrich,
+        source: req.file.originalname,
+      });
       const rows = loadCSVData();
-      let added = 0;
-
-      for (const chunk of chunks) {
-        let question;
-        try {
-          const qResult = await callLLM(
-            [{ role: "user", parts: [{ text: chunk }] }],
-            "Write a single question summarizing this text snippet. Write only the question, nothing else.",
-            64
-          );
-          question = (qResult.reply || "").trim();
-        } catch (err) {
-          logger.warn("fileUpload", "Question generation", err);
-          question = chunk.slice(0, 100) + "...";
-        }
-        if (!question) question = chunk.slice(0, 100) + "...";
-
-        rows.push({ question, answer: chunk, source: req.file.originalname });
-        added++;
-      }
-
+      const added = mergeImportedEntries(rows, importPlan.entries);
       saveCSVData(rows);
       await reingestKnowledgeBase();
+      recordAuditEvent?.("knowledge_upload", {
+        source: req.file.originalname,
+        mode: importPlan.mode,
+        added,
+        truncated: Boolean(importPlan.truncated),
+      }, req.ip);
 
       try { fs.unlinkSync(req.file.path); } catch (err) { logger.warn("fileUpload", "Cleanup", err); }
 
-      return res.json({ ok: true, chunksAdded: added, totalRecords: rows.length });
+      return res.json({
+        ok: true,
+        chunksAdded: added,
+        totalRecords: rows.length,
+        mode: importPlan.mode,
+        truncated: Boolean(importPlan.truncated),
+      });
     } catch (err) {
       try { fs.unlinkSync(req.file.path); } catch (cleanupErr) { logger.warn("fileUpload", "Cleanup", cleanupErr); }
       return res.status(500).json({ error: safeError(err, "api") });
@@ -312,36 +228,24 @@ function mount(app, deps) {
 
     try {
       const { title, text } = await urlExtractor.extract(url);
-
-      const chunks = chunkText(text, { filename: title || url });
-      if (!chunks.length) return res.status(400).json({ error: "Could not extract sufficient content from page." });
-
+      const importPlan = await buildEntriesFromChunks(
+        chunkText(text, { filename: title || url }),
+        { callLLM, logger },
+        { filename: title || url, source: url }
+      );
+      if (!importPlan.entries.length) return res.status(400).json({ error: "Could not extract sufficient content from page." });
       const rows = loadCSVData();
-      let added = 0;
-
-      for (const chunk of chunks) {
-        let question;
-        try {
-          const qResult = await callLLM(
-            [{ role: "user", parts: [{ text: chunk }] }],
-            "Write a single question summarizing this text snippet. Write only the question, nothing else.",
-            64
-          );
-          question = (qResult.reply || "").trim();
-        } catch (err) {
-          logger.warn("urlImport", "Question generation", err);
-          question = chunk.slice(0, 100) + "...";
-        }
-        if (!question) question = chunk.slice(0, 100) + "...";
-
-        rows.push({ question, answer: chunk, source: url });
-        added++;
-      }
-
+      const added = mergeImportedEntries(rows, importPlan.entries);
       saveCSVData(rows);
       await reingestKnowledgeBase();
 
-      return res.json({ ok: true, title: title || "", chunksAdded: added, totalRecords: rows.length });
+      return res.json({
+        ok: true,
+        title: title || "",
+        chunksAdded: added,
+        totalRecords: rows.length,
+        truncated: Boolean(importPlan.truncated),
+      });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });
     }
@@ -359,53 +263,27 @@ function mount(app, deps) {
 
     for (const file of req.files) {
       try {
-        const ext = path.extname(file.originalname).toLowerCase();
-
-        if (ext === ".xlsx" || ext === ".xls") {
-          const pairs = extractQAFromXlsx(file.path);
-          const rows = loadCSVData();
-          let added = 0;
-          for (const pair of pairs) {
-            const exists = rows.some(r =>
-              (r.question || "").trim().toLowerCase() === pair.question.trim().toLowerCase()
-            );
-            if (!exists) {
-              rows.push({ question: pair.question, answer: pair.answer, source: file.originalname });
-              added++;
-            }
-          }
-          if (added > 0) saveCSVData(rows);
-          totalAdded += added;
-          results.push({ file: file.originalname, ok: true, chunksAdded: added });
-        } else {
-          const text = await extractTextFromFile(file.path, file.mimetype, file.originalname);
-          if (!text.trim()) {
-            results.push({ file: file.originalname, ok: false, error: "Text extraction failed" });
-            continue;
-          }
-          const chunks = chunkText(text, { filename: file.originalname });
-          const rows = loadCSVData();
-          let added = 0;
-          for (const chunk of chunks) {
-            let question;
-            try {
-              const qResult = await callLLM(
-                [{ role: "user", parts: [{ text: chunk }] }],
-                "Write a single question summarizing this text snippet. Write only the question, nothing else.",
-                64
-              );
-              question = (qResult.reply || "").trim();
-            } catch (_) {
-              question = chunk.slice(0, 100) + "...";
-            }
-            if (!question) question = chunk.slice(0, 100) + "...";
-            rows.push({ question, answer: chunk, source: file.originalname });
-            added++;
-          }
-          if (added > 0) saveCSVData(rows);
-          totalAdded += added;
-          results.push({ file: file.originalname, ok: true, chunksAdded: added });
-        }
+        const importPlan = await prepareKnowledgeImport(file, {
+          fs,
+          path,
+          chunkText,
+          callLLM,
+          contextualChunker,
+          logger,
+        }, {
+          source: file.originalname,
+        });
+        const rows = loadCSVData();
+        const added = mergeImportedEntries(rows, importPlan.entries);
+        if (added > 0) saveCSVData(rows);
+        totalAdded += added;
+        results.push({
+          file: file.originalname,
+          ok: true,
+          chunksAdded: added,
+          mode: importPlan.mode,
+          truncated: Boolean(importPlan.truncated),
+        });
       } catch (err) {
         results.push({ file: file.originalname, ok: false, error: safeError(err, "api") });
       } finally {

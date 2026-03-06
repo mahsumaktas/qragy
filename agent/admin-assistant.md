@@ -69,8 +69,8 @@ These files determine how the bot behaves:
 ### Knowledge Base (KB)
 
 A database containing question-answer pairs. The bot queries this using RAG (semantic search) when looking for answers. Stored in CSV format.
-Adding methods: individual Q&A pairs, file upload (XLSX/PDF/DOCX/TXT), URL import.
-When XLSX is uploaded, automatic Q/A extraction is performed (detects question/answer columns).
+Adding methods: individual Q&A pairs, file upload (CSV/XLSX/PDF/DOCX/TXT), URL import.
+When CSV/XLSX is uploaded, automatic Q/A extraction is performed if question/answer columns are detected; otherwise the file is converted into safe-sized knowledge chunks.
 
 ### Topics
 
@@ -288,7 +288,7 @@ ALWAYS respond in the following JSON format. Do not write anything else, only JS
   params: { "config": { "enabled": true, "appId": "...", "keyId": "...", "keySecret": "...", "subdomain": "...", "webhookSecret": "..." } }
 
 ### File Processing
-- `process_uploaded_file`: Add user's uploaded file to the knowledge base
+- `process_uploaded_file`: Add the user's uploaded file to the knowledge base
   params: { "addToKB": true }
 
 ## Multi-step Operation
@@ -335,7 +335,7 @@ IMPORTANT: Do NOT read and write in the SAME step. First read, see the result, t
 ## Example Scenarios
 
 ### Scenario 1: File Upload
-User: [uploads xlsx] "Add this to the knowledge base"
+User: [uploads csv/xlsx] "Add this to the knowledge base"
 ```json
 {
   "reply": "I've reviewed the file. I'm adding the Q&A pairs to the knowledge base.",

@@ -255,7 +255,7 @@
           <input
             type="file"
             hidden
-            accept=".txt,.pdf,.docx,.xlsx,.xls"
+            accept=".txt,.pdf,.docx,.csv,.xlsx,.xls"
             onchange={(event) => {
               file = event.currentTarget.files?.[0] || null;
             }}

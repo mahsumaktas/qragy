@@ -19,6 +19,7 @@ const {
   normalizeForMatching,
   VALID_AGENT_FILES,
 } = require("../../services/adminContentCopilot");
+const { prepareKnowledgeImport } = require("../../services/knowledgeImport");
 
 // ── Allowed Actions Whitelist ────────────────────────────────────────────
 const ALLOWED_ACTIONS = {
@@ -45,6 +46,71 @@ const ASSISTANT_MAX_OUTPUT_TOKENS = 3072;
 const ASSISTANT_RECOVERY_MAX_OUTPUT_TOKENS = 1536;
 const ASSISTANT_MIN_TIMEOUT_MS = 40000;
 const ASSISTANT_RECOVERY_TIMEOUT_MS = 20000;
+const ADMIN_ASSISTANT_MAX_MESSAGE_LENGTH = 4000;
+const ADMIN_ASSISTANT_MAX_HISTORY_ITEMS = 10;
+const ADMIN_ASSISTANT_MAX_HISTORY_CHARS = 1200;
+
+function buildAssistantInputTooLongError(locale, maxChars) {
+  if (locale === "en") {
+    return `Message too long. Maximum ${maxChars} characters allowed.`;
+  }
+  return `Mesaj çok uzun. En fazla ${maxChars} karakter gönderebilirsiniz.`;
+}
+
+function sanitizeAssistantHistory(history) {
+  return (Array.isArray(history) ? history : [])
+    .slice(-ADMIN_ASSISTANT_MAX_HISTORY_ITEMS)
+    .map((item) => ({
+      role: item?.role === "assistant" ? "assistant" : "user",
+      content: String(item?.content || "").slice(0, ADMIN_ASSISTANT_MAX_HISTORY_CHARS),
+    }))
+    .filter((item) => item.content.trim());
+}
+
+function mergeKnowledgeEntries(rows, entries) {
+  let added = 0;
+  for (const entry of entries || []) {
+    const question = String(entry.question || "").trim();
+    const answer = String(entry.answer || "").trim();
+    if (!question || !answer) continue;
+    const exists = rows.some((row) =>
+      (row.question || "").trim().toLowerCase() === question.toLowerCase()
+      && (row.answer || "").trim().toLowerCase() === answer.toLowerCase()
+    );
+    if (exists) continue;
+    rows.push({
+      question,
+      answer,
+      source: entry.source || "assistant-import",
+    });
+    added += 1;
+  }
+  return added;
+}
+
+function buildAssistantFileContext(filename, importPlan) {
+  const lines = [`[UPLOADED FILE: ${filename}]`];
+  if (!importPlan) return lines.join("\n");
+
+  if (importPlan.mode === "qa_pairs") {
+    lines.push(`${importPlan.pairCount || importPlan.entries?.length || 0} Q&A pairs extracted from the file.`);
+  } else {
+    lines.push(`${importPlan.chunkCount || importPlan.entries?.length || 0} knowledge chunks prepared from the file.`);
+    if (importPlan.rowCount) {
+      lines.push(`Detected ${importPlan.rowCount} tabular row(s).`);
+    }
+  }
+
+  if (importPlan.preview) {
+    lines.push("Preview:");
+    lines.push(String(importPlan.preview).slice(0, 1600));
+  }
+  if (importPlan.truncated) {
+    lines.push("Import plan was truncated to stay within safe size limits.");
+  }
+
+  return lines.join("\n");
+}
 
 function detectAutoReviewActions(message) {
   const normalized = normalizeForMatching(message);
@@ -494,71 +560,6 @@ async function executeAction(actionName, params, deps) {
   }
 }
 
-// ── File Text Extraction (reused from knowledge.js patterns) ─────────
-async function extractTextFromFile(filePath, mimetype, originalname, deps) {
-  const ext = deps.path.extname(originalname).toLowerCase();
-
-  if (ext === ".txt" || mimetype === "text/plain") {
-    return deps.fs.readFileSync(filePath, "utf8");
-  }
-  if (ext === ".pdf" || mimetype === "application/pdf") {
-    const pdfParse = require("pdf-parse");
-    const buffer = deps.fs.readFileSync(filePath);
-    const data = await pdfParse(buffer);
-    return data.text || "";
-  }
-  if (ext === ".docx" || mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-    const mammoth = require("mammoth");
-    const result = await mammoth.extractRawText({ path: filePath });
-    return result.value || "";
-  }
-  if (ext === ".xlsx" || ext === ".xls") {
-    const XLSX = require("xlsx");
-    const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) return "(empty xlsx)";
-    const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-    return rows.map(r => Object.values(r).join(" | ")).join("\n");
-  }
-  throw new Error("Unsupported file format: " + ext);
-}
-
-// ── Extract Q/A pairs from XLSX (reused from knowledge.js) ──────────
-function extractQAFromXlsx(filePath, _deps) {
-  const XLSX = require("xlsx");
-  const workbook = XLSX.readFile(filePath);
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) return [];
-
-  const sheet = workbook.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-  if (!rows.length) return [];
-
-  const headers = Object.keys(rows[0]).map(h => h.toLowerCase().trim());
-  const qHeaders = ["soru", "question", "q"];
-  const aHeaders = ["cevap", "answer", "a", "yanit"];
-
-  let qCol = null, aCol = null;
-  for (const h of headers) {
-    if (!qCol && qHeaders.some(qh => h.includes(qh))) qCol = Object.keys(rows[0])[headers.indexOf(h)];
-    if (!aCol && aHeaders.some(ah => h.includes(ah))) aCol = Object.keys(rows[0])[headers.indexOf(h)];
-  }
-  if (!qCol || !aCol) {
-    const keys = Object.keys(rows[0]);
-    qCol = keys[0];
-    aCol = keys[1] || keys[0];
-  }
-
-  const pairs = [];
-  for (const row of rows) {
-    const q = String(row[qCol] || "").trim();
-    const a = String(row[aCol] || "").trim();
-    if (q && a) pairs.push({ question: q, answer: a });
-  }
-  return pairs;
-}
-
 // ── Build enriched system prompt with RAG + agent config context ──────
 function buildEnrichedSystemPrompt(basePrompt, ragResults, agentConfigSummary, kbSize, qualitySnapshot) {
   const parts = [basePrompt];
@@ -649,10 +650,13 @@ function mount(app, deps) {
     multer: multerLib, recordAuditEvent,
     loadCSVData, saveCSVData, reingestKnowledgeBase,
     // Qragy pipeline services
-    searchKnowledge, getProviderConfig, getAgentConfigSummary,
+    searchKnowledge, getProviderConfig, getAgentConfigSummary, chunkText, contextualChunker,
   } = deps;
 
-  const upload = multerLib({ dest: UPLOADS_DIR, limits: { fileSize: 10 * 1024 * 1024 } });
+  const upload = multerLib({
+    dest: UPLOADS_DIR,
+    limits: { fileSize: 10 * 1024 * 1024, fieldSize: 128 * 1024, fields: 12 },
+  });
   const copilot = createAdminContentCopilot(deps);
 
   app.post("/api/admin/assistant", requireAdminAccess, upload.single("file"), async (req, res) => {
@@ -667,6 +671,9 @@ function mount(app, deps) {
 
       if (typeof message !== "string") message = "";
       message = message.trim();
+      if (message.length > ADMIN_ASSISTANT_MAX_MESSAGE_LENGTH) {
+        return res.status(400).json({ error: buildAssistantInputTooLongError(locale, ADMIN_ASSISTANT_MAX_MESSAGE_LENGTH) });
+      }
 
       // Parse history (could be JSON string from FormData)
       let history = [];
@@ -675,6 +682,7 @@ function mount(app, deps) {
       } else if (Array.isArray(historyRaw)) {
         history = historyRaw;
       }
+      history = sanitizeAssistantHistory(history);
 
       let selection = null;
       if (typeof selectionRaw === "string" && selectionRaw.trim()) {
@@ -737,29 +745,21 @@ function mount(app, deps) {
 
       // ── Process uploaded file ───────────────────────────────────
       let fileContext = "";
-      let fileQAPairs = null;
+      let fileImportPlan = null;
 
       if (req.file) {
         try {
-          const ext = path.extname(req.file.originalname).toLowerCase();
-
-          // XLSX: try Q/A extraction first
-          if (ext === ".xlsx" || ext === ".xls") {
-            const pairs = extractQAFromXlsx(req.file.path, deps);
-            if (pairs.length > 0) {
-              fileQAPairs = pairs;
-              fileContext = "[UPLOADED FILE: " + req.file.originalname + "]\n" +
-                pairs.length + " Q&A pairs extracted from file:\n" +
-                pairs.slice(0, 10).map((p, i) => (i + 1) + ". Q: " + p.question + " | A: " + p.answer).join("\n") +
-                (pairs.length > 10 ? "\n... and " + (pairs.length - 10) + " more records." : "");
-            }
-          }
-
-          // Other formats: text extraction
-          if (!fileContext) {
-            const text = await extractTextFromFile(req.file.path, req.file.mimetype, req.file.originalname, deps);
-            fileContext = "[UPLOADED FILE: " + req.file.originalname + "]\n" + text.slice(0, 8000);
-          }
+          fileImportPlan = await prepareKnowledgeImport(req.file, {
+            fs,
+            path,
+            chunkText,
+            callLLM,
+            contextualChunker,
+            logger,
+          }, {
+            source: req.file.originalname,
+          });
+          fileContext = buildAssistantFileContext(req.file.originalname, fileImportPlan);
         } catch (fileErr) {
           logger.warn("Assistant file parse error:", fileErr);
           fileContext = "[UPLOADED FILE: " + req.file.originalname + "]\nFailed to read file: " + fileErr.message;
@@ -972,17 +972,21 @@ function mount(app, deps) {
         const results = [];
         for (const act of parsed.actions) {
           // Special handling: process_uploaded_file with actual file data
-          if (act.action === "process_uploaded_file" && fileQAPairs && fileQAPairs.length > 0) {
+          if (act.action === "process_uploaded_file" && fileImportPlan?.entries?.length) {
             const rows = loadCSVData();
-            let added = 0;
-            for (const p of fileQAPairs) {
-              if (p.question && p.answer) { rows.push({ question: p.question, answer: p.answer }); added++; }
-            }
+            const added = mergeKnowledgeEntries(rows, fileImportPlan.entries);
             if (added > 0) {
               saveCSVData(rows);
               await reingestKnowledgeBase();
             }
-            results.push({ action: "process_uploaded_file", status: "success", result: added + " entries added to knowledge base.", count: added });
+            results.push({
+              action: "process_uploaded_file",
+              status: "success",
+              result: added + " entries added to knowledge base.",
+              count: added,
+              mode: fileImportPlan.mode,
+              truncated: Boolean(fileImportPlan.truncated),
+            });
             recordAuditEvent("assistant:process_uploaded_file", added + " entries added", req.ip);
           } else {
             const result = await executeAction(act.action, act.params, { ...deps, copilot });
