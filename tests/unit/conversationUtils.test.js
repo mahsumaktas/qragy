@@ -82,4 +82,49 @@ describe("conversationUtils content gaps", () => {
     expect(saved.gaps).toHaveLength(2);
     expect(saved.gaps.some((item) => item.query.includes("tesekkur"))).toBe(false);
   });
+
+  it("can mark a content gap handled and automatically reopen it when the same signal appears again", () => {
+    const fixture = makeUtils({
+      gaps: [
+        { query: "Bilet yazdıramıyorum", count: 4, lastSeen: "2026-03-05T10:00:00.000Z" },
+      ],
+    });
+    tmpDir = fixture.tmpDir;
+
+    const handled = fixture.utils.handleContentGap("bilet yazdiramiyorum", "resolved");
+    const hiddenReport = fixture.utils.getContentGapReport({ limit: 20 });
+
+    expect(handled?.status).toBe("resolved");
+    expect(hiddenReport.gaps).toHaveLength(0);
+    expect(hiddenReport.summary.handledCount).toBe(1);
+
+    expect(fixture.utils.recordContentGap("Bilet yazdıramıyorum")).toBe(true);
+
+    const reopenedReport = fixture.utils.getContentGapReport({ limit: 20 });
+    const saved = JSON.parse(fs.readFileSync(fixture.contentGapsFile, "utf8"));
+
+    expect(reopenedReport.gaps).toHaveLength(1);
+    expect(reopenedReport.summary.handledCount).toBe(0);
+    expect(reopenedReport.gaps[0].count).toBe(5);
+    expect(saved.gaps[0].status).toBeUndefined();
+  });
+
+  it("keeps handled entries while pruning open noise", () => {
+    const fixture = makeUtils({
+      gaps: [
+        { query: "yazici sorunu yasiyorum", count: 5, lastSeen: "2026-03-01T10:00:00.000Z" },
+        { query: "tamam tesekkurler", count: 3, lastSeen: "2026-03-02T10:00:00.000Z" },
+        { query: "bildirim gelmiyor", count: 2, lastSeen: "2026-03-03T10:00:00.000Z", status: "resolved", handledAt: "2026-03-04T10:00:00.000Z" },
+      ],
+    });
+    tmpDir = fixture.tmpDir;
+
+    const pruned = fixture.utils.pruneContentGaps();
+    const saved = JSON.parse(fs.readFileSync(fixture.contentGapsFile, "utf8"));
+
+    expect(pruned.removedCount).toBe(1);
+    expect(saved.gaps).toHaveLength(2);
+    expect(saved.gaps.some((item) => item.status === "resolved" && item.query === "bildirim gelmiyor")).toBe(true);
+    expect(saved.gaps.some((item) => item.query.includes("tesekkur"))).toBe(false);
+  });
 });

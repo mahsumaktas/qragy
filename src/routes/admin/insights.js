@@ -1,5 +1,7 @@
 "use strict";
 
+const { adminError } = require("../../utils/adminLocale");
+
 /**
  * Admin Insights Routes — SLA tracking, auto-FAQ generation, content gaps, feedback
  */
@@ -16,6 +18,7 @@ function mount(app, deps) {
     loadContentGaps,
     getContentGapReport,
     pruneContentGaps,
+    handleContentGap,
     loadFeedback,
     callLLM,
     getProviderConfig,
@@ -228,6 +231,32 @@ function mount(app, deps) {
     const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "";
     recordAuditEvent("content_gap_prune", `removed=${result.removedCount}`, clientIp);
     return res.json({ ok: true, ...result });
+  });
+
+  app.post("/api/admin/content-gaps/handle", requireAdminAccess, (req, res) => {
+    if (typeof handleContentGap !== "function") {
+      return adminError(res, req, 400, "contentGaps.handleUnavailable");
+    }
+
+    const query = String(req.body?.query || "").trim();
+    if (!query) {
+      return adminError(res, req, 400, "contentGaps.queryRequired");
+    }
+
+    const action = String(req.body?.action || "resolved").trim().toLowerCase();
+    if (!["resolved", "dismissed"].includes(action)) {
+      return adminError(res, req, 400, "contentGaps.invalidAction");
+    }
+
+    const result = handleContentGap(query, action);
+    if (!result) {
+      return adminError(res, req, 404, "contentGaps.recordNotFound");
+    }
+
+    const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "";
+    recordAuditEvent("content_gap_handle", `${action}:${result.normalizedQuery}`, clientIp);
+    const report = getContentGapReport({ limit: 100 });
+    return res.json({ ok: true, handled: result, ...report });
   });
 
   // ── Feedback ────────────────────────────────────────────────────────────

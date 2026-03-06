@@ -33,6 +33,22 @@ const ADMIN_MESSAGES = {
     tr: "Bu kayıt mevcut konu anahtar kelimeleriyle eşleşmediği için kaydedilemez. Önce uygun konu kapsamını netleştirin.",
     en: "This record cannot be saved because it does not match any current topic keyword. Clarify the topic coverage first.",
   },
+  "contentGaps.handleUnavailable": {
+    tr: "İçerik eksiği durumu güncellenemiyor.",
+    en: "Content gap status update is unavailable.",
+  },
+  "contentGaps.queryRequired": {
+    tr: "İçerik eksiği kaydı seçilmelidir.",
+    en: "Content gap record is required.",
+  },
+  "contentGaps.invalidAction": {
+    tr: "Geçersiz içerik eksiği aksiyonu.",
+    en: "Invalid content gap action.",
+  },
+  "contentGaps.recordNotFound": {
+    tr: "İçerik eksiği kaydı bulunamadı.",
+    en: "Content gap record not found.",
+  },
   "topics.invalidFilename": {
     tr: "Geçersiz dosya adı.",
     en: "Invalid filename.",

@@ -106,6 +106,18 @@ function createConversationUtils(deps) {
     "hala sorun var",
     "tekrar denedim",
   ];
+  const CONTENT_GAP_OPEN_STATUS = "open";
+  const CONTENT_GAP_HANDLED_STATUSES = new Set(["resolved", "dismissed"]);
+
+  function getContentGapKey(query) {
+    return normalizeForMatching(String(query || "").trim()).slice(0, 200);
+  }
+
+  function getContentGapStatus(entry) {
+    const status = String(entry?.status || "").trim().toLowerCase();
+    if (CONTENT_GAP_HANDLED_STATUSES.has(status)) return status;
+    return CONTENT_GAP_OPEN_STATUS;
+  }
 
   function containsAnyPattern(normalizedText, patterns) {
     return patterns.some((pattern) => normalizedText.includes(pattern));
@@ -129,7 +141,7 @@ function createConversationUtils(deps) {
 
     for (const entry of entries || []) {
       const rawQuery = String(entry?.question || entry?.query || "").trim();
-      const normalizedQuery = normalizeForMatching(rawQuery).slice(0, 200);
+      const normalizedQuery = getContentGapKey(rawQuery);
       if (!normalizedQuery) continue;
 
       const current = grouped.get(normalizedQuery) || {
@@ -138,6 +150,9 @@ function createConversationUtils(deps) {
         count: 0,
         firstSeen: entry?.firstSeen || entry?.lastSeen || "",
         lastSeen: entry?.lastSeen || entry?.firstSeen || "",
+        status: getContentGapStatus(entry),
+        handledAt: String(entry?.handledAt || ""),
+        handledAction: String(entry?.handledAction || entry?.status || ""),
       };
 
       current.count += Number(entry?.count || entry?.frequency || 1);
@@ -151,10 +166,42 @@ function createConversationUtils(deps) {
         current.query = rawQuery;
       }
 
+      const entryStatus = getContentGapStatus(entry);
+      if (current.status !== CONTENT_GAP_OPEN_STATUS && entryStatus === CONTENT_GAP_OPEN_STATUS) {
+        current.status = CONTENT_GAP_OPEN_STATUS;
+        current.handledAt = "";
+        current.handledAction = "";
+      } else if (current.status !== CONTENT_GAP_OPEN_STATUS && entryStatus !== CONTENT_GAP_OPEN_STATUS) {
+        const entryHandledAt = String(entry?.handledAt || "");
+        if (!current.handledAt || (entryHandledAt && entryHandledAt > current.handledAt)) {
+          current.status = entryStatus;
+          current.handledAt = entryHandledAt;
+          current.handledAction = String(entry?.handledAction || entryStatus);
+        }
+      }
+
       grouped.set(normalizedQuery, current);
     }
 
     return Array.from(grouped.values());
+  }
+
+  function toStoredContentGapEntry(entry) {
+    const stored = {
+      query: String(entry?.query || entry?.question || "").trim().slice(0, 200),
+      count: Math.max(1, Number(entry?.count || entry?.frequency || 1)),
+      firstSeen: String(entry?.firstSeen || entry?.lastSeen || nowIso()),
+      lastSeen: String(entry?.lastSeen || entry?.firstSeen || nowIso()),
+    };
+
+    const status = getContentGapStatus(entry);
+    if (status !== CONTENT_GAP_OPEN_STATUS) {
+      stored.status = status;
+      stored.handledAction = String(entry?.handledAction || status);
+      stored.handledAt = String(entry?.handledAt || nowIso());
+    }
+
+    return stored;
   }
 
   function classifyContentGapEntry(entry) {
@@ -289,11 +336,13 @@ function createConversationUtils(deps) {
     const limit = Math.max(1, Math.min(500, Number(options.limit) || 100));
     const data = loadContentGaps();
     const merged = mergeContentGapEntries(data.gaps || []);
+    const openEntries = merged.filter((entry) => getContentGapStatus(entry) === CONTENT_GAP_OPEN_STATUS);
+    const handledEntries = merged.filter((entry) => getContentGapStatus(entry) !== CONTENT_GAP_OPEN_STATUS);
     const actionable = [];
     const filtered = [];
     const filteredReasonCounts = { acknowledgement: 0, test_or_gibberish: 0, too_short: 0, generic_followup: 0 };
 
-    for (const entry of merged) {
+    for (const entry of openEntries) {
       const classified = classifyContentGapEntry(entry);
       if (classified.actionable) actionable.push(classified);
       else {
@@ -314,9 +363,10 @@ function createConversationUtils(deps) {
 
     return {
       summary: {
-        rawCount: merged.length,
+        rawCount: openEntries.length,
         actionableCount: actionable.length,
         filteredCount: filtered.length,
+        handledCount: handledEntries.length,
         highSignalCount: actionable.filter((item) => item.signal === "high").length,
         mediumSignalCount: actionable.filter((item) => item.signal === "medium").length,
         lowSignalCount: actionable.filter((item) => item.signal === "low").length,
@@ -329,23 +379,46 @@ function createConversationUtils(deps) {
   }
 
   function pruneContentGaps() {
+    const data = loadContentGaps();
+    const merged = mergeContentGapEntries(data.gaps || []);
+    const handled = merged
+      .filter((entry) => getContentGapStatus(entry) !== CONTENT_GAP_OPEN_STATUS)
+      .map((entry) => toStoredContentGapEntry(entry));
     const report = getContentGapReport({ limit: 500 });
-    const pruned = report.gaps.map((entry) => ({
-      query: entry.query,
-      count: entry.count,
-      firstSeen: entry.firstSeen || nowIso(),
-      lastSeen: entry.lastSeen || nowIso(),
-    }));
-    saveContentGaps({ gaps: pruned });
+    const prunedOpen = report.gaps.map((entry) => toStoredContentGapEntry(entry));
+    saveContentGaps({ gaps: [...prunedOpen, ...handled] });
     return {
-      keptCount: pruned.length,
+      keptCount: prunedOpen.length + handled.length,
       removedCount: report.summary.filteredCount,
       summary: {
         ...report.summary,
-        rawCount: pruned.length,
-        actionableCount: pruned.length,
+        rawCount: prunedOpen.length,
+        actionableCount: prunedOpen.length,
         filteredCount: 0,
       },
+    };
+  }
+
+  function handleContentGap(query, action = "resolved") {
+    const normalizedQuery = getContentGapKey(query);
+    if (!normalizedQuery) return null;
+
+    const nextStatus = action === "dismissed" ? "dismissed" : "resolved";
+    const data = loadContentGaps();
+    const merged = mergeContentGapEntries(data.gaps || []).map((entry) => toStoredContentGapEntry(entry));
+    const existing = merged.find((gap) => getContentGapKey(gap.query || gap.question || "") === normalizedQuery);
+    if (!existing) return null;
+
+    existing.status = nextStatus;
+    existing.handledAction = nextStatus;
+    existing.handledAt = nowIso();
+    saveContentGaps({ gaps: merged });
+
+    return {
+      query: existing.query,
+      normalizedQuery,
+      status: nextStatus,
+      handledAt: existing.handledAt,
     };
   }
 
@@ -354,22 +427,27 @@ function createConversationUtils(deps) {
     if (!classified.actionable) return false;
 
     const data = loadContentGaps();
-    const existing = data.gaps.find((gap) => {
-      const normalizedGap = normalizeForMatching(gap.query || gap.question || "").slice(0, 200);
+    const merged = mergeContentGapEntries(data.gaps || []).map((entry) => toStoredContentGapEntry(entry));
+    const existing = merged.find((gap) => {
+      const normalizedGap = getContentGapKey(gap.query || gap.question || "");
       return normalizedGap === classified.normalizedQuery;
     });
+    const now = nowIso();
     if (existing) {
       existing.count++;
-      existing.lastSeen = nowIso();
+      existing.lastSeen = now;
+      delete existing.status;
+      delete existing.handledAt;
+      delete existing.handledAction;
     } else {
-      data.gaps.push({
+      merged.push({
         query: query.trim().slice(0, 200),
         count: 1,
-        firstSeen: nowIso(),
-        lastSeen: nowIso(),
+        firstSeen: now,
+        lastSeen: now,
       });
     }
-    saveContentGaps(data);
+    saveContentGaps({ gaps: merged });
     return true;
   }
 
@@ -436,6 +514,7 @@ function createConversationUtils(deps) {
     saveContentGaps,
     getContentGapReport,
     pruneContentGaps,
+    handleContentGap,
     classifyContentGapEntry,
     recordContentGap,
     generateEscalationSummary,

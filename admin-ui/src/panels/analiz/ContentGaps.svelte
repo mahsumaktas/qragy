@@ -11,6 +11,7 @@
 
   let loading = $state(true);
   let pruning = $state(false);
+  let handlingKey = $state("");
   let gaps = $state([]);
   let summary = $state(null);
 
@@ -27,6 +28,10 @@
     return Object.entries(counts)
       .filter(([, value]) => value > 0)
       .map(([reason, value]) => ({ reason, value }));
+  }
+
+  function getGapKey(gap) {
+    return String(gap?.normalizedQuery || gap?.query || gap?.question || "");
   }
 
   async function loadGaps() {
@@ -52,6 +57,25 @@
       showToast(t("common.error", { msg: e.message }), "error");
     } finally {
       pruning = false;
+    }
+  }
+
+  async function markHandled(gap) {
+    const key = getGapKey(gap);
+    if (!key) return;
+    handlingKey = key;
+    try {
+      const res = await api.post("admin/content-gaps/handle", {
+        query: gap.query || gap.question || "",
+        action: "resolved",
+      });
+      gaps = res.gaps || [];
+      summary = res.summary || null;
+      showToast(t("contentGaps.handled"), "success");
+    } catch (e) {
+      showToast(t("contentGaps.handleError", { msg: e.message }), "error");
+    } finally {
+      handlingKey = "";
     }
   }
 </script>
@@ -80,6 +104,7 @@
     <div class="guide-points">
       <div>{t("contentGaps.guidePoint1")}</div>
       <div>{t("contentGaps.guidePoint2")}</div>
+      <div>{t("contentGaps.guidePoint3")}</div>
     </div>
   </div>
 
@@ -131,6 +156,7 @@
           <th>{t("contentGaps.signal")}</th>
           <th>{t("contentGaps.recommendedAction")}</th>
           <th>{t("contentGaps.lastSeen")}</th>
+          <th>{t("contentGaps.actions")}</th>
         </tr>
       </thead>
       <tbody>
@@ -153,10 +179,20 @@
                 <span>{fmtDate(g.lastSeen)}</span>
               </div>
             </td>
+            <td class="actions-cell">
+              <Button
+                onclick={() => markHandled(g)}
+                variant="secondary"
+                size="sm"
+                disabled={handlingKey === getGapKey(g)}
+              >
+                {handlingKey === getGapKey(g) ? t("common.saving") : t("contentGaps.markHandled")}
+              </Button>
+            </td>
           </tr>
         {:else}
           <tr>
-            <td colspan="5" class="empty-row">
+            <td colspan="6" class="empty-row">
               <strong>{t("contentGaps.empty")}</strong>
               <span>{t("contentGaps.emptyHelp")}</span>
             </td>
@@ -287,6 +323,11 @@
     gap: 4px;
   }
 
+  .actions-cell {
+    width: 1%;
+    white-space: nowrap;
+  }
+
   .question-cell strong,
   .time-cell strong {
     color: var(--text);
@@ -346,6 +387,11 @@
 
     td {
       border-bottom: 1px solid var(--border-light);
+    }
+
+    .actions-cell {
+      width: auto;
+      white-space: normal;
     }
   }
 </style>
