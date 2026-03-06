@@ -3,6 +3,7 @@
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
   import { getLocale, t } from "../../lib/i18n.svelte.js";
+  import { navigate } from "../../lib/router.svelte.js";
   import {
     clearCopilotRequest,
     getPendingCopilotRequest,
@@ -12,6 +13,7 @@
   import Button from "../../components/ui/Button.svelte";
   import Badge from "../../components/ui/Badge.svelte";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
+  import ProgressBar from "../../components/ui/ProgressBar.svelte";
   import ContentCopilotDrawer from "../../components/copilot/ContentCopilotDrawer.svelte";
 
   const FILE_GROUPS = [
@@ -67,6 +69,8 @@
   let files = $state({});
   let memoryFiles = $state({});
   let identityConfig = $state({ ...DEFAULT_RUNTIME_IDENTITY });
+  let chatFlowConfig = $state({});
+  let siteConfig = $state({});
   let identitySaving = $state(false);
   let copilotReview = $state({ summary: null, targets: [] });
   let copilotOpen = $state(false);
@@ -112,6 +116,16 @@
     visibleGroups.reduce((total, group) => total + group.items.length, 0)
   );
   const totalFileCount = FILE_GROUPS.reduce((total, group) => total + group.items.length, 0);
+  const fileWarningsCount = $derived(
+    FILE_GROUPS
+      .flatMap((group) => group.items)
+      .reduce((total, item) => total + getWarnings(item.filename).length, 0)
+  );
+  const groupStatus = $derived(Object.fromEntries(
+    FILE_GROUPS.map((group) => [group.id, isGroupReady(group)])
+  ));
+  const setupChecklist = $derived(buildSetupChecklist());
+  const checklistCompleted = $derived(setupChecklist.filter((item) => item.done).length);
 
   onMount(() => {
     loadAll();
@@ -121,6 +135,117 @@
 
   function normalizeText(value) {
     return (value || "").toLowerCase().trim();
+  }
+
+  function getTextFile(filename) {
+    return String(files[filename] || "");
+  }
+
+  function hasMeaningfulFile(filename, minLength = 80) {
+    const content = getTextFile(filename)
+      .replaceAll("{{COMPANY_NAME}}", "")
+      .trim();
+    return content.length >= minLength;
+  }
+
+  function hasMeaningfulMemory(filename, minLength = 24) {
+    if (!jsonValidity[filename]) return false;
+    return String(memoryFiles[filename] || "").trim().length >= minLength;
+  }
+
+  function hasChatFlowReadiness() {
+    return Boolean(String(chatFlowConfig.welcomeMessage || "").trim())
+      && Boolean(String(chatFlowConfig.farewellMessage || "").trim());
+  }
+
+  function hasSiteReadiness() {
+    return Boolean(String(siteConfig.pageTitle || "").trim())
+      && Boolean(String(siteConfig.heroTitle || "").trim())
+      && Boolean(String(siteConfig.themeColor || "").trim());
+  }
+
+  function isGroupReady(group) {
+    return group.items.every((item) => {
+      if (item.kind === "memory") {
+        return hasMeaningfulMemory(item.filename) && getWarnings(item.filename).length === 0;
+      }
+      return hasMeaningfulFile(item.filename) && getWarnings(item.filename).length === 0;
+    });
+  }
+
+  function buildSetupChecklist() {
+    return [
+      {
+        id: "runtime-identity",
+        titleKey: "botSettings.check.runtimeTitle",
+        textKey: "botSettings.check.runtimeText",
+        actionKey: "botSettings.check.jumpIdentity",
+        done: Boolean(String(identityConfig.companyName || "").trim()) && Boolean(String(identityConfig.botName || "").trim()),
+        sectionId: "runtime-identity-card",
+      },
+      {
+        id: "identity",
+        titleKey: "botSettings.check.identityTitle",
+        textKey: "botSettings.check.identityText",
+        actionKey: "botSettings.check.jumpIdentityLayer",
+        done: Boolean(groupStatus.identity),
+        sectionId: "group-identity",
+      },
+      {
+        id: "execution",
+        titleKey: "botSettings.check.executionTitle",
+        textKey: "botSettings.check.executionText",
+        actionKey: "botSettings.check.jumpExecutionLayer",
+        done: Boolean(groupStatus.execution),
+        sectionId: "group-execution",
+      },
+      {
+        id: "guardrails",
+        titleKey: "botSettings.check.guardrailsTitle",
+        textKey: "botSettings.check.guardrailsText",
+        actionKey: "botSettings.check.jumpGuardrailsLayer",
+        done: Boolean(groupStatus.guardrails),
+        sectionId: "group-guardrails",
+      },
+      {
+        id: "memory",
+        titleKey: "botSettings.check.memoryTitle",
+        textKey: "botSettings.check.memoryText",
+        actionKey: "botSettings.check.jumpMemoryLayer",
+        done: Boolean(groupStatus.memory),
+        sectionId: "group-memory",
+      },
+      {
+        id: "chat-flow",
+        titleKey: "botSettings.check.chatFlowTitle",
+        textKey: "botSettings.check.chatFlowText",
+        actionKey: "botSettings.check.openChatFlow",
+        done: hasChatFlowReadiness(),
+        panelId: "chat-flow",
+      },
+      {
+        id: "site-settings",
+        titleKey: "botSettings.check.siteTitle",
+        textKey: "botSettings.check.siteText",
+        actionKey: "botSettings.check.openSiteSettings",
+        done: hasSiteReadiness(),
+        panelId: "site-settings",
+      },
+    ];
+  }
+
+  function goToChecklistItem(item) {
+    if (item.panelId) {
+      navigate(item.panelId);
+      return;
+    }
+    if (item.sectionId) {
+      document.getElementById(item.sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  function jumpToGroup(groupId) {
+    document.getElementById("group-" + groupId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function getVisibleGroups() {
@@ -151,10 +276,12 @@
         api.get("admin/agent/files/" + item.filename).catch(() => ({ content: "" }))
       );
 
-      const [fileResponses, memoryResponse, identityResponse] = await Promise.all([
+      const [fileResponses, memoryResponse, identityResponse, chatFlowResponse, siteConfigResponse] = await Promise.all([
         Promise.all(requests),
         api.get("admin/agent/memory").catch(() => ({ files: {} })),
         api.get("admin/runtime-identity").catch(() => ({ config: DEFAULT_RUNTIME_IDENTITY })),
+        api.get("admin/chat-flow").catch(() => ({ config: {} })),
+        api.get("admin/site-config").catch(() => ({ config: {} })),
       ]);
 
       files = Object.fromEntries(
@@ -171,6 +298,8 @@
         ...DEFAULT_RUNTIME_IDENTITY,
         ...(identityResponse.config || identityResponse || {}),
       };
+      chatFlowConfig = chatFlowResponse.config || chatFlowResponse || {};
+      siteConfig = siteConfigResponse.config || siteConfigResponse || {};
 
       const reviewResponse = await api.post("admin/copilot/review", {
         surface: "bot-settings",
@@ -315,13 +444,18 @@
     </div>
     <div class="stat-card">
       <span class="stat-label">{t("botSettings.qualityWarnings")}</span>
-      <strong>{qualityReport.warningCount}</strong>
+      <strong>{fileWarningsCount}</strong>
       <p>{t("botSettings.qualityWarningsHelp")}</p>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">{t("botSettings.setupProgress")}</span>
+      <strong>{checklistCompleted}/{setupChecklist.length}</strong>
+      <p>{t("botSettings.setupProgressHelp")}</p>
     </div>
   </div>
 
   <div class="ops-grid">
-    <section class="config-card">
+    <section class="config-card" id="runtime-identity-card">
       <div class="group-head">
         <div>
           <h2>{t("botSettings.runtimeIdentityTitle")}</h2>
@@ -382,6 +516,63 @@
     </section>
   </div>
 
+  <div class="ops-grid">
+    <section class="config-card">
+      <div class="group-head">
+        <div>
+          <h2>{t("botSettings.checklistTitle")}</h2>
+          <p>{t("botSettings.checklistIntro")}</p>
+        </div>
+        <Badge variant={checklistCompleted === setupChecklist.length ? "green" : "yellow"}>
+          {checklistCompleted === setupChecklist.length ? t("botSettings.sectionReady") : t("botSettings.sectionNeedsWork")}
+        </Badge>
+      </div>
+
+      <div class="checklist-progress">
+        <div class="checklist-progress-copy">
+          <strong>{t("botSettings.checklistProgress", { done: checklistCompleted, total: setupChecklist.length })}</strong>
+          <span>{t("botSettings.checklistProgressText")}</span>
+        </div>
+        <ProgressBar value={checklistCompleted} max={setupChecklist.length} height="8px" />
+      </div>
+
+      <div class="checklist-list">
+        {#each setupChecklist as item}
+          <button class="checklist-item" onclick={() => goToChecklistItem(item)}>
+            <span class:status-dot={true} class:done={item.done}></span>
+            <div>
+              <strong>{t(item.titleKey)}</strong>
+              <span>{t(item.textKey)}</span>
+            </div>
+            <Badge variant={item.done ? "green" : "yellow"}>
+              {item.done ? t("botSettings.sectionReady") : t(item.actionKey)}
+            </Badge>
+          </button>
+        {/each}
+      </div>
+    </section>
+
+    <section class="config-card">
+      <div class="group-head">
+        <div>
+          <h2>{t("botSettings.advancedAccessTitle")}</h2>
+          <p>{t("botSettings.advancedAccessText")}</p>
+        </div>
+      </div>
+
+      <div class="advanced-shortcuts">
+        <button class="shortcut-chip" onclick={() => jumpToGroup("identity")}>{t("botSettings.advancedIdentity")}</button>
+        <button class="shortcut-chip" onclick={() => jumpToGroup("execution")}>{t("botSettings.advancedExecution")}</button>
+        <button class="shortcut-chip" onclick={() => jumpToGroup("guardrails")}>{t("botSettings.advancedGuardrails")}</button>
+        <button class="shortcut-chip" onclick={() => jumpToGroup("memory")}>{t("botSettings.advancedMemory")}</button>
+        <button class="shortcut-chip" onclick={() => navigate("chat-flow")}>{t("botSettings.advancedChatFlow")}</button>
+        <button class="shortcut-chip" onclick={() => navigate("site-settings")}>{t("botSettings.advancedSite")}</button>
+      </div>
+
+      <p class="legacy-note">{t("botSettings.advancedLegacyNote")}</p>
+    </section>
+  </div>
+
   <div class="guide-card">
     <div class="guide-copy">
       <h2>{t("botSettings.guideTitle")}</h2>
@@ -412,13 +603,18 @@
   </div>
 
   {#each visibleGroups as group}
-    <section class="group-section">
+    <section class="group-section" id={"group-" + group.id}>
       <div class="group-head">
         <div>
           <h2>{t(group.titleKey)}</h2>
           <p>{t(group.descriptionKey)}</p>
         </div>
-        <Badge variant="gray">{group.items.length}</Badge>
+        <div class="group-badges">
+          <Badge variant={groupStatus[group.id] ? "green" : "yellow"}>
+            {groupStatus[group.id] ? t("botSettings.sectionReady") : t("botSettings.sectionNeedsWork")}
+          </Badge>
+          <Badge variant="gray">{group.items.length}</Badge>
+        </div>
       </div>
 
       {#each group.items as item}
@@ -526,7 +722,7 @@
 
   .summary-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 16px;
   }
@@ -579,6 +775,99 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 16px;
+  }
+
+  .checklist-progress {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .checklist-progress-copy {
+    display: grid;
+    gap: 2px;
+  }
+
+  .checklist-progress-copy strong {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .checklist-progress-copy span,
+  .legacy-note {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .checklist-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .checklist-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+  }
+
+  .checklist-item strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+
+  .checklist-item > div span {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #f59e0b;
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.12);
+    flex-shrink: 0;
+  }
+
+  .status-dot.done {
+    background: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+  }
+
+  .advanced-shortcuts {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .shortcut-chip {
+    border: 1px solid rgba(15, 108, 189, 0.16);
+    background: rgba(15, 108, 189, 0.06);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 9px 12px;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .shortcut-chip:hover {
+    background: rgba(15, 108, 189, 0.12);
   }
 
   .guide-copy h2 {
@@ -660,6 +949,13 @@
     font-size: 12px;
     color: var(--text-muted);
     margin-top: 4px;
+  }
+
+  .group-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .file-summary {
@@ -831,6 +1127,10 @@
 
     .meta-badges {
       justify-content: flex-start;
+    }
+
+    .checklist-item {
+      grid-template-columns: auto minmax(0, 1fr);
     }
   }
 </style>
