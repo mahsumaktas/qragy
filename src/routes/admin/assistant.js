@@ -363,6 +363,31 @@ function buildQualitySnapshot(deps) {
   };
 }
 
+function detectAutoReviewActions(message) {
+  const normalized = normalizeForMatching(message);
+  if (!normalized) return [];
+
+  const reviewIntent = /(incele|degerlendir|audit|review|kalite|eksik|bosluk|coverage|kapsama|celiski|zayif|problem)/.test(normalized);
+  if (!reviewIntent) return [];
+
+  const actions = [];
+  const mentionsKb = /(bilgi bankasi|kb|knowledge base|sss)/.test(normalized);
+  const mentionsTopics = /(konu|konular|topic|topics)/.test(normalized);
+  const mentionsBot = /(bot ayari|bot ayarlari|prompt|persona|skills|hard bans|yasak|hafiza|memory|chat flow|ajan dosya|agent file)/.test(normalized);
+
+  if (mentionsKb) actions.push({ action: "review_kb_quality", params: { limit: 8 } });
+  if (mentionsTopics) actions.push({ action: "review_topics_quality", params: { limit: 8 } });
+  if (mentionsBot) actions.push({ action: "review_bot_files_quality", params: {} });
+
+  if (!actions.length) {
+    actions.push({ action: "review_kb_quality", params: { limit: 6 } });
+    actions.push({ action: "review_topics_quality", params: { limit: 6 } });
+    actions.push({ action: "review_bot_files_quality", params: {} });
+  }
+
+  return actions;
+}
+
 // ── Parse LLM Response ──────────────────────────────────────────────────
 function parseAssistantResponse(rawText) {
   if (!rawText || typeof rawText !== "string") {
@@ -946,6 +971,20 @@ function mount(app, deps) {
       let iterations = 0;
       const allExecutedActions = [];
       let finalReply = "";
+      const autoReviewActions = detectAutoReviewActions(message);
+
+      if (autoReviewActions.length) {
+        const autoResults = [];
+        for (const action of autoReviewActions) {
+          const result = await executeAction(action.action, action.params, deps);
+          autoResults.push(result);
+          allExecutedActions.push(result);
+        }
+        messages.push({
+          role: "user",
+          parts: [{ text: "Preloaded quality review context based on the admin request:\n" + JSON.stringify(autoResults) }],
+        });
+      }
 
       while (iterations < MAX_ITERATIONS) {
         const llmResult = await callLLM(messages, systemPrompt, maxTokens, llmOptions);
