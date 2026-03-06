@@ -2,12 +2,17 @@
   import { onMount } from "svelte";
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
-  import { t } from "../../lib/i18n.svelte.js";
-  import { getBotSettingsQualityReport } from "../../lib/agentConfigQuality.js";
+  import { getLocale, t } from "../../lib/i18n.svelte.js";
+  import {
+    clearCopilotRequest,
+    getPendingCopilotRequest,
+    setAssistantContext,
+  } from "../../lib/copilotBridge.svelte.js";
   import ExpandCard from "../../components/ui/ExpandCard.svelte";
   import Button from "../../components/ui/Button.svelte";
   import Badge from "../../components/ui/Badge.svelte";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
+  import ContentCopilotDrawer from "../../components/copilot/ContentCopilotDrawer.svelte";
 
   const FILE_GROUPS = [
     {
@@ -63,6 +68,14 @@
   let memoryFiles = $state({});
   let identityConfig = $state({ ...DEFAULT_RUNTIME_IDENTITY });
   let identitySaving = $state(false);
+  let copilotReview = $state({ summary: null, targets: [] });
+  let copilotOpen = $state(false);
+  let copilotTarget = $state(null);
+  let copilotMode = $state("review");
+  let copilotGoal = $state("");
+  let copilotLabel = $state("");
+  let copilotRequestKey = $state("");
+  let copilotApplying = $state(false);
 
   const parsedMemoryFiles = $derived(Object.fromEntries(
     FILE_GROUPS
@@ -88,7 +101,12 @@
     })
   ));
 
-  const qualityReport = $derived(getBotSettingsQualityReport(files, parsedMemoryFiles));
+  const qualityReport = $derived({
+    warningCount: copilotReview.summary?.warningCount || 0,
+    warningsByFile: Object.fromEntries(
+      (copilotReview.targets || []).map((target) => [target.id, target.findings || []])
+    ),
+  });
   const visibleGroups = $derived(getVisibleGroups());
   const visibleFileCount = $derived(
     visibleGroups.reduce((total, group) => total + group.items.length, 0)
@@ -98,6 +116,8 @@
   onMount(() => {
     loadAll();
   });
+
+  let pendingCopilotRequest = $derived(getPendingCopilotRequest());
 
   function normalizeText(value) {
     return (value || "").toLowerCase().trim();
@@ -151,6 +171,12 @@
         ...DEFAULT_RUNTIME_IDENTITY,
         ...(identityResponse.config || identityResponse || {}),
       };
+
+      const reviewResponse = await api.post("admin/copilot/review", {
+        surface: "bot-settings",
+        locale: getLocale(),
+      });
+      copilotReview = reviewResponse.review || { summary: null, targets: [] };
     } catch (e) {
       showToast(t("botSettings.loadError", { msg: e.message }), "error");
     } finally {
@@ -160,6 +186,21 @@
 
   function getWarnings(filename) {
     return qualityReport.warningsByFile[filename] || [];
+  }
+
+  function openCopilot(item, mode = "review", goalText = "", requestId = "") {
+    const filename = item?.filename;
+    if (!filename) return;
+    setAssistantContext({
+      panel: "bot-settings",
+      selection: { filename },
+    });
+    copilotTarget = { filename };
+    copilotMode = mode;
+    copilotGoal = goalText;
+    copilotLabel = filename;
+    copilotRequestKey = requestId ? String(requestId) : `${filename}:${Date.now()}`;
+    copilotOpen = true;
   }
 
   async function saveFile(filename) {
@@ -215,6 +256,36 @@
       showToast(t("common.error", { msg: e.message }), "error");
     }
   }
+
+  async function applyCopilotDraft(event) {
+    const payload = event.detail?.draft?.applyPayload;
+    const filename = event.detail?.target?.filename;
+    if (!payload || !filename) return;
+
+    copilotApplying = true;
+    try {
+      const isMemory = filename.endsWith(".json");
+      if (isMemory) {
+        await api.put(`admin/agent/memory/${filename}`, payload);
+      } else {
+        await api.put(`admin/agent/files/${filename}`, payload);
+      }
+      showToast(t("copilot.applied"), "success");
+      copilotOpen = false;
+      await loadAll();
+    } catch (error) {
+      showToast(t("common.error", { msg: error.message }), "error");
+    } finally {
+      copilotApplying = false;
+    }
+  }
+
+  $effect(() => {
+    const request = pendingCopilotRequest;
+    if (!request || request.panel !== "bot-settings" || request.surface !== "bot-settings") return;
+    openCopilot({ filename: request.target?.filename || "" }, request.mode || "review", request.goal || "", request.requestId);
+    clearCopilotRequest(request.requestId);
+  });
 </script>
 
 <div class="page-header">
@@ -382,28 +453,32 @@
             </div>
           {/if}
 
-          {#if getWarnings(item.filename).length}
-            <div class="warning-list">
-              {#each getWarnings(item.filename) as warning}
-                <div class="warning-item">
-                  <strong>{t("botSettings.warningTitle")}</strong>
-                  <span>{t(warning.key, warning.params)}</span>
+              {#if getWarnings(item.filename).length}
+                <div class="warning-list">
+                  {#each getWarnings(item.filename) as warning}
+                    <div class="warning-item">
+                      <strong>{t("botSettings.warningTitle")}</strong>
+                      <span>{t(warning.messageKey, warning.params)}</span>
+                    </div>
+                  {/each}
                 </div>
-              {/each}
-            </div>
-          {/if}
+              {/if}
 
-          {#if item.kind === "text"}
-            <textarea class="mono-editor" rows={item.rows} bind:value={files[item.filename]}></textarea>
-            <div class="card-actions">
-              <Button onclick={() => saveFile(item.filename)} variant="primary" size="sm">{t("common.save")}</Button>
-            </div>
-          {:else}
-            <textarea class="mono-editor" rows={item.rows} bind:value={memoryFiles[item.filename]}></textarea>
-            <div class="card-actions">
-              <Button onclick={() => saveMemory(item.filename)} variant="primary" size="sm">{t("common.save")}</Button>
-            </div>
-          {/if}
+              {#if item.kind === "text"}
+                <textarea class="mono-editor" rows={item.rows} bind:value={files[item.filename]}></textarea>
+                <div class="card-actions">
+                  <Button onclick={() => openCopilot(item, "review")} variant="ghost" size="sm">{t("copilot.reviewAction")}</Button>
+                  <Button onclick={() => openCopilot(item, "draft", t("copilot.goal.botTightenFile"))} variant="ghost" size="sm">{t("copilot.draftAction")}</Button>
+                  <Button onclick={() => saveFile(item.filename)} variant="primary" size="sm">{t("common.save")}</Button>
+                </div>
+              {:else}
+                <textarea class="mono-editor" rows={item.rows} bind:value={memoryFiles[item.filename]}></textarea>
+                <div class="card-actions">
+                  <Button onclick={() => openCopilot(item, "review")} variant="ghost" size="sm">{t("copilot.reviewAction")}</Button>
+                  <Button onclick={() => openCopilot(item, "draft", t("copilot.goal.botTightenFile"))} variant="ghost" size="sm">{t("copilot.draftAction")}</Button>
+                  <Button onclick={() => saveMemory(item.filename)} variant="primary" size="sm">{t("common.save")}</Button>
+                </div>
+              {/if}
         </ExpandCard>
       {/each}
     </section>
@@ -411,6 +486,18 @@
     <div class="empty-state">{t("common.noData")}</div>
   {/each}
 {/if}
+
+<ContentCopilotDrawer
+  bind:open={copilotOpen}
+  surface="bot-settings"
+  target={copilotTarget}
+  contextLabel={copilotLabel}
+  initialMode={copilotMode}
+  initialGoal={copilotGoal}
+  requestKey={copilotRequestKey}
+  applying={copilotApplying}
+  on:apply={applyCopilotDraft}
+/>
 
 <style>
   .page-header {

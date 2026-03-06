@@ -19,6 +19,7 @@ function mount(app, deps) {
     TOPICS_DIR,
     MEMORY_DIR,
     logger,
+    recordAuditEvent,
   } = deps;
 
   // ── Agent Files: List ───────────────────────────────────────────────────
@@ -50,7 +51,7 @@ function mount(app, deps) {
     const filename = req.params.filename;
     if (!isValidFilename(filename)) return res.status(400).json({ error: "Invalid filename." });
 
-    const { content } = req.body || {};
+    const { content, auditContext } = req.body || {};
     if (typeof content !== "string") return res.status(400).json({ error: "content is required." });
 
     const filePath = path.join(AGENT_DIR, filename);
@@ -61,6 +62,15 @@ function mount(app, deps) {
       }
       fs.writeFileSync(filePath, content, "utf8");
       loadAllAgentConfig();
+      recordAuditEvent?.(
+        auditContext?.source === "copilot" ? "copilot_apply" : "agent_file_update",
+        {
+          surface: auditContext?.surface || "bot-settings",
+          filename,
+          goal: auditContext?.goal || "",
+        },
+        req.ip
+      );
       return res.json({ ok: true });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });
@@ -125,6 +135,7 @@ function mount(app, deps) {
         canResolveDirectly,
         requiredInfo,
         content,
+        auditContext,
       } = req.body || {};
       const indexPath = path.join(TOPICS_DIR, "_index.json");
       const index = readJsonFileSafe(indexPath, { topics: [] });
@@ -147,6 +158,15 @@ function mount(app, deps) {
 
       loadAllAgentConfig();
       invalidateTopicCache(req.params.topicId);
+      recordAuditEvent?.(
+        auditContext?.source === "copilot" ? "copilot_apply" : "topic_update",
+        {
+          surface: auditContext?.surface || "topics",
+          topicId: req.params.topicId,
+          goal: auditContext?.goal || "",
+        },
+        req.ip
+      );
       return res.json({ ok: true });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });
@@ -165,6 +185,7 @@ function mount(app, deps) {
         canResolveDirectly,
         requiredInfo,
         content,
+        auditContext,
       } = req.body || {};
       if (!id || !title) return res.status(400).json({ error: "id and title are required." });
       if (!/^[a-z0-9-]+$/.test(id)) return res.status(400).json({ error: "Invalid topic ID format." });
@@ -190,6 +211,15 @@ function mount(app, deps) {
       fs.writeFileSync(path.join(TOPICS_DIR, filename), content || "", "utf8");
 
       loadAllAgentConfig();
+      recordAuditEvent?.(
+        auditContext?.source === "copilot" ? "copilot_apply" : "topic_create",
+        {
+          surface: auditContext?.surface || "topics",
+          topicId: id,
+          goal: auditContext?.goal || "",
+        },
+        req.ip
+      );
       return res.json({ ok: true, topic: newTopic });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });
@@ -213,6 +243,7 @@ function mount(app, deps) {
 
       loadAllAgentConfig();
       invalidateTopicCache(req.params.topicId);
+      recordAuditEvent?.("topic_delete", { topicId: req.params.topicId }, req.ip);
       return res.json({ ok: true });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });
@@ -262,7 +293,7 @@ function mount(app, deps) {
     const allowed = ["ticket-template.json", "conversation-schema.json"];
     if (!allowed.includes(filename)) return res.status(400).json({ error: "Invalid filename." });
 
-    const { content } = req.body || {};
+    const { content, auditContext } = req.body || {};
     if (typeof content !== "string") return res.status(400).json({ error: "content is required." });
 
     try { JSON.parse(content); } catch (_err) {
@@ -272,6 +303,15 @@ function mount(app, deps) {
     try {
       fs.writeFileSync(path.join(MEMORY_DIR, filename), content, "utf8");
       loadAllAgentConfig();
+      recordAuditEvent?.(
+        auditContext?.source === "copilot" ? "copilot_apply" : "memory_update",
+        {
+          surface: auditContext?.surface || "bot-settings",
+          filename,
+          goal: auditContext?.goal || "",
+        },
+        req.ip
+      );
       return res.json({ ok: true });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });

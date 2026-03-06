@@ -4,13 +4,19 @@
   import { showToast } from "../../lib/toast.svelte.js";
   import { showConfirm } from "../../lib/confirm.svelte.js";
   import { truncate } from "../../lib/format.js";
-  import { t } from "../../lib/i18n.svelte.js";
+  import { getLocale, t } from "../../lib/i18n.svelte.js";
   import { getKnowledgeWarnings } from "../../lib/contentQuality.js";
+  import {
+    clearCopilotRequest,
+    getPendingCopilotRequest,
+    setAssistantContext,
+  } from "../../lib/copilotBridge.svelte.js";
   import Button from "../../components/ui/Button.svelte";
   import Modal from "../../components/ui/Modal.svelte";
   import FileUpload from "../../components/ui/FileUpload.svelte";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
   import Badge from "../../components/ui/Badge.svelte";
+  import ContentCopilotDrawer from "../../components/copilot/ContentCopilotDrawer.svelte";
 
   let loading = $state(true);
   let items = $state([]);
@@ -27,6 +33,14 @@
   let newAnswer = $state("");
   let importUrl = $state("");
   let busyAction = $state("");
+  let copilotReview = $state({ summary: null, targets: [] });
+  let copilotOpen = $state(false);
+  let copilotTarget = $state(null);
+  let copilotMode = $state("review");
+  let copilotGoal = $state("");
+  let copilotLabel = $state("");
+  let copilotRequestKey = $state("");
+  let copilotApplying = $state(false);
 
   onMount(() => loadData());
 
@@ -41,6 +55,15 @@
     topics = topicsRes.topics || topicsRes || [];
   }
 
+  async function refreshCopilotReview({ selection = null } = {}) {
+    const response = await api.post("admin/copilot/review", {
+      surface: "knowledge",
+      locale: getLocale(),
+      selection,
+    });
+    copilotReview = response.review || { summary: null, targets: [] };
+  }
+
   async function loadData({ reloadTopics = true } = {}) {
     loading = true;
     try {
@@ -49,6 +72,7 @@
       } else {
         await refreshKnowledge();
       }
+      await refreshCopilotReview();
     } catch (e) {
       showToast(t("kb.loadError", { msg: e.message }), "error");
     } finally {
@@ -56,13 +80,17 @@
     }
   }
 
+  let reviewMap = $derived(Object.fromEntries(
+    (copilotReview.targets || []).map((target) => [String(target.id), target])
+  ));
+
   let decoratedItems = $derived(
     items.map((item) => {
-      const review = getKnowledgeWarnings(item.question, item.answer, topics);
+      const review = reviewMap[String(item.id || item._id)];
       return {
         ...item,
-        matches: review.matches,
-        warnings: review.warnings,
+        matches: review?.meta?.matches || [],
+        warnings: review?.warningCodes || [],
       };
     })
   );
@@ -85,6 +113,7 @@
   let unmatchedCount = $derived(decoratedItems.filter((item) => item.matches.length === 0).length);
   let warningCount = $derived(decoratedItems.filter((item) => item.warnings.length > 0).length);
   let importedCount = $derived(decoratedItems.filter((item) => item.source && item.source !== "admin-manual").length);
+  let pendingCopilotRequest = $derived(getPendingCopilotRequest());
 
   function getSourceLabel(source) {
     if (!source || source === "admin-manual") return t("kb.manualSource");
@@ -99,10 +128,29 @@
   }
 
   function openEditEntry(item) {
+    setAssistantContext({
+      panel: "knowledge-base",
+      selection: { id: item.id || item._id },
+    });
     editId = item.id || item._id;
     editQuestion = item.question || item.title || "";
     editAnswer = item.answer || item.content || "";
     editOpen = true;
+  }
+
+  function openCopilot(item, mode = "review", goalText = "", requestId = "") {
+    const targetId = item?.id || item?._id;
+    if (!targetId) return;
+    setAssistantContext({
+      panel: "knowledge-base",
+      selection: { id: targetId },
+    });
+    copilotTarget = { id: targetId };
+    copilotMode = mode;
+    copilotGoal = goalText;
+    copilotLabel = item?.question || item?.title || "";
+    copilotRequestKey = requestId ? String(requestId) : `${targetId}:${Date.now()}`;
+    copilotOpen = true;
   }
 
   async function addEntry() {
@@ -219,6 +267,32 @@
   function warningLabel(key) {
     return t(`kb.warning.${key}`);
   }
+
+  async function applyCopilotDraft(event) {
+    const payload = event.detail?.draft?.applyPayload;
+    const draftTarget = event.detail?.target;
+    if (!payload || !draftTarget?.id) return;
+
+    copilotApplying = true;
+    try {
+      await api.put(`admin/knowledge/${draftTarget.id}`, payload);
+      showToast(t("copilot.applied"), "success");
+      copilotOpen = false;
+      await loadData({ reloadTopics: false });
+    } catch (error) {
+      showToast(t("common.error", { msg: error.message }), "error");
+    } finally {
+      copilotApplying = false;
+    }
+  }
+
+  $effect(() => {
+    const request = pendingCopilotRequest;
+    if (!request || request.panel !== "knowledge-base" || request.surface !== "knowledge") return;
+    const matched = items.find((item) => String(item.id || item._id) === String(request.target?.id));
+    openCopilot(matched || { id: request.target?.id, question: "" }, request.mode || "review", request.goal || "", request.requestId);
+    clearCopilotRequest(request.requestId);
+  });
 </script>
 
 <div class="page-header">
@@ -327,6 +401,8 @@
             <td><span class="source-pill">{truncate(getSourceLabel(item.source), 36)}</span></td>
             <td>{truncate(item.answer || "", 120)}</td>
             <td class="actions">
+              <Button onclick={() => openCopilot(item, "review")} variant="ghost" size="sm">{t("copilot.reviewAction")}</Button>
+              <Button onclick={() => openCopilot(item, "draft", t("copilot.goal.kbImproveAnswerStructure"))} variant="ghost" size="sm">{t("copilot.draftAction")}</Button>
               <Button onclick={() => openEditEntry(item)} variant="ghost" size="sm">{t("common.edit")}</Button>
               <Button onclick={() => deleteEntry(item.id || item._id)} variant="ghost" size="sm">{t("common.delete")}</Button>
             </td>
@@ -456,6 +532,18 @@
 <Modal bind:open={uploadOpen} title={t("kb.uploadFile")}>
   <FileUpload accept=".pdf,.docx,.xlsx,.csv,.txt" multiple onfiles={handleUpload} label={t("kb.uploadHint")} />
 </Modal>
+
+<ContentCopilotDrawer
+  bind:open={copilotOpen}
+  surface="knowledge"
+  target={copilotTarget}
+  contextLabel={copilotLabel}
+  initialMode={copilotMode}
+  initialGoal={copilotGoal}
+  requestKey={copilotRequestKey}
+  applying={copilotApplying}
+  on:apply={applyCopilotDraft}
+/>
 
 <style>
   .page-header {

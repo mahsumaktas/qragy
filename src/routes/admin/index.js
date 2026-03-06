@@ -15,6 +15,7 @@ const configRoutes = require("./config");
 const analyticsRoutes = require("./analytics");
 const webhookRoutes = require("./webhooks");
 const insightRoutes = require("./insights");
+const copilotRoutes = require("./copilot");
 const assistantRoutes = require("./assistant");
 const evalRoutes = require("./eval");
 
@@ -32,6 +33,7 @@ function mount(app, deps) {
   analyticsRoutes.mount(app, depsWithAudit);
   webhookRoutes.mount(app, depsWithAudit);
   insightRoutes.mount(app, depsWithAudit);
+  copilotRoutes.mount(app, depsWithAudit);
   assistantRoutes.mount(app, depsWithAudit);
   evalRoutes.mount(app, depsWithAudit);
 }

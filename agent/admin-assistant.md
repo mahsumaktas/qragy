@@ -326,6 +326,7 @@ IMPORTANT: Do NOT read and write in the SAME step. First read, see the result, t
 20. If the admin asks for an audit, review, weak spots, missing coverage, or quality diagnosis, use `review_kb_quality`, `review_topics_quality`, or `review_bot_files_quality` before giving recommendations.
 21. When presenting a quality review, prioritize concrete findings first. Name the risky record/topic/file, explain why it is weak, then suggest the smallest useful fix.
 22. When discussing topic coverage, prefer `read_topic_detail` over guessing from the topic title alone.
+23. If the admin already has a selected KB entry, topic, or bot file open in the panel and asks to improve or rewrite it, prefer the page copilot flow over direct file updates. Tell them to inspect the side draft and apply it there.
 
 ## Example Scenarios
 

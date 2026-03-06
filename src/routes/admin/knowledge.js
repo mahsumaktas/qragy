@@ -20,6 +20,7 @@ function mount(app, deps) {
     logger,
     contextualChunker,
     urlExtractor,
+    recordAuditEvent,
   } = deps;
 
   const upload = multer({ dest: UPLOADS_DIR, limits: { fileSize: 10 * 1024 * 1024 } });
@@ -117,6 +118,7 @@ function mount(app, deps) {
       saveCSVData(rows);
 
       await reingestKnowledgeBase();
+      recordAuditEvent?.("knowledge_create", { id: rows.length, source: source || "admin-manual" }, req.ip);
 
       return res.json({ ok: true, id: rows.length });
     } catch (err) {
@@ -140,7 +142,7 @@ function mount(app, deps) {
   app.put("/api/admin/knowledge/:id", requireAdminAccess, async (req, res) => {
     try {
       const id = Number(req.params.id);
-      const { question, answer, source } = req.body || {};
+      const { question, answer, source, auditContext } = req.body || {};
       if (!question || !answer) return res.status(400).json({ error: "question and answer are required." });
 
       const rows = loadCSVData();
@@ -151,6 +153,15 @@ function mount(app, deps) {
       saveCSVData(rows);
 
       await reingestKnowledgeBase();
+      recordAuditEvent?.(
+        auditContext?.source === "copilot" ? "copilot_apply" : "knowledge_update",
+        {
+          surface: auditContext?.surface || "knowledge",
+          id,
+          goal: auditContext?.goal || "",
+        },
+        req.ip
+      );
 
       return res.json({ ok: true });
     } catch (err) {
@@ -170,6 +181,7 @@ function mount(app, deps) {
       saveCSVData(rows);
 
       await reingestKnowledgeBase();
+      recordAuditEvent?.("knowledge_delete", { id }, req.ip);
 
       return res.json({ ok: true });
     } catch (err) {

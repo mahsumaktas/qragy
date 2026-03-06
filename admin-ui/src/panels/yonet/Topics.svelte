@@ -3,15 +3,21 @@
   import { api } from "../../lib/api.js";
   import { showToast } from "../../lib/toast.svelte.js";
   import { showConfirm } from "../../lib/confirm.svelte.js";
-  import { t } from "../../lib/i18n.svelte.js";
+  import { getLocale, t } from "../../lib/i18n.svelte.js";
   import { generateSlug, getTopicCoverage } from "../../lib/contentQuality.js";
   import { truncate } from "../../lib/format.js";
+  import {
+    clearCopilotRequest,
+    getPendingCopilotRequest,
+    setAssistantContext,
+  } from "../../lib/copilotBridge.svelte.js";
   import Button from "../../components/ui/Button.svelte";
   import Modal from "../../components/ui/Modal.svelte";
   import Tag from "../../components/ui/Tag.svelte";
   import Badge from "../../components/ui/Badge.svelte";
   import Toggle from "../../components/ui/Toggle.svelte";
   import LoadingSpinner from "../../components/ui/LoadingSpinner.svelte";
+  import ContentCopilotDrawer from "../../components/copilot/ContentCopilotDrawer.svelte";
 
   let loading = $state(true);
   let topics = $state([]);
@@ -35,6 +41,14 @@
   let requiredInfoText = $state("");
   let manualSlugEdited = $state(false);
   let busyAction = $state("");
+  let copilotReview = $state({ summary: null, targets: [] });
+  let copilotOpen = $state(false);
+  let copilotTarget = $state(null);
+  let copilotMode = $state("review");
+  let copilotGoal = $state("");
+  let copilotLabel = $state("");
+  let copilotRequestKey = $state("");
+  let copilotApplying = $state(false);
 
   onMount(() => loadData());
 
@@ -52,10 +66,20 @@
     knowledgeItems = knowledgeRes.records || [];
   }
 
+  async function refreshCopilotReview({ selection = null } = {}) {
+    const response = await api.post("admin/copilot/review", {
+      surface: "topics",
+      locale: getLocale(),
+      selection,
+    });
+    copilotReview = response.review || { summary: null, targets: [] };
+  }
+
   async function loadData() {
     loading = true;
     try {
       await Promise.all([refreshTopics(), refreshKnowledge()]);
+      await refreshCopilotReview();
     } catch (e) {
       showToast(t("topics.loadError", { msg: e.message }), "error");
     } finally {
@@ -63,10 +87,20 @@
     }
   }
 
+  let reviewMap = $derived(Object.fromEntries(
+    (copilotReview.targets || []).map((target) => [String(target.id), target])
+  ));
+
   let decoratedTopics = $derived(
     topics.map((topic) => {
       const content = topicContents[topic.id] || "";
-      const coverage = getTopicCoverage(topic, knowledgeItems, content);
+      const review = reviewMap[String(topic.id)];
+      const coverage = review
+        ? {
+            matchedEntries: review.meta?.matchedEntries || [],
+            warnings: review.warningCodes || [],
+          }
+        : getTopicCoverage(topic, knowledgeItems, content);
       return {
         ...topic,
         content,
@@ -95,6 +129,7 @@
   let escalationNeedsInfoCount = $derived(
     decoratedTopics.filter((topic) => topic.requiresEscalation && (topic.requiredInfo || []).length === 0).length
   );
+  let pendingCopilotRequest = $derived(getPendingCopilotRequest());
 
   function openNew() {
     editId = null;
@@ -115,6 +150,10 @@
   }
 
   async function openEdit(topic) {
+    setAssistantContext({
+      panel: "topics",
+      selection: { id: topic.id || topic._id },
+    });
     const loadedTopic = topic;
     editId = loadedTopic.id || loadedTopic._id;
     editTopic = {
@@ -157,7 +196,7 @@
         showToast(t("common.created"), "success");
       }
       editOpen = false;
-      await refreshTopics();
+      await loadData();
     } catch (e) {
       showToast(t("common.error", { msg: e.message }), "error");
     } finally {
@@ -225,6 +264,39 @@
     return t(`topics.warning.${key}`);
   }
 
+  function openCopilot(topic, mode = "review", goalText = "", requestId = "") {
+    const topicId = topic?.id || topic?._id;
+    if (!topicId) return;
+    setAssistantContext({
+      panel: "topics",
+      selection: { id: topicId },
+    });
+    copilotTarget = { id: topicId };
+    copilotMode = mode;
+    copilotGoal = goalText;
+    copilotLabel = topic?.title || topicId;
+    copilotRequestKey = requestId ? String(requestId) : `${topicId}:${Date.now()}`;
+    copilotOpen = true;
+  }
+
+  async function applyCopilotDraft(event) {
+    const payload = event.detail?.draft?.applyPayload;
+    const draftTarget = event.detail?.target;
+    if (!payload || !draftTarget?.id) return;
+
+    copilotApplying = true;
+    try {
+      await api.put(`admin/agent/topics/${draftTarget.id}`, payload);
+      showToast(t("copilot.applied"), "success");
+      copilotOpen = false;
+      await loadData();
+    } catch (error) {
+      showToast(t("common.error", { msg: error.message }), "error");
+    } finally {
+      copilotApplying = false;
+    }
+  }
+
   let editCoverage = $derived(
     getTopicCoverage(
       {
@@ -235,6 +307,14 @@
       editTopic.content
     )
   );
+
+  $effect(() => {
+    const request = pendingCopilotRequest;
+    if (!request || request.panel !== "topics" || request.surface !== "topics") return;
+    const matched = topics.find((topic) => String(topic.id || topic._id) === String(request.target?.id));
+    openCopilot(matched || { id: request.target?.id, title: "" }, request.mode || "review", request.goal || "", request.requestId);
+    clearCopilotRequest(request.requestId);
+  });
 </script>
 
 <div class="page-header">
@@ -346,6 +426,8 @@
         {/if}
 
         <div class="topic-actions">
+          <Button onclick={() => openCopilot(topic, "review")} variant="ghost" size="sm">{t("copilot.reviewAction")}</Button>
+          <Button onclick={() => openCopilot(topic, "draft", t("copilot.goal.topicStrengthenPlaybook"))} variant="ghost" size="sm">{t("copilot.draftAction")}</Button>
           <Button onclick={() => openEdit(topic)} variant="ghost" size="sm">{t("common.edit")}</Button>
           <Button onclick={() => deleteTopic(topic.id || topic._id)} variant="ghost" size="sm">{t("common.delete")}</Button>
         </div>
@@ -485,6 +567,18 @@
     </Button>
   </div>
 </Modal>
+
+<ContentCopilotDrawer
+  bind:open={copilotOpen}
+  surface="topics"
+  target={copilotTarget}
+  contextLabel={copilotLabel}
+  initialMode={copilotMode}
+  initialGoal={copilotGoal}
+  requestKey={copilotRequestKey}
+  applying={copilotApplying}
+  on:apply={applyCopilotDraft}
+/>
 
 <style>
   .page-header {

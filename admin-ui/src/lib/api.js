@@ -33,26 +33,28 @@ function apiUrl(path) {
 }
 
 export const api = {
-  get(path) {
-    return fetchJson(apiUrl(path));
+  get(path, options = {}) {
+    return fetchJson(apiUrl(path), options);
   },
 
-  post(path, body) {
+  post(path, body, options = {}) {
     return fetchJson(apiUrl(path), {
+      ...options,
       method: "POST",
       body: JSON.stringify(body),
     });
   },
 
-  put(path, body) {
+  put(path, body, options = {}) {
     return fetchJson(apiUrl(path), {
+      ...options,
       method: "PUT",
       body: JSON.stringify(body),
     });
   },
 
-  delete(path) {
-    return fetchJson(apiUrl(path), { method: "DELETE" });
+  delete(path, options = {}) {
+    return fetchJson(apiUrl(path), { ...options, method: "DELETE" });
   },
 
   async upload(path, file) {

@@ -14,6 +14,11 @@
  */
 
 const { validateBotResponse } = require("../../services/responseValidator");
+const {
+  createAdminContentCopilot,
+  normalizeForMatching,
+  VALID_AGENT_FILES,
+} = require("../../services/adminContentCopilot");
 
 // ── Allowed Actions Whitelist ────────────────────────────────────────────
 const ALLOWED_ACTIONS = {
@@ -35,333 +40,7 @@ const ALLOWED_ACTIONS = {
   process_uploaded_file: { description: "Process uploaded file", dangerous: false },
 };
 
-const VALID_AGENT_FILES = [
-  "soul.md", "domain.md", "persona.md", "skills.md",
-  "hard-bans.md", "escalation-matrix.md",
-  "output-filter.md", "response-policy.md",
-  "bootstrap.md", "definition-of-done.md",
-];
-
 const MAX_ITERATIONS = 3;
-
-const DIACRITICS = {
-  "ç": "c",
-  "ğ": "g",
-  "ı": "i",
-  "ö": "o",
-  "ş": "s",
-  "ü": "u",
-  "Ç": "c",
-  "Ğ": "g",
-  "İ": "i",
-  "Ö": "o",
-  "Ş": "s",
-  "Ü": "u",
-};
-
-const STOPWORDS = new Set([
-  "acaba", "ait", "ama", "ancak", "artık", "aslında", "aynı", "bana", "bazı", "belki",
-  "beni", "benim", "bile", "bir", "biraz", "biri", "birkaç", "birşey", "biz", "bize",
-  "bizi", "böyle", "bu", "burada", "çok", "çünkü", "da", "daha", "de", "defa", "değil",
-  "diye", "dolayı", "en", "gibi", "göre", "hala", "hangi", "hatta", "hem", "hep",
-  "hepsi", "her", "hiç", "için", "içinde", "ile", "ise", "işte", "kadar", "kendi",
-  "kez", "ki", "kim", "mı", "mi", "mu", "mü", "nasıl", "ne", "neden", "nerede", "nereye",
-  "olan", "olarak", "oldu", "olduğu", "olur", "onu", "orada", "oysa", "şey", "siz",
-  "size", "sizi", "sonra", "şu", "tabi", "tam", "tüm", "ve", "veya", "ya", "yani",
-  "yerine", "yine", "yok", "zaten", "the", "and", "for", "with", "from", "that", "this",
-  "your", "have", "cant", "can't",
-]);
-
-function normalizeForMatching(text) {
-  if (!text || typeof text !== "string") return "";
-  return text
-    .replace(/[çğıöşüÇĞİÖŞÜ]/g, (char) => DIACRITICS[char] || char)
-    .toLowerCase()
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function tokenizeForMatching(text) {
-  return Array.from(new Set(
-    normalizeForMatching(text)
-      .split(/[^a-z0-9]+/g)
-      .map((token) => token.trim())
-      .filter((token) => token.length >= 2 && !STOPWORDS.has(token))
-  ));
-}
-
-function getTokenCoverage(haystackTokens, needleTokens) {
-  if (!haystackTokens.length || !needleTokens.length) return 0;
-  const haystack = new Set(haystackTokens);
-  let hits = 0;
-  for (const token of needleTokens) {
-    if (haystack.has(token)) hits += 1;
-  }
-  return hits / needleTokens.length;
-}
-
-function getMatchConfidence(score) {
-  if (score >= 16) return "high";
-  if (score >= 10) return "medium";
-  return "low";
-}
-
-function roundScore(value) {
-  return Math.round(value * 10) / 10;
-}
-
-function scoreTopicMatch(question, answer, topic) {
-  const normalizedQuestion = normalizeForMatching(question);
-  const normalizedAnswer = normalizeForMatching(answer);
-  const combined = [normalizedQuestion, normalizedAnswer].filter(Boolean).join(" ").trim();
-  if (!combined) return null;
-
-  const questionTokens = tokenizeForMatching(question);
-  const answerTokens = tokenizeForMatching(answer);
-  const combinedTokens = Array.from(new Set([...questionTokens, ...answerTokens]));
-  const titleTokens = tokenizeForMatching(topic.title || "");
-  const descriptionTokens = tokenizeForMatching(topic.description || "");
-  const keywordTokens = Array.from(new Set((topic.keywords || []).flatMap((keyword) => tokenizeForMatching(keyword))));
-  const topicVocabulary = Array.from(new Set([...titleTokens, ...descriptionTokens, ...keywordTokens]));
-
-  let score = 0;
-  const keywordHits = [];
-
-  for (const keyword of topic.keywords || []) {
-    const normalizedKeyword = normalizeForMatching(keyword);
-    const tokens = tokenizeForMatching(keyword);
-    if (!normalizedKeyword || !tokens.length) continue;
-
-    if (combined.includes(normalizedKeyword)) {
-      keywordHits.push(keyword);
-      score += 8 + Math.min(tokens.length * 1.5, 6);
-      continue;
-    }
-
-    const questionCoverage = getTokenCoverage(questionTokens, tokens);
-    const answerCoverage = getTokenCoverage(answerTokens, tokens);
-    const bestCoverage = Math.max(questionCoverage, answerCoverage * 0.75);
-    if (bestCoverage >= 0.75 && tokens.length >= 2) {
-      score += 3 + (bestCoverage * 3);
-    }
-  }
-
-  const normalizedTitle = normalizeForMatching(topic.title || "");
-  if (normalizedTitle && combined.includes(normalizedTitle)) {
-    score += 6;
-  }
-
-  const titleCoverage = getTokenCoverage(combinedTokens, titleTokens);
-  if (titleCoverage >= 0.5 && titleTokens.length) {
-    score += 4 + (titleCoverage * 4);
-  }
-
-  const descriptionCoverage = getTokenCoverage(combinedTokens, descriptionTokens);
-  if (descriptionCoverage >= 0.4 && descriptionTokens.length >= 2) {
-    score += 2 + (descriptionCoverage * 3);
-  }
-
-  const vocabularyCoverage = getTokenCoverage(combinedTokens, topicVocabulary);
-  if (vocabularyCoverage >= 0.3 && topicVocabulary.length) {
-    score += vocabularyCoverage * 5;
-  }
-
-  if (answerTokens.length) {
-    const answerCoverage = getTokenCoverage(answerTokens, topicVocabulary);
-    if (answerCoverage >= 0.35) {
-      score += answerCoverage * 2;
-    }
-  }
-
-  if (score < 6) return null;
-
-  return {
-    ...topic,
-    matchScore: roundScore(score),
-    matchConfidence: getMatchConfidence(score),
-    matchedKeywords: keywordHits,
-  };
-}
-
-function getTopicMatches(question, topics, answer = "") {
-  return (topics || [])
-    .map((topic) => scoreTopicMatch(question, answer, topic))
-    .filter(Boolean)
-    .sort((left, right) => right.matchScore - left.matchScore);
-}
-
-function getKnowledgeWarnings(question, answer, topics) {
-  const warnings = [];
-  const trimmedQuestion = String(question || "").trim();
-  const trimmedAnswer = String(answer || "").trim();
-  const matches = getTopicMatches(trimmedQuestion, topics, trimmedAnswer);
-
-  if (trimmedQuestion.length < 24) warnings.push("questionShort");
-  if (!trimmedQuestion.includes(",") && !trimmedQuestion.includes("?")) warnings.push("questionNeedsVariants");
-  if (trimmedAnswer.length < 120) warnings.push("answerShort");
-  if (trimmedAnswer.length > 200 && !/(^|\n)\s*(\d+\.|-|\*)\s+/.test(trimmedAnswer)) warnings.push("answerNeedsStructure");
-  if (!matches.length) warnings.push("noTopicMatch");
-
-  return { matches, warnings };
-}
-
-function getTopicCoverage(topic, knowledgeItems, content) {
-  const matchedEntries = (knowledgeItems || [])
-    .map((item) => {
-      const match = getTopicMatches(item.question, [topic], item.answer)[0];
-      if (!match) return null;
-      return {
-        ...item,
-        matchScore: match.matchScore,
-        matchConfidence: match.matchConfidence,
-      };
-    })
-    .filter(Boolean)
-    .sort((left, right) => right.matchScore - left.matchScore);
-
-  const warnings = [];
-  if (!topic.id) warnings.push("missingId");
-  if ((topic.keywords || []).length < 5) warnings.push("fewKeywords");
-  if ((topic.requiredInfo || []).length === 0 && topic.requiresEscalation) warnings.push("missingRequiredInfo");
-  if (String(content || "").trim().length < 260) warnings.push("playbookShort");
-  if (topic.canResolveDirectly && matchedEntries.length === 0) warnings.push("directWithoutKb");
-
-  return { matchedEntries, warnings };
-}
-
-function getBotSettingsQualityReport(agentFiles, memoryFiles) {
-  const warnings = [];
-  const requiredTextFiles = [
-    "soul.md",
-    "bootstrap.md",
-    "persona.md",
-    "response-policy.md",
-    "domain.md",
-    "skills.md",
-    "hard-bans.md",
-    "escalation-matrix.md",
-    "definition-of-done.md",
-    "output-filter.md",
-  ];
-
-  for (const filename of requiredTextFiles) {
-    if (!String(agentFiles[filename] || "").trim()) {
-      warnings.push({ filename, key: "missingContent" });
-    }
-  }
-
-  const bootstrapText = String(agentFiles["bootstrap.md"] || "");
-  const responsePolicyText = String(agentFiles["response-policy.md"] || "");
-  const escalationMatrixText = String(agentFiles["escalation-matrix.md"] || "");
-  const earlyEscalationPatterns = [
-    /erken escalation/i,
-    /ilk mesaj/i,
-    /direkt info_collection/i,
-    /direkt .*escalation/i,
-    /troubleshooting vermenin anlami yok/i,
-    /immediate escalation/i,
-    /first turn .*transfer/i,
-  ];
-
-  if (earlyEscalationPatterns.some((pattern) => pattern.test(bootstrapText))) {
-    warnings.push({ filename: "bootstrap.md", key: "earlyEscalation" });
-  }
-  if (earlyEscalationPatterns.some((pattern) => pattern.test(responsePolicyText))) {
-    warnings.push({ filename: "response-policy.md", key: "earlyEscalation" });
-  }
-
-  if (/onay|confirmation/i.test(escalationMatrixText) && /direkt aktar|direct transfer/i.test(responsePolicyText)) {
-    warnings.push({ filename: "response-policy.md", key: "escalationFlowConflict" });
-    warnings.push({ filename: "escalation-matrix.md", key: "escalationFlowConflict" });
-  }
-
-  const memoryText = JSON.stringify(memoryFiles["ticket-template.json"] || {}).toLowerCase();
-  if (/(your request|account id|issue:|support team|live support)/.test(memoryText)) {
-    warnings.push({ filename: "ticket-template.json", key: "memoryLanguage" });
-  }
-
-  const conversationSchema = memoryFiles["conversation-schema.json"] || {};
-  const initialState = conversationSchema.sessionFields?.conversationState;
-  const validStates = Array.isArray(conversationSchema.validStates) ? conversationSchema.validStates : [];
-  if (initialState && !validStates.includes(initialState)) {
-    warnings.push({ filename: "conversation-schema.json", key: "invalidInitialState", params: { state: initialState } });
-  }
-  if (initialState === "welcome") {
-    warnings.push({ filename: "conversation-schema.json", key: "legacyInitialState" });
-  }
-
-  return warnings;
-}
-
-function buildQualitySnapshot(deps) {
-  const {
-    loadCSVData, readJsonFileSafe, readTextFileSafe, path, TOPICS_DIR, AGENT_DIR, MEMORY_DIR,
-  } = deps;
-
-  const knowledgeRows = loadCSVData();
-  const topicIndex = readJsonFileSafe(path.join(TOPICS_DIR, "_index.json"), { topics: [] });
-  const topics = topicIndex.topics || [];
-  const topicContents = Object.fromEntries(
-    topics.map((topic) => [topic.id, readTextFileSafe(path.join(TOPICS_DIR, topic.file), "")])
-  );
-
-  const knowledgeIssues = knowledgeRows
-    .map((row, index) => {
-      const review = getKnowledgeWarnings(row.question, row.answer, topics);
-      return {
-        id: index + 1,
-        question: row.question || "",
-        warnings: review.warnings,
-        matches: review.matches.slice(0, 3).map((match) => ({
-          id: match.id,
-          title: match.title,
-          score: match.matchScore,
-          confidence: match.matchConfidence,
-        })),
-      };
-    })
-    .filter((item) => item.warnings.length > 0);
-
-  const topicIssues = topics
-    .map((topic) => {
-      const coverage = getTopicCoverage(topic, knowledgeRows, topicContents[topic.id] || "");
-      return {
-        id: topic.id,
-        title: topic.title || topic.id,
-        warnings: coverage.warnings,
-        matchedEntryCount: coverage.matchedEntries.length,
-      };
-    })
-    .filter((item) => item.warnings.length > 0);
-
-  const agentFiles = Object.fromEntries(
-    VALID_AGENT_FILES.map((filename) => [filename, readTextFileSafe(path.join(AGENT_DIR, filename), "")])
-  );
-  const memoryFiles = {
-    "ticket-template.json": readJsonFileSafe(path.join(MEMORY_DIR, "ticket-template.json"), {}),
-    "conversation-schema.json": readJsonFileSafe(path.join(MEMORY_DIR, "conversation-schema.json"), {}),
-  };
-  const botWarnings = getBotSettingsQualityReport(agentFiles, memoryFiles);
-
-  return {
-    knowledge: {
-      totalRecords: knowledgeRows.length,
-      warningCount: knowledgeIssues.length,
-      unmatchedCount: knowledgeIssues.filter((item) => item.warnings.includes("noTopicMatch")).length,
-      topIssues: knowledgeIssues.slice(0, 8),
-    },
-    topics: {
-      totalTopics: topics.length,
-      warningCount: topicIssues.length,
-      topIssues: topicIssues.slice(0, 8),
-    },
-    bot: {
-      warningCount: botWarnings.length,
-      topIssues: botWarnings.slice(0, 8),
-    },
-  };
-}
 
 function detectAutoReviewActions(message) {
   const normalized = normalizeForMatching(message);
@@ -386,6 +65,26 @@ function detectAutoReviewActions(message) {
   }
 
   return actions;
+}
+
+function detectRewriteIntent(message) {
+  const normalized = normalizeForMatching(message);
+  if (!normalized) return false;
+  return /(duzelt|yeniden yaz|iyilestir|rewrite|revize|guncelle|guclendir|taslak|draft)/.test(normalized);
+}
+
+function getCopilotOpenReply(locale, mode, surface) {
+  if (locale === "en") {
+    if (mode === "draft") {
+      return `I opened the ${surface} copilot for the selected item. Review the draft and apply it from the side panel.`;
+    }
+    return `I opened the ${surface} copilot for the selected item. You can inspect findings from the side panel.`;
+  }
+
+  if (mode === "draft") {
+    return `Seçili kayıt için ${surface} copilot panelini açıyorum. Taslağı yandaki panelden inceleyip uygulayabilirsiniz.`;
+  }
+  return `Seçili kayıt için ${surface} copilot panelini açıyorum. Bulguları yandaki panelden inceleyebilirsiniz.`;
 }
 
 // ── Parse LLM Response ──────────────────────────────────────────────────
@@ -432,7 +131,7 @@ async function executeAction(actionName, params, deps) {
   }
 
   const {
-    fs, path, AGENT_DIR, TOPICS_DIR, MEMORY_DIR,
+    fs, path, AGENT_DIR, TOPICS_DIR, _MEMORY_DIR,
     loadCSVData, saveCSVData, reingestKnowledgeBase,
     readTextFileSafe, readJsonFileSafe,
     loadAllAgentConfig, savePromptVersion, invalidateTopicCache,
@@ -441,6 +140,7 @@ async function executeAction(actionName, params, deps) {
     getSunshineConfig, saveSunshineConfig,
     logger,
   } = deps;
+  const copilot = deps.copilot || createAdminContentCopilot(deps);
 
   try {
     switch (actionName) {
@@ -471,15 +171,21 @@ async function executeAction(actionName, params, deps) {
 
       case "review_kb_quality": {
         const limit = Math.max(1, Math.min(Number(params?.limit) || 10, 25));
-        const quality = buildQualitySnapshot({
-          loadCSVData, readJsonFileSafe, readTextFileSafe, path, TOPICS_DIR, AGENT_DIR, MEMORY_DIR,
-        });
+        const quality = copilot.reviewKnowledgeBase({ selection: params?.selection || null, limit });
         return {
           action: actionName,
           status: "success",
-          result: quality.knowledge.warningCount + " KB records need review.",
-          summary: quality.knowledge,
-          records: quality.knowledge.topIssues.slice(0, limit),
+          result: quality.summary.warningCount + " KB records need review.",
+          summary: quality.summary,
+          records: quality.targets
+            .filter((target) => target.warningCodes.length > 0)
+            .slice(0, limit)
+            .map((target) => ({
+              id: target.id,
+              question: target.label,
+              warnings: target.warningCodes,
+              matches: target.meta.matches || [],
+            })),
         };
       }
 
@@ -544,28 +250,37 @@ async function executeAction(actionName, params, deps) {
 
       case "review_topics_quality": {
         const limit = Math.max(1, Math.min(Number(params?.limit) || 10, 25));
-        const quality = buildQualitySnapshot({
-          loadCSVData, readJsonFileSafe, readTextFileSafe, path, TOPICS_DIR, AGENT_DIR, MEMORY_DIR,
-        });
+        const quality = copilot.reviewTopics({ selection: params?.selection || null, limit });
         return {
           action: actionName,
           status: "success",
-          result: quality.topics.warningCount + " topics need review.",
-          summary: quality.topics,
-          topics: quality.topics.topIssues.slice(0, limit),
+          result: quality.summary.warningCount + " topics need review.",
+          summary: quality.summary,
+          topics: quality.targets
+            .filter((target) => target.warningCodes.length > 0)
+            .slice(0, limit)
+            .map((target) => ({
+              id: target.id,
+              title: target.label,
+              warnings: target.warningCodes,
+              matchedEntryCount: target.meta.matchedEntries?.length || 0,
+            })),
         };
       }
 
       case "review_bot_files_quality": {
-        const quality = buildQualitySnapshot({
-          loadCSVData, readJsonFileSafe, readTextFileSafe, path, TOPICS_DIR, AGENT_DIR, MEMORY_DIR,
-        });
+        const quality = copilot.reviewBotSettings({ selection: params?.selection || null, limit: 10 });
         return {
           action: actionName,
           status: "success",
-          result: quality.bot.warningCount + " bot file warnings found.",
-          summary: quality.bot,
-          warnings: quality.bot.topIssues,
+          result: quality.summary.warningCount + " bot file warnings found.",
+          summary: quality.summary,
+          warnings: quality.targets
+            .flatMap((target) => target.findings.map((finding) => ({
+              filename: target.id,
+              key: finding.messageKey,
+              params: finding.params || {},
+            }))),
         };
       }
 
@@ -826,8 +541,8 @@ function buildEnrichedSystemPrompt(basePrompt, ragResults, agentConfigSummary, k
 // ── Mount ────────────────────────────────────────────────────────────────
 function mount(app, deps) {
   const {
-    requireAdminAccess, callLLM, readTextFileSafe, readJsonFileSafe, safeError,
-    path, fs, AGENT_DIR, TOPICS_DIR, MEMORY_DIR, UPLOADS_DIR, logger,
+    requireAdminAccess, callLLM, readTextFileSafe, readJsonFileSafe: _readJsonFileSafe, safeError,
+    path, fs, AGENT_DIR, TOPICS_DIR: _TOPICS_DIR, MEMORY_DIR: _MEMORY_DIR, UPLOADS_DIR, logger,
     multer: multerLib, recordAuditEvent,
     loadCSVData, saveCSVData, reingestKnowledgeBase,
     // Qragy pipeline services
@@ -835,6 +550,7 @@ function mount(app, deps) {
   } = deps;
 
   const upload = multerLib({ dest: UPLOADS_DIR, limits: { fileSize: 10 * 1024 * 1024 } });
+  const copilot = createAdminContentCopilot(deps);
 
   app.post("/api/admin/assistant", requireAdminAccess, upload.single("file"), async (req, res) => {
     try {
@@ -842,6 +558,9 @@ function mount(app, deps) {
       let message = req.body?.message;
       const historyRaw = req.body?.history;
       const pendingActionsRaw = req.body?.pendingActions;
+      const panel = String(req.body?.panel || "").trim();
+      const locale = String(req.body?.locale || "tr").trim() === "en" ? "en" : "tr";
+      const selectionRaw = req.body?.selection;
 
       if (typeof message !== "string") message = "";
       message = message.trim();
@@ -852,6 +571,38 @@ function mount(app, deps) {
         try { history = JSON.parse(historyRaw); } catch (_e) { history = []; }
       } else if (Array.isArray(historyRaw)) {
         history = historyRaw;
+      }
+
+      let selection = null;
+      if (typeof selectionRaw === "string" && selectionRaw.trim()) {
+        try {
+          selection = JSON.parse(selectionRaw);
+        } catch (_error) {
+          selection = null;
+        }
+      } else if (selectionRaw && typeof selectionRaw === "object") {
+        selection = selectionRaw;
+      }
+
+      const copilotSurface = copilot.surfaceFromPanel(panel);
+      const rewriteIntent = detectRewriteIntent(message);
+      const reviewIntent = detectAutoReviewActions(message).length > 0;
+      const copilotRequest = copilotSurface && selection
+        ? {
+            panel,
+            surface: copilotSurface,
+            target: selection,
+            mode: rewriteIntent ? "draft" : "review",
+            goal: message || "",
+          }
+        : null;
+
+      if (copilotRequest && rewriteIntent) {
+        return res.json({
+          ok: true,
+          reply: getCopilotOpenReply(locale, "draft", copilotSurface),
+          copilot_request: copilotRequest,
+        });
       }
 
       // ── Handle confirmation/cancellation ────────────────────────
@@ -866,7 +617,7 @@ function mount(app, deps) {
         const results = [];
         for (const act of pendingActions) {
           if (!ALLOWED_ACTIONS[act.action]) continue;
-          const result = await executeAction(act.action, act.params, deps);
+          const result = await executeAction(act.action, act.params, { ...deps, copilot });
           results.push(result);
           recordAuditEvent("assistant:" + act.action, ALLOWED_ACTIONS[act.action].description, req.ip);
         }
@@ -937,9 +688,7 @@ function mount(app, deps) {
       // ── Qragy Pipeline: KB Size + quality snapshot ───────────
       const kbRows = loadCSVData();
       const kbSize = kbRows.length;
-      const qualitySnapshot = buildQualitySnapshot({
-        loadCSVData, readJsonFileSafe, readTextFileSafe, path, TOPICS_DIR, AGENT_DIR, MEMORY_DIR,
-      });
+      const qualitySnapshot = copilot.getQualitySnapshot();
 
       // ── Build enriched system prompt ──────────────────────────
       const basePrompt = readTextFileSafe(path.join(AGENT_DIR, "admin-assistant.md"), "")
@@ -957,6 +706,18 @@ function mount(app, deps) {
       let userText = message || "";
       if (fileContext) {
         userText = (userText ? userText + "\n\n" : "") + fileContext;
+      }
+      if (copilotRequest) {
+        userText = [
+          userText,
+          "",
+          "Selected admin context:",
+          JSON.stringify({
+            panel: copilotRequest.panel,
+            surface: copilotRequest.surface,
+            target: copilotRequest.target,
+          }),
+        ].filter(Boolean).join("\n");
       }
       if (!userText) userText = "Hello";
       messages.push({ role: "user", parts: [{ text: userText }] });
@@ -976,7 +737,7 @@ function mount(app, deps) {
       if (autoReviewActions.length) {
         const autoResults = [];
         for (const action of autoReviewActions) {
-          const result = await executeAction(action.action, action.params, deps);
+          const result = await executeAction(action.action, action.params, { ...deps, copilot });
           autoResults.push(result);
           allExecutedActions.push(result);
         }
@@ -986,13 +747,20 @@ function mount(app, deps) {
         });
       }
 
+      if (copilotRequest && reviewIntent) {
+        messages.push({
+          role: "user",
+          parts: [{ text: "The admin currently has a selected item open in the panel. If useful, refer them to the page copilot panel instead of proposing direct edits." }],
+        });
+      }
+
       while (iterations < MAX_ITERATIONS) {
         const llmResult = await callLLM(messages, systemPrompt, maxTokens, llmOptions);
         const parsed = parseAssistantResponse(llmResult.reply);
         finalReply = parsed.reply;
 
         // ── Qragy Pipeline: Response Validation ─────────────────
-        const validation = validateBotResponse(finalReply, "tr");
+        const validation = validateBotResponse(finalReply, locale);
         if (!validation.valid && validation.reason === "hallucination_marker") {
           // Strip hallucinated content, retry once
           logger.warn("assistant", "Hallucination detected, retrying", validation.reason);
@@ -1033,7 +801,7 @@ function mount(app, deps) {
             results.push({ action: "process_uploaded_file", status: "success", result: added + " entries added to knowledge base.", count: added });
             recordAuditEvent("assistant:process_uploaded_file", added + " entries added", req.ip);
           } else {
-            const result = await executeAction(act.action, act.params, deps);
+            const result = await executeAction(act.action, act.params, { ...deps, copilot });
             results.push(result);
             recordAuditEvent("assistant:" + act.action, ALLOWED_ACTIONS[act.action]?.description || act.action, req.ip);
           }
@@ -1051,6 +819,7 @@ function mount(app, deps) {
         ok: true,
         reply: finalReply,
         actions_executed: allExecutedActions.length > 0 ? allExecutedActions : undefined,
+        copilot_request: copilotRequest && reviewIntent ? copilotRequest : undefined,
       });
     } catch (err) {
       logger.error("Admin assistant error:", err);

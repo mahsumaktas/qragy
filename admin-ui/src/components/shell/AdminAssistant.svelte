@@ -1,7 +1,9 @@
 <script>
   import { tick } from "svelte";
   import { getToken } from "../../lib/auth.svelte.js";
-  import { t } from "../../lib/i18n.svelte.js";
+  import { getLocale, t } from "../../lib/i18n.svelte.js";
+  import { getPanel } from "../../lib/router.svelte.js";
+  import { getAssistantContext, openCopilotRequest } from "../../lib/copilotBridge.svelte.js";
 
   let open = $state(false);
   let sending = $state(false);
@@ -71,6 +73,13 @@
       const formData = new FormData();
       formData.append("message", trimmedMessage);
       formData.append("history", JSON.stringify(history.slice(-10)));
+      const panel = getPanel();
+      formData.append("panel", panel);
+      formData.append("locale", getLocale());
+      const context = getAssistantContext();
+      if (context?.panel === panel && context?.selection) {
+        formData.append("selection", JSON.stringify(context.selection));
+      }
       if (pendingActions) {
         formData.append("pendingActions", JSON.stringify(pendingActions));
       }
@@ -96,6 +105,9 @@
       }
 
       const reply = payload.reply || "";
+      if (payload.copilot_request) {
+        openCopilotRequest(payload.copilot_request);
+      }
       appendMessage({
         role: "assistant",
         text: reply,
