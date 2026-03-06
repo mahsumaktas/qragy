@@ -600,14 +600,19 @@ app.get("/api-docs", (_req, res) => {
 });
 
 // Admin v2 — reverse proxy prefix kaybi sorununu onlemek icin redirect YOK
-// /admin-v2 (slash'siz) icin <base> tag inject ederek asset path'leri duzelt
+// /admin-v2 (slash'siz) icin <base> tag inject ederek asset path'leri duzelt.
+// Trailing-slash path'lerde ham index.html donmek gerekir; aksi halde
+// /corpcx/admin/ gibi proxied yollar admin-v2/assets altina kayar.
 let _adminV2Html = "";
 let _adminV2HtmlFile = "";
-app.get("/admin-v2", (_req, res) => {
+app.get("/admin-v2", (req, res) => {
   const adminV2IndexFile = resolveAdminV2File();
   if (!_adminV2Html || _adminV2HtmlFile !== adminV2IndexFile) {
     _adminV2Html = fs.readFileSync(adminV2IndexFile, "utf8");
     _adminV2HtmlFile = adminV2IndexFile;
+  }
+  if (req.path.endsWith("/")) {
+    return res.type("html").send(_adminV2Html);
   }
   // <base href="admin-v2/"> relative — browser mevcut URL'e gore cozumler
   // /proxy-prefix/admin-v2 → base = /proxy-prefix/admin-v2/ → asset'ler dogru yuklenir
