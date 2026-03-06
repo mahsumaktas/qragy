@@ -41,6 +41,10 @@ const ALLOWED_ACTIONS = {
 };
 
 const MAX_ITERATIONS = 3;
+const ASSISTANT_MAX_OUTPUT_TOKENS = 3072;
+const ASSISTANT_RECOVERY_MAX_OUTPUT_TOKENS = 1536;
+const ASSISTANT_MIN_TIMEOUT_MS = 40000;
+const ASSISTANT_RECOVERY_TIMEOUT_MS = 20000;
 
 function detectAutoReviewActions(message) {
   const normalized = normalizeForMatching(message);
@@ -97,6 +101,93 @@ function sanitizeProfessionalAssistantText(text) {
     .replace(/^\s*•\s+/gm, "- ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function buildAssistantUnavailableReply(locale, context = {}) {
+  const hasSelection = Boolean(context?.copilotRequest);
+  const hasReviewData = Boolean(context?.hasReviewData);
+
+  if (locale === "en") {
+    if (hasSelection && hasReviewData) {
+      return "The AI assistant could not produce a stable response this time. Your review data is still available, and you can continue from the side copilot panel.";
+    }
+    if (hasSelection) {
+      return "The AI assistant could not produce a stable response this time. Please try again, or continue from the side copilot panel for the selected item.";
+    }
+    if (hasReviewData) {
+      return "The AI assistant could not produce a stable response this time. The preloaded review data is still available. Please try again in a moment.";
+    }
+    return "The AI assistant could not produce a stable response this time. Please try again in a moment.";
+  }
+
+  if (hasSelection && hasReviewData) {
+    return "AI asistan bu istekte kararlı bir yanıt üretemedi. İnceleme verisi hazır durumda; seçili kayıt için yandaki copilot panelinden devam edebilirsiniz.";
+  }
+  if (hasSelection) {
+    return "AI asistan bu istekte kararlı bir yanıt üretemedi. Biraz sonra tekrar deneyin veya seçili kayıt için yandaki copilot panelinden devam edin.";
+  }
+  if (hasReviewData) {
+    return "AI asistan bu istekte kararlı bir yanıt üretemedi. Ön inceleme verisi hazır durumda; kısa süre sonra tekrar deneyebilirsiniz.";
+  }
+  return "AI asistan bu istekte kararlı bir yanıt üretemedi. Kısa süre sonra tekrar deneyin.";
+}
+
+function buildAssistantPrimaryOptions(options = {}) {
+  return {
+    ...options,
+    requestTimeoutMs: Math.max(Number(options.requestTimeoutMs) || 0, ASSISTANT_MIN_TIMEOUT_MS),
+  };
+}
+
+function buildAssistantRecoveryOptions(options = {}) {
+  return {
+    ...options,
+    enableThinking: "false",
+    thinkingBudget: 0,
+    requestTimeoutMs: Math.max(Number(options.requestTimeoutMs) || 0, ASSISTANT_RECOVERY_TIMEOUT_MS),
+  };
+}
+
+function shouldRecoverAssistantReply(parsed, llmResult) {
+  const finishReason = String(llmResult?.finishReason || "").toUpperCase();
+  if (!parsed.reply && !parsed.actions.length) return true;
+  if (finishReason === "MAX_TOKENS" && !parsed.actions.length) return true;
+  return false;
+}
+
+async function callAssistantModel({
+  messages,
+  systemPrompt,
+  maxTokens,
+  options,
+  callLLM,
+  callLLMWithFallback,
+  logger,
+}) {
+  const caller = typeof callLLMWithFallback === "function" ? callLLMWithFallback : callLLM;
+  if (typeof caller !== "function") {
+    const error = new Error("LLM service is not configured.");
+    error.status = 503;
+    throw error;
+  }
+
+  const primaryOptions = buildAssistantPrimaryOptions(options);
+  try {
+    return await caller(messages, systemPrompt, maxTokens, primaryOptions);
+  } catch (error) {
+    logger?.warn?.("assistant", "primary_call_failed_retrying_without_thinking", {
+      error: error.message,
+      model: primaryOptions.model || "",
+    });
+  }
+
+  const recoveryOptions = buildAssistantRecoveryOptions(options);
+  return caller(
+    messages,
+    systemPrompt,
+    Math.min(maxTokens, ASSISTANT_RECOVERY_MAX_OUTPUT_TOKENS),
+    recoveryOptions
+  );
 }
 
 // ── Parse LLM Response ──────────────────────────────────────────────────
@@ -553,7 +644,7 @@ function buildEnrichedSystemPrompt(basePrompt, ragResults, agentConfigSummary, k
 // ── Mount ────────────────────────────────────────────────────────────────
 function mount(app, deps) {
   const {
-    requireAdminAccess, callLLM, readTextFileSafe, readJsonFileSafe: _readJsonFileSafe, safeError,
+    requireAdminAccess, callLLM, callLLMWithFallback, readTextFileSafe, readJsonFileSafe: _readJsonFileSafe, safeError,
     path, fs, AGENT_DIR, TOPICS_DIR: _TOPICS_DIR, MEMORY_DIR: _MEMORY_DIR, UPLOADS_DIR, logger,
     multer: multerLib, recordAuditEvent,
     loadCSVData, saveCSVData, reingestKnowledgeBase,
@@ -738,7 +829,10 @@ function mount(app, deps) {
       const providerCfg = getProviderConfig ? getProviderConfig() : {};
       const modelOverride = process.env.ADMIN_ASSISTANT_MODEL || undefined;
       const llmOptions = modelOverride ? { ...providerCfg, model: modelOverride } : providerCfg;
-      const maxTokens = Math.max(llmOptions.maxOutputTokens || 4096, 4096);
+      const maxTokens = Math.min(
+        Math.max(llmOptions.maxOutputTokens || 2048, 2048),
+        ASSISTANT_MAX_OUTPUT_TOKENS
+      );
 
       // ── Agent Loop (max 3 iterations) ───────────────────────────
       let iterations = 0;
@@ -767,8 +861,86 @@ function mount(app, deps) {
       }
 
       while (iterations < MAX_ITERATIONS) {
-        const llmResult = await callLLM(messages, systemPrompt, maxTokens, llmOptions);
-        const parsed = parseAssistantResponse(llmResult.reply);
+        let llmResult;
+        try {
+          llmResult = await callAssistantModel({
+            messages,
+            systemPrompt,
+            maxTokens,
+            options: llmOptions,
+            callLLM,
+            callLLMWithFallback,
+            logger,
+          });
+        } catch (error) {
+          logger.warn("assistant", "assistant_model_unavailable", {
+            error: error.message,
+            model: llmOptions.model || "",
+          });
+          return res.json({
+            ok: true,
+            reply: buildAssistantUnavailableReply(locale, {
+              copilotRequest,
+              hasReviewData: allExecutedActions.length > 0,
+            }),
+            actions_executed: allExecutedActions.length > 0 ? allExecutedActions : undefined,
+            copilot_request: copilotRequest && reviewIntent ? copilotRequest : undefined,
+            degraded: true,
+          });
+        }
+
+        let parsed = parseAssistantResponse(llmResult.reply);
+        if (shouldRecoverAssistantReply(parsed, llmResult)) {
+          messages.push({ role: "model", parts: [{ text: llmResult.reply || "" }] });
+          messages.push({
+            role: "user",
+            parts: [{
+              text: "Your previous response was incomplete. Return a compact JSON object only, with a concise reply and valid actions. Do not add extra commentary.",
+            }],
+          });
+
+          try {
+            llmResult = await callAssistantModel({
+              messages,
+              systemPrompt,
+              maxTokens: Math.min(maxTokens, ASSISTANT_RECOVERY_MAX_OUTPUT_TOKENS),
+              options: buildAssistantRecoveryOptions(llmOptions),
+              callLLM,
+              callLLMWithFallback,
+              logger,
+            });
+            parsed = parseAssistantResponse(llmResult.reply);
+          } catch (error) {
+            logger.warn("assistant", "assistant_recovery_failed", {
+              error: error.message,
+              model: llmOptions.model || "",
+            });
+            return res.json({
+              ok: true,
+              reply: buildAssistantUnavailableReply(locale, {
+                copilotRequest,
+                hasReviewData: allExecutedActions.length > 0,
+              }),
+              actions_executed: allExecutedActions.length > 0 ? allExecutedActions : undefined,
+              copilot_request: copilotRequest && reviewIntent ? copilotRequest : undefined,
+              degraded: true,
+            });
+          }
+        }
+
+        if (!parsed.reply && !parsed.actions.length) {
+          return res.json({
+            ok: true,
+            reply: buildAssistantUnavailableReply(locale, {
+              copilotRequest,
+              hasReviewData: allExecutedActions.length > 0,
+            }),
+            actions_executed: allExecutedActions.length > 0 ? allExecutedActions : undefined,
+            copilot_request: copilotRequest && reviewIntent ? copilotRequest : undefined,
+            degraded: true,
+          });
+        }
+
         finalReply = parsed.reply;
 
         // ── Qragy Pipeline: Response Validation ─────────────────
@@ -842,6 +1014,9 @@ function mount(app, deps) {
 
 module.exports = {
   mount,
+  callAssistantModel,
+  shouldRecoverAssistantReply,
+  buildAssistantUnavailableReply,
   parseAssistantResponse,
   sanitizeProfessionalAssistantText,
 };

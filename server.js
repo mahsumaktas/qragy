@@ -901,7 +901,7 @@ require("./src/routes/admin").mount(app, {
   loadFeedback: conversationLifecycle.loadFeedback,
   feedbackAnalyzer,
   safeError, invalidateTopicCache,
-  callLLM, getProviderConfig, embedText,
+  callLLM, callLLMWithFallback, getProviderConfig, embedText,
   multer, chunkText,
   getGoogleModel: () => GOOGLE_MODEL,
   getTopicIndex: agentConfig.getTopicIndex,
