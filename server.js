@@ -30,6 +30,7 @@ if (configErrors.length > 0) {
 // ── Modular imports ──────────────────────────────────────────────────────
 const { createRateLimiter } = require("./src/middleware/rateLimiter.js");
 const { createAuthMiddleware } = require("./src/middleware/auth.js");
+const { createAdminTrustedAuth } = require("./src/services/adminTrustedAuth.js");
 const { securityHeaders } = require("./src/middleware/security.js");
 const { detectInjection, validateOutput, GENERIC_REPLY } = require("./src/middleware/injectionGuard.js");
 const { maskPII, normalizeForMatching, maskCredentials } = require("./src/utils/sanitizer.js");
@@ -101,6 +102,14 @@ let SUPPORT_CLOSE_HOUR = config.supportCloseHour;
 let SUPPORT_OPEN_DAYS = config.supportOpenDays;
 let DETERMINISTIC_COLLECTION_MODE = config.deterministicCollectionMode;
 let ADMIN_TOKEN = config.adminToken;
+let ADMIN_SESSION_SECRET = config.adminSessionSecret;
+let ADMIN_SESSION_TTL_HOURS = config.adminSessionTtlHours;
+let ADMIN_SSO_ENABLED = config.adminSsoEnabled;
+let ADMIN_SSO_WORKSPACE = config.adminSsoWorkspace;
+let CLOUDFLARE_ACCESS_TEAM_DOMAIN = config.cloudflareAccessTeamDomain;
+let CLOUDFLARE_ACCESS_AUD = config.cloudflareAccessAud;
+let OCP_WORKSPACE_AUTHZ_URL = config.ocpWorkspaceAuthzUrl;
+let OCP_WORKSPACE_AUTHZ_SECRET = config.ocpWorkspaceAuthzSecret;
 let BOT_NAME = config.botName;
 let COMPANY_NAME = config.companyName;
 let REMOTE_TOOL_NAME = config.remoteToolName;
@@ -267,8 +276,22 @@ const { TICKET_STATUS, HANDOFF_RESULT_STATUS_MAP, ACTIVE_TICKET_STATUSES,
   findRecentDuplicateTicket, createOrReuseTicket,
   updateTicketHandoffResult, getAdminSummary, sanitizeTicketForList } = ticketStore;
 
+const trustedAdminAuth = createAdminTrustedAuth({
+  getSessionSecret: () => ADMIN_SESSION_SECRET,
+  getSessionTtlMs: () => Math.max(1, Number(ADMIN_SESSION_TTL_HOURS || 12)) * 60 * 60 * 1000,
+  getCloudflareTeamDomain: () => ADMIN_SSO_ENABLED ? CLOUDFLARE_ACCESS_TEAM_DOMAIN : "",
+  getCloudflareAudience: () => ADMIN_SSO_ENABLED ? CLOUDFLARE_ACCESS_AUD : "",
+  getWorkspaceAccessUrl: () => ADMIN_SSO_ENABLED ? OCP_WORKSPACE_AUTHZ_URL : "",
+  getWorkspaceAccessSecret: () => ADMIN_SSO_ENABLED ? OCP_WORKSPACE_AUTHZ_SECRET : "",
+  getWorkspaceKey: () => ADMIN_SSO_WORKSPACE || "corpcx",
+});
+
 // Auth middleware — modular (src/middleware/auth.js)
-const requireAdminAccess = createAuthMiddleware(() => ADMIN_TOKEN);
+const requireAdminAccess = createAuthMiddleware({
+  getAdminToken: () => ADMIN_TOKEN,
+  getTrustedSessionAuth: (req) => trustedAdminAuth.getSessionAuthContext(req),
+  isTrustedSessionConfigured: () => trustedAdminAuth.isSessionConfigured(),
+});
 
 const adminHelpers = createAdminHelpers({
   fs, path, Papa, logger, csvFile: CSV_FILE, envDir: ENV_DIR,
@@ -296,6 +319,14 @@ function reloadRuntimeEnv() {
   if (env.SUPPORT_CLOSE_HOUR !== undefined) SUPPORT_CLOSE_HOUR = Number(env.SUPPORT_CLOSE_HOUR);
   if (env.SUPPORT_OPEN_DAYS) SUPPORT_OPEN_DAYS = env.SUPPORT_OPEN_DAYS.split(",").map(d => Number(d.trim())).filter(d => d >= 1 && d <= 7);
   if (env.ADMIN_TOKEN !== undefined) ADMIN_TOKEN = (env.ADMIN_TOKEN || "").trim();
+  if (env.ADMIN_SESSION_SECRET !== undefined) ADMIN_SESSION_SECRET = (env.ADMIN_SESSION_SECRET || "").trim();
+  if (env.ADMIN_SESSION_TTL_HOURS !== undefined) ADMIN_SESSION_TTL_HOURS = Number(env.ADMIN_SESSION_TTL_HOURS) || ADMIN_SESSION_TTL_HOURS;
+  if (env.ADMIN_SSO_ENABLED !== undefined) ADMIN_SSO_ENABLED = /^(1|true|yes)$/i.test(env.ADMIN_SSO_ENABLED);
+  if (env.ADMIN_SSO_WORKSPACE !== undefined) ADMIN_SSO_WORKSPACE = (env.ADMIN_SSO_WORKSPACE || "corpcx").trim() || "corpcx";
+  if (env.CLOUDFLARE_ACCESS_TEAM_DOMAIN !== undefined) CLOUDFLARE_ACCESS_TEAM_DOMAIN = (env.CLOUDFLARE_ACCESS_TEAM_DOMAIN || "").trim();
+  if (env.CLOUDFLARE_ACCESS_AUD !== undefined) CLOUDFLARE_ACCESS_AUD = (env.CLOUDFLARE_ACCESS_AUD || "").trim();
+  if (env.OCP_WORKSPACE_AUTHZ_URL !== undefined) OCP_WORKSPACE_AUTHZ_URL = (env.OCP_WORKSPACE_AUTHZ_URL || "").trim();
+  if (env.OCP_WORKSPACE_AUTHZ_SECRET !== undefined) OCP_WORKSPACE_AUTHZ_SECRET = (env.OCP_WORKSPACE_AUTHZ_SECRET || "").trim();
   if (env.ZENDESK_SC_ENABLED !== undefined) ZENDESK_SC_ENABLED = /^(1|true|yes)$/i.test(env.ZENDESK_SC_ENABLED);
   if (env.ZENDESK_SC_APP_ID !== undefined) ZENDESK_SC_APP_ID = (env.ZENDESK_SC_APP_ID || "").trim();
   if (env.ZENDESK_SC_KEY_ID !== undefined) ZENDESK_SC_KEY_ID = (env.ZENDESK_SC_KEY_ID || "").trim();
@@ -852,10 +883,19 @@ const whatsappIntegration = createWhatsAppIntegration({
 });
 whatsappIntegration.mountWebhook(app);
 
+// ── Public Admin Auth Routes (trusted session / SSO) ────────────────────
+require("./src/routes/adminAuth").mount(app, {
+  requireAdminAccess,
+  trustedAdminAuth,
+  logger,
+});
+
 // ── Admin Rate Limiting (all /api/admin endpoints) ──────────────────────
 app.use("/api/admin", (req, res, next) => {
-  const providedToken = String(req.headers["x-admin-token"] || "").trim();
-  if (ADMIN_TOKEN && providedToken && providedToken === ADMIN_TOKEN) {
+  const authContext = typeof requireAdminAccess.getAuthContext === "function"
+    ? requireAdminAccess.getAuthContext(req)
+    : null;
+  if (authContext) {
     return next();
   }
   const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";

@@ -2,12 +2,12 @@
 
 const ADMIN_MESSAGES = {
   "auth.notConfigured": {
-    tr: "Admin panel yapılandırılmamış. ADMIN_TOKEN ayarlayın.",
-    en: "Admin panel is not configured. Set ADMIN_TOKEN.",
+    tr: "Admin erişimi yapılandırılmamış. ADMIN_TOKEN veya trusted SSO ayarlayın.",
+    en: "Admin access is not configured. Set ADMIN_TOKEN or trusted SSO.",
   },
   "auth.tokenRequired": {
-    tr: "Admin erişimi için token gerekli.",
-    en: "Admin token is required.",
+    tr: "Admin erişimi gerekli.",
+    en: "Admin access is required.",
   },
   "copilot.surfaceRequired": {
     tr: "İşlem yüzeyi seçilmelidir.",

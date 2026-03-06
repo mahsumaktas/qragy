@@ -1,6 +1,7 @@
 <script>
   import { getPanelMeta } from "../../lib/constants.js";
   import { getPanel } from "../../lib/router.svelte.js";
+  import { api } from "../../lib/api.js";
   import { clearToken } from "../../lib/auth.svelte.js";
   import { t, getLocale, setLocale } from "../../lib/i18n.svelte.js";
 
@@ -55,7 +56,12 @@
     <button
       class="logout-btn"
       title={t("header.logout")}
-      onclick={() => {
+      onclick={async () => {
+        try {
+          await api.post("admin/logout", {});
+        } catch (_error) {
+          // Clearing local state is still enough for token-based fallback sessions.
+        }
         clearToken();
         window.location.reload();
       }}

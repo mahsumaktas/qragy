@@ -41,6 +41,14 @@ function loadConfig(env = process.env) {
     rateLimitWindowMs: Number(env.RATE_LIMIT_WINDOW_MS || 60000),
     deterministicCollectionMode: parseBool(env.DETERMINISTIC_COLLECTION_MODE, true),
     adminToken: (env.ADMIN_TOKEN || "").trim(),
+    adminSessionSecret: (env.ADMIN_SESSION_SECRET || "").trim(),
+    adminSessionTtlHours: Number(env.ADMIN_SESSION_TTL_HOURS || 12),
+    adminSsoEnabled: parseBool(env.ADMIN_SSO_ENABLED),
+    adminSsoWorkspace: (env.ADMIN_SSO_WORKSPACE || "corpcx").trim() || "corpcx",
+    cloudflareAccessTeamDomain: (env.CLOUDFLARE_ACCESS_TEAM_DOMAIN || "").trim(),
+    cloudflareAccessAud: (env.CLOUDFLARE_ACCESS_AUD || "").trim(),
+    ocpWorkspaceAuthzUrl: (env.OCP_WORKSPACE_AUTHZ_URL || "").trim(),
+    ocpWorkspaceAuthzSecret: (env.OCP_WORKSPACE_AUTHZ_SECRET || "").trim(),
     botName: (env.BOT_NAME || "QRAGY Bot").trim(),
     companyName: (env.COMPANY_NAME || "").trim(),
     remoteToolName: (env.REMOTE_TOOL_NAME || "").trim(),
@@ -73,27 +81,39 @@ function validateConfig(config) {
   if (!config.googleApiKey) {
     warnings.push("GOOGLE_API_KEY (or GEMINI_API_KEY) is not set — LLM calls will fail");
   }
-  if (!config.adminToken) {
+  if (!config.adminToken && !config.adminSsoEnabled) {
     warnings.push("ADMIN_TOKEN is not set — admin panel is unprotected");
   }
   return warnings;
 }
 
 const MIN_ADMIN_TOKEN_LENGTH = 16;
+const MIN_ADMIN_SESSION_SECRET_LENGTH = 32;
 
 function validateConfigStrict(config, env = process.env) {
   const warnings = validateConfig(config);
   const errors = [];
   const nodeEnv = (env.NODE_ENV || "").toLowerCase();
   const isTestOrDev = nodeEnv === "test" || nodeEnv === "development";
+  const hasAdminSso =
+    config.adminSsoEnabled
+    && config.adminSessionSecret
+    && config.cloudflareAccessTeamDomain
+    && config.cloudflareAccessAud
+    && config.ocpWorkspaceAuthzUrl
+    && config.ocpWorkspaceAuthzSecret;
 
-  // ADMIN_TOKEN: missing/empty is an error in production
-  if (!config.adminToken) {
+  // ADMIN_TOKEN or trusted admin SSO must protect the admin surface in production
+  if (!config.adminToken && !hasAdminSso) {
     if (!isTestOrDev) {
-      errors.push("ADMIN_TOKEN is not set — admin panel is unprotected. Server will not start.");
+      errors.push("ADMIN_TOKEN or ADMIN_SSO_ENABLED configuration must protect the admin surface. Server will not start.");
     }
-  } else if (config.adminToken.length < MIN_ADMIN_TOKEN_LENGTH && nodeEnv !== "test") {
+  } else if (config.adminToken && config.adminToken.length < MIN_ADMIN_TOKEN_LENGTH && nodeEnv !== "test") {
     errors.push(`ADMIN_TOKEN must be at least ${MIN_ADMIN_TOKEN_LENGTH} characters (current: ${config.adminToken.length}). Server will not start.`);
+  }
+
+  if (config.adminSessionSecret && config.adminSessionSecret.length < MIN_ADMIN_SESSION_SECRET_LENGTH) {
+    errors.push(`ADMIN_SESSION_SECRET must be at least ${MIN_ADMIN_SESSION_SECRET_LENGTH} characters (current: ${config.adminSessionSecret.length}). Server will not start.`);
   }
 
   // GOOGLE_API_KEY: warning only (some setups use LLM_API_KEY instead)

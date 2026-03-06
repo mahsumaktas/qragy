@@ -4,6 +4,7 @@
   import AdminAssistant from "./components/shell/AdminAssistant.svelte";
   import Toast from "./components/ui/Toast.svelte";
   import ConfirmDialog from "./components/ui/ConfirmDialog.svelte";
+  import { api } from "./lib/api.js";
   import { getPanel, initRouter } from "./lib/router.svelte.js";
   import { getToken, setToken } from "./lib/auth.svelte.js";
   import { t } from "./lib/i18n.svelte.js";
@@ -36,9 +37,79 @@
   import SystemStatus from "./panels/analiz/SystemStatus.svelte";
 
   let cleanupRouter;
+  let authState = $state({
+    checking: true,
+    authenticated: false,
+    ssoAvailable: false,
+    candidateEmail: "",
+    errorCode: "",
+    bootError: "",
+  });
+
+  const LOGIN_ERROR_KEYS = {
+    workspace_access_denied: "login.errorAccessDenied",
+    cf_email_mismatch: "login.errorSsoMismatch",
+    invalid_cf_token: "login.errorSsoToken",
+    missing_cf_headers: "login.errorMissingSso",
+    sso_not_configured: "login.errorSsoUnavailable",
+    workspace_authz_failed: "login.errorWorkspaceCheck",
+    login_failed: "login.errorGeneric",
+  };
+
+  function currentRedirectPath() {
+    if (typeof window === "undefined") return "/admin-v2";
+    return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  }
+
+  async function bootstrapAuth() {
+    if (getToken()) {
+      authState = { ...authState, checking: false, authenticated: true };
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const errorCode = params.get("auth_error") || "";
+
+    try {
+      const session = await api.get("admin/session");
+      authState = {
+        checking: false,
+        authenticated: Boolean(session?.authenticated),
+        ssoAvailable: Boolean(session?.ssoAvailable),
+        candidateEmail: session?.candidateEmail || session?.user?.email || "",
+        errorCode,
+        bootError: "",
+      };
+    } catch (error) {
+      authState = {
+        checking: false,
+        authenticated: false,
+        ssoAvailable: false,
+        candidateEmail: "",
+        errorCode,
+        bootError: error?.message || "",
+      };
+    }
+  }
+
+  function startSsoLogin() {
+    const redirect = encodeURIComponent(currentRedirectPath());
+    window.location.href = `../api/admin/sso/login?redirect=${redirect}`;
+  }
+
+  function getLoginErrorMessage() {
+    if (authState.errorCode && LOGIN_ERROR_KEYS[authState.errorCode]) {
+      return t(LOGIN_ERROR_KEYS[authState.errorCode]);
+    }
+    if (authState.bootError) {
+      return authState.bootError;
+    }
+    return "";
+  }
 
   onMount(() => {
     cleanupRouter = initRouter();
+    bootstrapAuth();
   });
 
   onDestroy(() => {
@@ -46,14 +117,36 @@
   });
 
   let panel = $derived(getPanel());
+  let hasAccess = $derived(Boolean(getToken()) || Boolean(authState.authenticated));
+  let loginErrorMessage = $derived(getLoginErrorMessage());
 </script>
 
-{#if !getToken()}
+{#if authState.checking}
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-logo">Q</div>
+      <h2>{t("login.title")}</h2>
+      <p>{t("common.loading")}</p>
+    </div>
+  </div>
+{:else if !hasAccess}
   <div class="login-page">
     <div class="login-card">
       <div class="login-logo">Q</div>
       <h2>{t("login.title")}</h2>
       <p>{t("login.subtitle")}</p>
+      {#if loginErrorMessage}
+        <div class="login-error">{loginErrorMessage}</div>
+      {/if}
+      {#if authState.ssoAvailable}
+        <button class="login-sso-btn" onclick={startSsoLogin}>{t("login.ssoButton")}</button>
+        <p class="login-note">
+          {t("login.ssoHint", {
+            email: authState.candidateEmail || t("login.currentAccount"),
+          })}
+        </p>
+        <div class="login-divider">{t("login.orFallback")}</div>
+      {/if}
       <input
         type="password"
         class="login-input"
@@ -181,6 +274,52 @@
     font-size: 13px;
     color: var(--text-muted, #6b7280);
     margin-bottom: 24px;
+  }
+
+  .login-error {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(185, 28, 28, 0.08);
+    border: 1px solid rgba(185, 28, 28, 0.2);
+    color: #fecaca;
+    font-size: 13px;
+    text-align: left;
+  }
+
+  .login-sso-btn {
+    width: 100%;
+    padding: 11px;
+    border: 1px solid var(--border, #2a2b35);
+    border-radius: 8px;
+    background: #111827;
+    color: #f9fafb;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: opacity 0.15s, border-color 0.15s;
+    margin-bottom: 10px;
+  }
+
+  .login-sso-btn:hover {
+    opacity: 0.94;
+    border-color: var(--accent, #2563eb);
+  }
+
+  .login-note {
+    margin: 0 0 16px;
+    font-size: 12px;
+    color: var(--text-muted, #9ca3af);
+  }
+
+  .login-divider {
+    margin: 0 0 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted, #6b7280);
   }
 
   .login-input {

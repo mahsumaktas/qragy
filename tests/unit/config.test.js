@@ -83,4 +83,17 @@ describe("Config", () => {
     expect(cfg.publicDir).toBe("/srv/qragy-instance/tenant/public");
     expect(cfg.knowledgeBaseCsvFile).toBe("/srv/qragy-instance/tenant/data/faq.csv");
   });
+  it("allows trusted admin SSO without ADMIN_TOKEN", () => {
+    const { loadConfig, validateConfigStrict } = require("../../src/config/index.js");
+    const cfg = loadConfig({
+      ADMIN_SSO_ENABLED: "true",
+      ADMIN_SESSION_SECRET: "a".repeat(40),
+      CLOUDFLARE_ACCESS_TEAM_DOMAIN: "example.cloudflareaccess.com",
+      CLOUDFLARE_ACCESS_AUD: "aud-123",
+      OCP_WORKSPACE_AUTHZ_URL: "http://127.0.0.1:8000/api/auth/internal/workspace-access",
+      OCP_WORKSPACE_AUTHZ_SECRET: "shared-secret",
+    });
+    const result = validateConfigStrict(cfg, { NODE_ENV: "production" });
+    expect(result.errors).toEqual([]);
+  });
 });

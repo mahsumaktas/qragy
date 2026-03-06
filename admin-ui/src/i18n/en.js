@@ -32,9 +32,20 @@ export default {
 
   // ── Login ──────────────────────────────────────────────
   "login.title": "Qragy Admin",
-  "login.subtitle": "Enter admin token to continue.",
+  "login.subtitle": "Continue with SSO or use the admin token when needed.",
   "login.placeholder": "Admin Token",
   "login.button": "Log In",
+  "login.ssoButton": "Continue with OCP Internal",
+  "login.ssoHint": "A trusted admin session can be opened for {email}.",
+  "login.orFallback": "or use the token fallback",
+  "login.currentAccount": "your current account",
+  "login.errorAccessDenied": "This account does not have CorpCX admin access.",
+  "login.errorSsoMismatch": "The Cloudflare session user did not match the trusted email.",
+  "login.errorSsoToken": "The Cloudflare session could not be verified. Please sign in again.",
+  "login.errorMissingSso": "No Cloudflare Access session was found.",
+  "login.errorSsoUnavailable": "SSO is not configured right now.",
+  "login.errorWorkspaceCheck": "The OCP Internal workspace check is not responding right now.",
+  "login.errorGeneric": "The admin session could not be opened. Please try again.",
 
   // ── Navigation ─────────────────────────────────────────
   "nav.monitor": "Monitor",

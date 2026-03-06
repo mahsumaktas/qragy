@@ -32,9 +32,20 @@ export default {
 
   // ── Giriş ──────────────────────────────────────────────
   "login.title": "Qragy Yönetim",
-  "login.subtitle": "Devam etmek için yönetici token'ı girin.",
+  "login.subtitle": "SSO ile devam edin veya gerekirse yönetici token'ı kullanın.",
   "login.placeholder": "Yönetici Token",
   "login.button": "Giriş Yap",
+  "login.ssoButton": "OCP Internal ile Devam Et",
+  "login.ssoHint": "{email} hesabı için tek tıkla yönetici oturumu açılabilir.",
+  "login.orFallback": "veya token ile girin",
+  "login.currentAccount": "mevcut hesabınız",
+  "login.errorAccessDenied": "Bu hesap için CorpCX admin yetkisi bulunamadı.",
+  "login.errorSsoMismatch": "Cloudflare oturumu ile gelen kullanıcı bilgisi eşleşmedi.",
+  "login.errorSsoToken": "Cloudflare oturumu doğrulanamadı. Lütfen tekrar giriş yapın.",
+  "login.errorMissingSso": "Cloudflare Access oturumu bulunamadı.",
+  "login.errorSsoUnavailable": "SSO şu anda yapılandırılmamış.",
+  "login.errorWorkspaceCheck": "OCP Internal yetki kontrolü şu anda yanıt vermiyor.",
+  "login.errorGeneric": "Yönetici oturumu açılamadı. Lütfen tekrar deneyin.",
 
   // ── Navigasyon ─────────────────────────────────────────
   "nav.monitor": "İzle",
