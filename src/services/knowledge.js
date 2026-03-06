@@ -6,7 +6,11 @@
  * LanceDB vector store + full-text search + RRF hybrid retrieval.
  * Factory pattern — knowledgeTable state encapsulated inside.
  */
-const { removeStopWords } = require("../utils/stopWords.js");
+const {
+  buildNormalizedQuery,
+  scoreKnowledgeTextMatch,
+  isStrongTextMatchScore,
+} = require("../utils/knowledgeGuardrail.js");
 
 function createKnowledgeService(deps) {
   const {
@@ -64,25 +68,14 @@ function createKnowledgeService(deps) {
     try {
       const rows = loadCSVData();
       if (!rows.length) return [];
-      const queryLower = query.toLowerCase();
-      const cleanedQuery = removeStopWords(queryLower);
-      const queryWords = cleanedQuery.split(/\s+/).filter(w => w.length > 2);
+      const { queryWords } = buildNormalizedQuery(query);
       if (!queryWords.length) return [];
 
       const scored = [];
       for (const row of rows) {
         if (!row.question || !row.answer) continue;
-        const qLower = (row.question || "").toLowerCase();
-        const aLower = (row.answer || "").toLowerCase();
-        let score = 0;
-        if (qLower.includes(queryLower) || aLower.includes(queryLower)) {
-          score += 10;
-        }
-        for (const word of queryWords) {
-          if (qLower.includes(word)) score += 2;
-          if (aLower.includes(word)) score += 1;
-        }
-        if (score > 0) {
+        const score = scoreKnowledgeTextMatch(query, row.question, row.answer);
+        if (isStrongTextMatchScore(score)) {
           scored.push({ question: row.question, answer: row.answer, source: row.source || "", textScore: score });
         }
       }

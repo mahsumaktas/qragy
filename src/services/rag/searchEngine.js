@@ -10,8 +10,12 @@
  * Factory pattern: createSearchEngine(deps)
  */
 
-const { normalizeForMatching } = require("../../utils/sanitizer.js");
-const { removeStopWords } = require("../../utils/stopWords.js");
+const {
+  buildNormalizedQuery,
+  hasPhraseMatch,
+  isStrongTextMatchScore,
+  scoreKnowledgeTextMatch,
+} = require("../../utils/knowledgeGuardrail.js");
 
 function createSearchEngine(deps) {
   const {
@@ -36,14 +40,8 @@ function createSearchEngine(deps) {
    * Returns true if any consecutive word pair from query appears in text.
    */
   function phraseMatch(query, text) {
-    const qWords = normalizeForMatching(query).split(" ").filter(Boolean);
-    if (qWords.length < 2) return false;
-    const normalizedText = normalizeForMatching(text);
-    for (let i = 0; i < qWords.length - 1; i++) {
-      const phrase = qWords[i] + " " + qWords[i + 1];
-      if (normalizedText.includes(phrase)) return true;
-    }
-    return false;
+    const { normalizedQuery } = buildNormalizedQuery(query);
+    return hasPhraseMatch(normalizedQuery, String(text || ""));
   }
 
   /**
@@ -53,26 +51,13 @@ function createSearchEngine(deps) {
    */
   function fullTextSearch(knowledgeBase, query, topK = 3) {
     if (!knowledgeBase || !query) return [];
-    const normalizedQuery = normalizeForMatching(query);
-    const cleanedQuery = removeStopWords(normalizedQuery);
-    const queryWords = cleanedQuery.split(" ").filter((w) => w.length > 1);
+    const { queryWords } = buildNormalizedQuery(query);
     if (queryWords.length === 0) return [];
 
     const scored = [];
     for (const entry of knowledgeBase) {
-      let score = 0;
-      const nQuestion = normalizeForMatching(entry.question || "");
-      const nAnswer = normalizeForMatching(entry.answer || "");
-
-      if (nQuestion === normalizedQuery) score += 15;
-      if (phraseMatch(query, entry.question || "")) score += 8;
-
-      for (const word of queryWords) {
-        if (nQuestion.includes(word)) score += 3;
-        if (nAnswer.includes(word)) score += 1;
-      }
-
-      if (score > 0) scored.push({ ...entry, _textScore: score });
+      const score = scoreKnowledgeTextMatch(query, entry.question, entry.answer);
+      if (isStrongTextMatchScore(score)) scored.push({ ...entry, _textScore: score });
     }
 
     return scored.sort((a, b) => b._textScore - a._textScore).slice(0, topK);

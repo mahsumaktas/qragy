@@ -58,6 +58,7 @@ function makeDeps() {
       runEarlyChecks: () => null,
       handleTicketCreation: async () => null,
       handleEscalation: async () => null,
+      handleKnowledgeGapEscalation: async () => null,
       handleDeterministicReply: () => ({ reply: "ok" }),
     },
     ngChatPipeline: null,
@@ -96,5 +97,36 @@ describe("chat route payload guards", () => {
 
     expect(result.statusCode).toBe(400);
     expect(result.body.error).toContain("Conversation payload too large");
+  });
+
+  it("forces handoff when adaptive pipeline returns no verified KB result", async () => {
+    const app = createMockApp();
+    const deps = makeDeps();
+    deps.webChatPipeline.handleDeterministicReply = () => null;
+    deps.USE_ADAPTIVE_PIPELINE = true;
+    deps.ngChatPipeline = {
+      process: async () => ({
+        route: "STANDARD",
+        ragResults: [],
+        citations: [],
+        reply: "hallucinated answer",
+        finishReason: "stop",
+      }),
+    };
+    deps.webChatPipeline.handleKnowledgeGapEscalation = async () => ({
+      reply: "handoff",
+      source: "knowledge-gap-escalation",
+      handoffReady: true,
+    });
+
+    mount(app, deps);
+
+    const result = await app._call("POST", "/api/chat", {
+      messages: [{ role: "user", content: "bilinmeyen sorun yasiyorum" }],
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body.source).toBe("knowledge-gap-escalation");
+    expect(result.body.reply).toBe("handoff");
   });
 });

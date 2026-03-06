@@ -232,6 +232,25 @@ function mount(app, deps) {
           conversationContext,
         });
 
+        if (
+          adaptiveResult.route !== "FAST" &&
+          Array.isArray(adaptiveResult.ragResults) &&
+          adaptiveResult.ragResults.length === 0 &&
+          typeof webChatPipeline.handleKnowledgeGapEscalation === "function"
+        ) {
+          const knowledgeGapEscalation = await webChatPipeline.handleKnowledgeGapEscalation({
+            contents,
+            latestUserMessage,
+            memory,
+            conversationContext,
+            sessionId,
+            chatHistorySnapshot,
+            hasClosedTicketHistory,
+            chatStartTime,
+          });
+          if (knowledgeGapEscalation) return res.json(knowledgeGapEscalation);
+        }
+
         let reply = adaptiveResult.reply || "";
 
         // Output validation (same as legacy pipeline)

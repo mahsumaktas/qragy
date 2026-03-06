@@ -154,6 +154,10 @@ describe("webChatPipeline", () => {
   });
 
   it("calls AI when all conditions met", async () => {
+    deps.searchKnowledge.mockResolvedValue([
+      { question: "Yazici ayarlari", answer: "Ayarlar > Yazicilar", textScore: 8 },
+    ]);
+
     const result = await pipeline.generateAIResponse({
       contents: [{ role: "user", parts: [{ text: "yazicim calismiyor" }] }],
       latestUserMessage: "yazicim calismiyor",
@@ -169,6 +173,29 @@ describe("webChatPipeline", () => {
     expect(result.source).toBe("gemini");
     expect(deps.callLLMWithFallback).toHaveBeenCalled();
     expect(deps.buildSystemPrompt).toHaveBeenCalled();
+  });
+
+  it("escalates to live support when there is no verified KB match", async () => {
+    const result = await pipeline.generateAIResponse({
+      contents: [{ role: "user", parts: [{ text: "Bilinmeyen bir entegrasyon sorunu yasiyorum" }] }],
+      latestUserMessage: "Bilinmeyen bir entegrasyon sorunu yasiyorum",
+      memory: { branchCode: "EST01" },
+      conversationContext: { currentTopic: null, conversationState: "topic_detection" },
+      hasClosedTicketHistory: false,
+      chatHistorySnapshot: [{ role: "user", content: "Bilinmeyen bir entegrasyon sorunu yasiyorum" }],
+      sessionId: "kb-gap",
+      chatStartTime: Date.now(),
+    });
+
+    expect(result.source).toBe("knowledge-gap-escalation");
+    expect(result.handoffReady).toBe(true);
+    expect(result.ticketCreated).toBe(true);
+    expect(deps.callLLMWithFallback).not.toHaveBeenCalled();
+    expect(deps.createOrReuseTicket).toHaveBeenCalledWith(
+      expect.objectContaining({ issueSummary: "Printer issue - EST01 branch" }),
+      expect.any(Object),
+      expect.objectContaining({ source: "knowledge-gap-escalation" })
+    );
   });
 
   it("handles LLM error gracefully", async () => {

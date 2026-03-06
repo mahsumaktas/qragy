@@ -146,7 +146,7 @@ describe("chatPipeline", () => {
     expect(result.ragResults.every(r => r._rerankScore >= 0.3)).toBe(true);
   });
 
-  it("standardPath keeps at least 1 result even if all below threshold", async () => {
+  it("standardPath returns no results when all reranked hits are below confidence threshold", async () => {
     const analysis = makeAnalysis({ route: "STANDARD" });
     const reranker = {
       rerank: vi.fn().mockResolvedValue([
@@ -159,9 +159,7 @@ describe("chatPipeline", () => {
 
     const result = await pipeline.process(makeInput());
 
-    // Should keep at least 1 even though all are below threshold
-    expect(result.ragResults).toHaveLength(1);
-    expect(result.ragResults[0]._rerankScore).toBe(0.1);
+    expect(result.ragResults).toHaveLength(0);
   });
 
   it("DEEP route: search + rerank + CRAG evaluate", async () => {

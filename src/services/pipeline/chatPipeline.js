@@ -1,5 +1,7 @@
 "use strict";
 
+const { hasConfidentRerankScore, MIN_RERANK_SCORE } = require("../../utils/knowledgeGuardrail.js");
+
 /**
  * Adaptive Chat Pipeline
  *
@@ -46,15 +48,14 @@ function createChatPipeline(deps) {
 
     const reranked = await reranker.rerank(query, searchResults);
 
-    // Filter low-relevance results (keep at least 1)
-    const MIN_RERANK_SCORE = 0.3;
-    const filtered = reranked.filter(r => (r._rerankScore || 0) >= MIN_RERANK_SCORE);
-    const finalResults = filtered.length > 0 ? filtered : reranked.slice(0, 1);
+    // Filter low-relevance results — if nothing clears the threshold, treat it as no verified KB hit.
+    const finalResults = reranked.filter((result) => hasConfidentRerankScore(result._rerankScore || 0));
 
     logger.info("chatPipeline:STANDARD", "RAG completed", {
       searchHits: searchResults.length,
       afterRerank: reranked.length,
       afterFilter: finalResults.length,
+      minAcceptedScore: MIN_RERANK_SCORE,
       topScore: finalResults[0]?._rerankScore?.toFixed(3) || "N/A",
       topQ: (finalResults[0]?.question || "").slice(0, 80),
     });
@@ -100,7 +101,7 @@ function createChatPipeline(deps) {
 
       if (!evaluation.insufficient || attempt === maxRetries) {
         const usableResults = [...evaluation.relevant, ...evaluation.partial];
-        const finalResults = usableResults.length > 0 ? usableResults : reranked;
+        const finalResults = usableResults;
         const citations = searchEngine.formatCitations(finalResults);
         return { ragResults: finalResults, citations };
       }
@@ -216,7 +217,7 @@ function createChatPipeline(deps) {
           const reranked = await reranker.rerank(standaloneQuery, mergedResults);
           const evaluation = await cragEvaluator.evaluate(standaloneQuery, reranked);
           const usableResults = [...evaluation.relevant, ...evaluation.partial];
-          ragResults = usableResults.length > 0 ? usableResults : reranked;
+          ragResults = usableResults;
           citations = searchEngine.formatCitations(ragResults);
         }
       } else {

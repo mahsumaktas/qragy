@@ -1,5 +1,7 @@
 "use strict";
 
+const { shouldEscalateForKnowledgeGap } = require("../utils/knowledgeGuardrail.js");
+
 /**
  * Web Chat Pipeline Service
  *
@@ -428,6 +430,75 @@ function createWebChatPipeline(deps) {
     });
   }
 
+  async function handleKnowledgeGapEscalation({
+    contents,
+    latestUserMessage,
+    memory,
+    conversationContext,
+    sessionId,
+    chatHistorySnapshot,
+    hasClosedTicketHistory,
+    chatStartTime,
+  }) {
+    if (!shouldEscalateForKnowledgeGap(latestUserMessage, conversationContext)) {
+      return null;
+    }
+
+    const supportAvailability = getSupportAvailability();
+    conversationContext.escalationTriggered = true;
+    if (!conversationContext.escalationReason) {
+      conversationContext.escalationReason = conversationContext.currentTopic
+        ? "verified-knowledge-missing"
+        : "knowledge-not-found";
+    }
+
+    const aiSummary = await generateEscalationSummary(contents, memory, conversationContext);
+    const escalationMemory = {
+      ...memory,
+      issueSummary: aiSummary,
+    };
+    const ticketResult = createOrReuseTicket(escalationMemory, supportAvailability, {
+      source: "knowledge-gap-escalation",
+      model: getGoogleModel(),
+      chatHistory: chatHistorySnapshot,
+    });
+
+    updateConversationTicket(sessionId, ticketResult.ticket.id);
+
+    const conversationData = loadConversations();
+    const conversation = conversationData.conversations.find((item) => item.sessionId === sessionId);
+    if (conversation) {
+      conversation.escalationStatus = "active";
+      saveConversations(conversationData);
+    }
+
+    recordAnalyticsEvent({
+      source: "knowledge-gap-escalation",
+      responseTimeMs: Date.now() - chatStartTime,
+      topicId: conversationContext.currentTopic || null,
+    });
+
+    if (ticketResult.created) {
+      fireWebhook("ticket_created", { ticketId: ticketResult.ticket.id, memory: escalationMemory, source: "knowledge-gap-escalation" });
+      fireWebhook("escalation", { ticketId: ticketResult.ticket.id, memory: escalationMemory, reason: conversationContext.escalationReason });
+    }
+
+    const handoffReady = Boolean(supportAvailability.isOpen);
+    return webResponse({
+      reply: "I don't have verified information on this issue in my knowledge base, so I'm connecting you with a live support agent. They will assist you shortly.",
+      source: "knowledge-gap-escalation",
+      memory: escalationMemory,
+      conversationContext,
+      hasClosedTicketHistory,
+      ticketId: ticketResult.ticket.id,
+      ticketStatus: ticketResult.ticket.status,
+      ticketCreated: ticketResult.created,
+      handoffReady,
+      handoffReason: conversationContext.escalationReason,
+      handoffMessage: !handoffReady ? getOutsideSupportHoursMessage() : "",
+    });
+  }
+
   // ── Deterministic reply ────────────────────────────────────────────────
 
   function handleDeterministicReply({
@@ -609,6 +680,26 @@ function createWebChatPipeline(deps) {
       logger.info("webChatPipeline:RAG", "Content gap recorded", { sessionId, query: latestUserMessage.slice(0, 80) });
       recordContentGap(latestUserMessage);
     }
+
+    if (ragResults.length === 0) {
+      logger.warn("webChatPipeline:RAG", "No verified KB match, escalating", {
+        sessionId,
+        topic: conversationContext.currentTopic || null,
+        query: latestUserMessage.slice(0, 80),
+      });
+      const escalationResult = await handleKnowledgeGapEscalation({
+        contents,
+        latestUserMessage,
+        memory,
+        conversationContext,
+        sessionId,
+        chatHistorySnapshot,
+        hasClosedTicketHistory,
+        chatStartTime,
+      });
+      if (escalationResult) return escalationResult;
+    }
+
     const sources = ragResults.map(r => ({
       question: r.question,
       answer: (r.answer || "").slice(0, 200),
@@ -796,6 +887,7 @@ function createWebChatPipeline(deps) {
     runEarlyChecks,
     handleTicketCreation,
     handleEscalation,
+    handleKnowledgeGapEscalation,
     handleDeterministicReply,
     generateAIResponse,
   };
