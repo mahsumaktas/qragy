@@ -24,7 +24,7 @@
 
   function markSsoSkip() {
     if (typeof window === "undefined") return;
-    if (window.location.pathname.startsWith("/corpcx/admin")) {
+    if (/^\/[^/]+\/admin(?:\/|$)/.test(window.location.pathname)) {
       window.sessionStorage.setItem(SSO_SKIP_KEY, "1");
     }
   }

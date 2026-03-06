@@ -1,6 +1,6 @@
 "use strict";
 
-function normalizeRedirectPath(value, fallback = "/corpcx/admin/") {
+function normalizeRedirectPath(value, fallback = "/admin-v2/") {
   const raw = String(value || "").trim();
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
     return fallback;
@@ -61,7 +61,7 @@ function mount(app, deps) {
   });
 
   app.get("/api/admin/sso/login", async (req, res) => {
-    const redirectPath = normalizeRedirectPath(req.query?.redirect, "/corpcx/admin/");
+    const redirectPath = normalizeRedirectPath(req.query?.redirect, "/admin-v2/");
 
     try {
       const session = trustedAdminAuth.getSessionAuthContext(req) || await trustedAdminAuth.authenticateWithSso(req);

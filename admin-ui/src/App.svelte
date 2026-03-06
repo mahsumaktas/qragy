@@ -58,8 +58,9 @@
 
   const SSO_SKIP_KEY = "qragy-admin-sso-skip";
 
-  function isCorpCxAdminPath() {
-    return typeof window !== "undefined" && window.location.pathname.startsWith("/corpcx/admin");
+  function isWorkspaceAdminPath() {
+    if (typeof window === "undefined") return false;
+    return /^\/[^/]+\/admin(?:\/|$)/.test(window.location.pathname);
   }
 
   function hasSsoSkip() {
@@ -73,7 +74,7 @@
   }
 
   function currentRedirectPath() {
-    if (typeof window === "undefined") return "/corpcx/admin/";
+    if (typeof window === "undefined") return "/admin-v2/";
     return `${window.location.pathname}${window.location.search}${window.location.hash}`;
   }
 
@@ -135,7 +136,7 @@
   $effect(() => {
     if (authState.checking || authState.authenticated || getToken()) return;
     if (!authState.ssoAvailable || authState.errorCode || authState.bootError) return;
-    if (!isCorpCxAdminPath() || hasSsoSkip()) return;
+    if (!isWorkspaceAdminPath() || hasSsoSkip()) return;
     startSsoLogin();
   });
 

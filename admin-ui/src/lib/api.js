@@ -126,8 +126,9 @@ function getSessionExpiredMessage() {
   return getLocale() === "tr" ? "Oturum süresi doldu." : "Session expired.";
 }
 
-function isCorpCxAdminPath() {
-  return typeof window !== "undefined" && window.location.pathname.startsWith("/corpcx/admin");
+function isWorkspaceAdminPath() {
+  if (typeof window === "undefined") return false;
+  return /^\/[^/]+\/admin(?:\/|$)/.test(window.location.pathname);
 }
 
 function hasSsoSkip() {
@@ -135,8 +136,8 @@ function hasSsoSkip() {
 }
 
 function getSsoLoginUrl() {
-  if (typeof window === "undefined") return "../api/admin/sso/login?redirect=%2Fcorpcx%2Fadmin%2F";
-  const redirect = encodeURIComponent(`${window.location.pathname}${window.location.search}${window.location.hash}` || "/corpcx/admin/");
+  if (typeof window === "undefined") return "../api/admin/sso/login?redirect=%2Fadmin-v2%2F";
+  const redirect = encodeURIComponent(`${window.location.pathname}${window.location.search}${window.location.hash}` || "/admin-v2/");
   return `../api/admin/sso/login?redirect=${redirect}`;
 }
 
@@ -165,7 +166,7 @@ async function fetchJson(url, options = {}) {
 
   if (response.status === 401) {
     clearToken();
-    if (!token && isCorpCxAdminPath() && !hasSsoSkip()) {
+    if (!token && isWorkspaceAdminPath() && !hasSsoSkip()) {
       window.location.href = getSsoLoginUrl();
     }
     window.location.hash = "#login";
@@ -180,7 +181,7 @@ async function fetchJson(url, options = {}) {
 }
 
 function apiUrl(path) {
-  // Canonical admin UI /corpcx/admin/ altinda, ../api/ ile /corpcx/api/ hedefine gider.
+  // Workspace admin UI /<workspace>/admin/ altinda, ../api/ ile /<workspace>/api/ hedefine gider.
   return "../api/" + path;
 }
 

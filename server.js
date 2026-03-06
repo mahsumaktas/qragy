@@ -602,7 +602,7 @@ app.get("/api-docs", (_req, res) => {
 // Admin v2 — reverse proxy prefix kaybi sorununu onlemek icin redirect YOK
 // /admin-v2 (slash'siz) icin <base> tag inject ederek asset path'leri duzelt.
 // Trailing-slash path'lerde ham index.html donmek gerekir; aksi halde
-// /corpcx/admin/ gibi proxied yollar admin-v2/assets altina kayar.
+// /<workspace>/admin/ gibi proxied yollar admin-v2/assets altina kayar.
 let _adminV2Html = "";
 let _adminV2HtmlFile = "";
 app.get("/admin-v2", (req, res) => {
