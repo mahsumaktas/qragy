@@ -397,6 +397,18 @@ function stringifyMaybeJson(value, fallback = "{}") {
   }
 }
 
+function sanitizePlainDraftText(text) {
+  return String(text || "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^\s*#{1,6}\s+/gm, "")
+    .replace(/^\s*[-*]\s+/gm, "- ")
+    .replace(/^\s*•\s+/gm, "- ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function buildFieldChanges(before, after, fields) {
   return fields
     .map((field) => {
@@ -759,7 +771,9 @@ function createAdminContentCopilot(deps) {
       "Rules:",
       "- Preserve the factual meaning and product terminology.",
       "- Keep the original content language.",
+      "- Return plain text only. Do not use markdown bold, italic, headings, tables, or code fences.",
       "- Improve clarity and make answer steps visible when helpful.",
+      "- Numbered steps are allowed when they help the reviewer see the flow.",
       "- Do not invent unsupported troubleshooting steps or promises.",
       `- Write rationale in ${locale === "tr" ? "Turkish" : "English"}.`,
       "",
@@ -793,8 +807,8 @@ function createAdminContentCopilot(deps) {
     if (!parsed) return null;
 
     const after = {
-      question: parsed.question.trim(),
-      answer: parsed.answer.trim(),
+      question: sanitizePlainDraftText(parsed.question),
+      answer: sanitizePlainDraftText(parsed.answer),
     };
     const before = {
       question: current.question,
@@ -836,6 +850,7 @@ function createAdminContentCopilot(deps) {
       "- Preserve product-specific facts.",
       "- Keep the topic ID unchanged; do not include it in the response.",
       "- Keep the original content language.",
+      "- title, description, keywords, and requiredInfo must be plain text only with no markdown emphasis or headings.",
       "- Keywords should be concise search phrases.",
       "- Playbook content should be actionable and structured.",
       `- Write rationale in ${locale === "tr" ? "Turkish" : "English"}.`,
@@ -881,10 +896,20 @@ function createAdminContentCopilot(deps) {
     if (!parsed) return null;
 
     const after = {
-      title: parsed.title.trim(),
-      description: parsed.description.trim(),
-      keywords: uniqueByKey(parsed.keywords.map((item) => String(item || "").trim()).filter(Boolean), (item) => normalizeForMatching(item)),
-      requiredInfo: uniqueByKey(parsed.requiredInfo.map((item) => String(item || "").trim()).filter(Boolean), (item) => normalizeForMatching(item)),
+      title: sanitizePlainDraftText(parsed.title),
+      description: sanitizePlainDraftText(parsed.description),
+      keywords: uniqueByKey(
+        parsed.keywords
+          .map((item) => sanitizePlainDraftText(item))
+          .filter(Boolean),
+        (item) => normalizeForMatching(item)
+      ),
+      requiredInfo: uniqueByKey(
+        parsed.requiredInfo
+          .map((item) => sanitizePlainDraftText(item))
+          .filter(Boolean),
+        (item) => normalizeForMatching(item)
+      ),
       content: parsed.content.trim(),
     };
     const before = {

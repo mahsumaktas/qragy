@@ -126,8 +126,8 @@ describe("adminContentCopilot", () => {
       .mockResolvedValueOnce({ reply: "not-json" })
       .mockResolvedValueOnce({
         reply: JSON.stringify({
-          question: "Bilet yazdıramıyorum, yazıcı hata veriyor",
-          answer: "1. Yazıcının açık olduğunu kontrol edin.\n2. Test çıktısı alın.\n3. Sorun sürerse Alpemix ID paylaşın.",
+          question: "**Bilet yazdıramıyorum**, yazıcı hata veriyor",
+          answer: "1. **Yazıcının** açık olduğunu kontrol edin.\n2. Test çıktısı alın.\n3. Sorun sürerse `Alpemix ID` paylaşın.",
           rationale: ["Soru varyasyonları netleştirildi.", "Cevap görünür adımlara bölündü."],
           confidence: "high",
         }),
@@ -141,7 +141,10 @@ describe("adminContentCopilot", () => {
     });
 
     expect(callLLM).toHaveBeenCalledTimes(2);
+    expect(draft.after.question).not.toContain("**");
     expect(draft.after.answer).toContain("1.");
+    expect(draft.after.answer).not.toContain("**");
+    expect(draft.after.answer).not.toContain("`");
     expect(draft.applyPayload.auditContext.source).toBe("copilot");
   });
 });

@@ -87,10 +87,22 @@ function getCopilotOpenReply(locale, mode, surface) {
   return `Seçili kayıt için ${surface} copilot panelini açıyorum. Bulguları yandaki panelden inceleyebilirsiniz.`;
 }
 
+function sanitizeProfessionalAssistantText(text) {
+  return String(text || "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^\s*#{1,6}\s+/gm, "")
+    .replace(/^\s*[-*]\s+/gm, "- ")
+    .replace(/^\s*•\s+/gm, "- ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 // ── Parse LLM Response ──────────────────────────────────────────────────
 function parseAssistantResponse(rawText) {
   if (!rawText || typeof rawText !== "string") {
-    return { reply: rawText || "", actions: [] };
+    return { reply: sanitizeProfessionalAssistantText(rawText || ""), actions: [] };
   }
 
   // Try ```json ... ``` block first
@@ -99,7 +111,7 @@ function parseAssistantResponse(rawText) {
     try {
       const parsed = JSON.parse(fencedMatch[1].trim());
       return {
-        reply: parsed.reply || "",
+        reply: sanitizeProfessionalAssistantText(parsed.reply || ""),
         actions: Array.isArray(parsed.actions) ? parsed.actions : [],
       };
     } catch (_e) { /* fall through */ }
@@ -112,7 +124,7 @@ function parseAssistantResponse(rawText) {
       const parsed = JSON.parse(jsonMatch[0]);
       if (typeof parsed.reply === "string" || Array.isArray(parsed.actions)) {
         return {
-          reply: parsed.reply || "",
+          reply: sanitizeProfessionalAssistantText(parsed.reply || ""),
           actions: Array.isArray(parsed.actions) ? parsed.actions : [],
         };
       }
@@ -120,7 +132,7 @@ function parseAssistantResponse(rawText) {
   }
 
   // Fallback: treat entire text as plain reply
-  return { reply: rawText, actions: [] };
+  return { reply: sanitizeProfessionalAssistantText(rawText), actions: [] };
 }
 
 // ── Execute Single Action ───────────────────────────────────────────────
@@ -828,4 +840,8 @@ function mount(app, deps) {
   });
 }
 
-module.exports = { mount };
+module.exports = {
+  mount,
+  parseAssistantResponse,
+  sanitizeProfessionalAssistantText,
+};
