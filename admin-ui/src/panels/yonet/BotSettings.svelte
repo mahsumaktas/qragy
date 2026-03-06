@@ -452,6 +452,7 @@
     border-radius: var(--radius);
     background: var(--bg-card);
     box-shadow: var(--shadow-sm);
+    min-width: 0;
   }
 
   .stat-card {
@@ -499,6 +500,21 @@
     margin-bottom: 6px;
   }
 
+  .guide-copy,
+  .guide-copy h2,
+  .guide-copy p,
+  .guide-item,
+  .guide-item strong,
+  .guide-item span,
+  .group-head > div,
+  .file-summary,
+  .file-summary p,
+  .form-group,
+  .form-group > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
   .guide-copy p {
     font-size: 13px;
     color: var(--text-secondary);
@@ -507,6 +523,7 @@
 
   .guide-list {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
 
@@ -661,6 +678,7 @@
 
   .ownership-list {
     height: 100%;
+    align-content: start;
   }
 
   .flow-grid {
@@ -713,6 +731,10 @@
     .ops-grid,
     .guide-card,
     .flow-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .guide-list {
       grid-template-columns: 1fr;
     }
 

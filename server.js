@@ -854,9 +854,13 @@ whatsappIntegration.mountWebhook(app);
 
 // ── Admin Rate Limiting (all /api/admin endpoints) ──────────────────────
 app.use("/api/admin", (req, res, next) => {
+  const providedToken = String(req.headers["x-admin-token"] || "").trim();
+  if (ADMIN_TOKEN && providedToken && providedToken === ADMIN_TOKEN) {
+    return next();
+  }
   const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
   if (!adminRateLimiter.check(ip)) {
-    return res.status(429).json({ error: "Cok fazla istek. Lutfen bekleyin." });
+    return res.status(429).json({ error: "Cok fazla istek. Lutfen bekleyin.", retryAfterMs: 60000 });
   }
   next();
 });

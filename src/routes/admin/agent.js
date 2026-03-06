@@ -71,7 +71,21 @@ function mount(app, deps) {
   app.get("/api/admin/agent/topics", requireAdminAccess, (_req, res) => {
     try {
       const index = readJsonFileSafe(path.join(TOPICS_DIR, "_index.json"), { topics: [] });
-      return res.json({ ok: true, topics: index.topics });
+      const includeContent = String(_req.query.includeContent || "").trim() === "1";
+      const topics = includeContent
+        ? index.topics.map((topic) => {
+            let content = "";
+            if (topic.file) {
+              try {
+                content = fs.readFileSync(path.join(TOPICS_DIR, topic.file), "utf8");
+              } catch (_err) {
+                content = "";
+              }
+            }
+            return { ...topic, content };
+          })
+        : index.topics;
+      return res.json({ ok: true, topics });
     } catch (err) {
       return res.status(500).json({ error: safeError(err, "api") });
     }

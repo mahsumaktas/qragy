@@ -34,31 +34,28 @@
   let newKeyword = $state("");
   let requiredInfoText = $state("");
   let manualSlugEdited = $state(false);
+  let busyAction = $state("");
 
   onMount(() => loadData());
+
+  async function refreshTopics() {
+    const topicsRes = await api.get("admin/agent/topics?includeContent=1");
+    const loadedTopics = topicsRes.topics || topicsRes || [];
+    topics = loadedTopics;
+    topicContents = Object.fromEntries(
+      loadedTopics.map((topic) => [topic.id, topic.content || ""])
+    );
+  }
+
+  async function refreshKnowledge() {
+    const knowledgeRes = await api.get("admin/knowledge").catch(() => ({ records: [] }));
+    knowledgeItems = knowledgeRes.records || [];
+  }
 
   async function loadData() {
     loading = true;
     try {
-      const [topicsRes, knowledgeRes] = await Promise.all([
-        api.get("admin/agent/topics"),
-        api.get("admin/knowledge").catch(() => ({ records: [] })),
-      ]);
-      const loadedTopics = topicsRes.topics || topicsRes || [];
-      topics = loadedTopics;
-      knowledgeItems = knowledgeRes.records || [];
-
-      const contentEntries = await Promise.all(
-        loadedTopics.map(async (topic) => {
-          try {
-            const res = await api.get(`admin/agent/topics/${encodeURIComponent(topic.id)}`);
-            return [topic.id, res.content || ""];
-          } catch (_err) {
-            return [topic.id, ""];
-          }
-        })
-      );
-      topicContents = Object.fromEntries(contentEntries);
+      await Promise.all([refreshTopics(), refreshKnowledge()]);
     } catch (e) {
       showToast(t("topics.loadError", { msg: e.message }), "error");
     } finally {
@@ -118,31 +115,26 @@
   }
 
   async function openEdit(topic) {
-    try {
-      const res = await api.get(`admin/agent/topics/${encodeURIComponent(topic.id || topic._id)}`);
-      const loadedTopic = res.topic || topic;
-      editId = loadedTopic.id || loadedTopic._id;
-      editTopic = {
-        id: loadedTopic.id || "",
-        title: loadedTopic.title || "",
-        description: loadedTopic.description || "",
-        keywords: [...(loadedTopic.keywords || [])],
-        requiresEscalation: Boolean(loadedTopic.requiresEscalation),
-        canResolveDirectly: Boolean(loadedTopic.canResolveDirectly),
-        requiredInfo: [...(loadedTopic.requiredInfo || [])],
-        content: res.content || topicContents[loadedTopic.id] || "",
-      };
-      requiredInfoText = (loadedTopic.requiredInfo || []).join(", ");
-      newKeyword = "";
-      manualSlugEdited = true;
-      editOpen = true;
-    } catch (e) {
-      showToast(t("common.error", { msg: e.message }), "error");
-    }
+    const loadedTopic = topic;
+    editId = loadedTopic.id || loadedTopic._id;
+    editTopic = {
+      id: loadedTopic.id || "",
+      title: loadedTopic.title || "",
+      description: loadedTopic.description || "",
+      keywords: [...(loadedTopic.keywords || [])],
+      requiresEscalation: Boolean(loadedTopic.requiresEscalation),
+      canResolveDirectly: Boolean(loadedTopic.canResolveDirectly),
+      requiredInfo: [...(loadedTopic.requiredInfo || [])],
+      content: loadedTopic.content || topicContents[loadedTopic.id] || "",
+    };
+    requiredInfoText = (loadedTopic.requiredInfo || []).join(", ");
+    newKeyword = "";
+    manualSlugEdited = true;
+    editOpen = true;
   }
 
   async function save() {
-    if (!editTopic.id.trim() || !editTopic.title.trim()) return;
+    if (!editTopic.id.trim() || !editTopic.title.trim() || busyAction) return;
 
     const payload = {
       id: editTopic.id.trim(),
@@ -155,6 +147,7 @@
       content: editTopic.content.trim(),
     };
 
+    busyAction = "save";
     try {
       if (editId) {
         await api.put(`admin/agent/topics/${editId}`, payload);
@@ -164,13 +157,16 @@
         showToast(t("common.created"), "success");
       }
       editOpen = false;
-      await loadData();
+      await refreshTopics();
     } catch (e) {
       showToast(t("common.error", { msg: e.message }), "error");
+    } finally {
+      busyAction = "";
     }
   }
 
   async function deleteTopic(id) {
+    if (busyAction) return;
     const ok = await showConfirm({
       title: t("topics.deleteTitle"),
       message: t("topics.deleteMsg"),
@@ -178,12 +174,15 @@
       danger: true,
     });
     if (!ok) return;
+    busyAction = "delete";
     try {
       await api.delete(`admin/agent/topics/${id}`);
       showToast(t("common.deleted"), "success");
-      await loadData();
+      await refreshTopics();
     } catch (e) {
       showToast(t("common.error", { msg: e.message }), "error");
+    } finally {
+      busyAction = "";
     }
   }
 
@@ -200,7 +199,8 @@
   }
 
   async function suggestKeywords() {
-    if (!editTopic.title.trim()) return;
+    if (!editTopic.title.trim() || busyAction) return;
+    busyAction = "keywords";
     try {
       const res = await api.post("admin/topics/suggest-keywords", { title: editTopic.title.trim() });
       const suggested = Array.isArray(res.keywords) ? res.keywords : [];
@@ -209,6 +209,8 @@
       showToast(t("topics.keywordsSuggested", { n: suggested.length }), "info");
     } catch (e) {
       showToast(t("topics.suggestError", { msg: e.message }), "error");
+    } finally {
+      busyAction = "";
     }
   }
 
@@ -240,7 +242,7 @@
     <h1>{t("topics.title")} <Badge variant="blue">{topics.length}</Badge></h1>
     <p>{t("topics.subtitle")}</p>
   </div>
-  <Button onclick={openNew} variant="primary" size="sm">{t("topics.newTopic")}</Button>
+  <Button onclick={openNew} variant="primary" size="sm" disabled={Boolean(busyAction)}>{t("topics.newTopic")}</Button>
 </div>
 
 {#if loading}
@@ -403,8 +405,10 @@
                 }
               }}
             />
-            <Button onclick={addKeyword} variant="secondary" size="sm">{t("common.add")}</Button>
-            <Button onclick={suggestKeywords} variant="ghost" size="sm">{t("topics.aiSuggest")}</Button>
+            <Button onclick={addKeyword} variant="secondary" size="sm" disabled={Boolean(busyAction)}>{t("common.add")}</Button>
+            <Button onclick={suggestKeywords} variant="ghost" size="sm" disabled={Boolean(busyAction)}>
+              {busyAction === "keywords" ? t("common.saving") : t("topics.aiSuggest")}
+            </Button>
           </div>
         </label>
         <div class="kw-tags">
@@ -475,8 +479,10 @@
   </div>
 
   <div class="modal-actions">
-    <Button onclick={() => (editOpen = false)} variant="secondary">{t("common.cancel")}</Button>
-    <Button onclick={save} variant="primary">{t("common.save")}</Button>
+    <Button onclick={() => (editOpen = false)} variant="secondary" disabled={Boolean(busyAction)}>{t("common.cancel")}</Button>
+    <Button onclick={save} variant="primary" disabled={Boolean(busyAction)}>
+      {busyAction === "save" ? t("common.saving") : t("common.save")}
+    </Button>
   </div>
 </Modal>
 

@@ -26,19 +26,29 @@
   let newQuestion = $state("");
   let newAnswer = $state("");
   let importUrl = $state("");
+  let busyAction = $state("");
 
   onMount(() => loadData());
 
-  async function loadData() {
+  async function refreshKnowledge() {
+    const knowledgeRes = await api.get("admin/knowledge");
+    const data = knowledgeRes.records || knowledgeRes.payload?.records || knowledgeRes.items || knowledgeRes.knowledge || [];
+    items = Array.isArray(data) ? data : [];
+  }
+
+  async function refreshTopics() {
+    const topicsRes = await api.get("admin/agent/topics").catch(() => ({ topics: [] }));
+    topics = topicsRes.topics || topicsRes || [];
+  }
+
+  async function loadData({ reloadTopics = true } = {}) {
     loading = true;
     try {
-      const [knowledgeRes, topicsRes] = await Promise.all([
-        api.get("admin/knowledge"),
-        api.get("admin/agent/topics").catch(() => ({ topics: [] })),
-      ]);
-      const data = knowledgeRes.records || knowledgeRes.payload?.records || knowledgeRes.items || knowledgeRes.knowledge || [];
-      items = Array.isArray(data) ? data : [];
-      topics = topicsRes.topics || topicsRes || [];
+      if (reloadTopics) {
+        await Promise.all([refreshKnowledge(), refreshTopics()]);
+      } else {
+        await refreshKnowledge();
+      }
     } catch (e) {
       showToast(t("kb.loadError", { msg: e.message }), "error");
     } finally {
@@ -96,7 +106,8 @@
   }
 
   async function addEntry() {
-    if (!newQuestion.trim() || !newAnswer.trim()) return;
+    if (!newQuestion.trim() || !newAnswer.trim() || busyAction) return;
+    busyAction = "add";
     try {
       await api.post("admin/knowledge", {
         question: newQuestion.trim(),
@@ -105,14 +116,17 @@
       });
       showToast(t("kb.added"), "success");
       addOpen = false;
-      await loadData();
+      await loadData({ reloadTopics: false });
     } catch (e) {
       showToast(t("common.error", { msg: e.message }), "error");
+    } finally {
+      busyAction = "";
     }
   }
 
   async function updateEntry() {
-    if (!editQuestion.trim() || !editAnswer.trim()) return;
+    if (!editQuestion.trim() || !editAnswer.trim() || busyAction) return;
+    busyAction = "update";
     try {
       const existing = items.find((item) => (item.id || item._id) === editId);
       await api.put(`admin/knowledge/${editId}`, {
@@ -123,13 +137,16 @@
       showToast(t("kb.updated"), "success");
       editOpen = false;
       editId = null;
-      await loadData();
+      await loadData({ reloadTopics: false });
     } catch (e) {
       showToast(t("common.error", { msg: e.message }), "error");
+    } finally {
+      busyAction = "";
     }
   }
 
   async function deleteEntry(id) {
+    if (busyAction) return;
     const ok = await showConfirm({
       title: t("kb.deleteTitle"),
       message: t("kb.deleteMsg"),
@@ -137,47 +154,61 @@
       danger: true,
     });
     if (!ok) return;
+    busyAction = "delete";
     try {
       await api.delete(`admin/knowledge/${id}`);
       showToast(t("kb.deleted"), "success");
-      await loadData();
+      await loadData({ reloadTopics: false });
     } catch (e) {
       showToast(t("common.error", { msg: e.message }), "error");
+    } finally {
+      busyAction = "";
     }
   }
 
   async function handleUpload(files) {
+    if (busyAction) return;
+    busyAction = "upload";
     const formData = new FormData();
     for (const file of files) formData.append("files", file);
     try {
       await api.uploadForm("admin/knowledge/upload-batch", formData);
       showToast(t("kb.filesUploaded", { n: files.length }), "success");
       uploadOpen = false;
-      await loadData();
+      await loadData({ reloadTopics: false });
     } catch (e) {
       showToast(t("kb.uploadError", { msg: e.message }), "error");
+    } finally {
+      busyAction = "";
     }
   }
 
   async function handleImportUrl() {
-    if (!importUrl.trim()) return;
+    if (!importUrl.trim() || busyAction) return;
+    busyAction = "import-url";
     try {
       await api.post("admin/knowledge/import-url", { url: importUrl.trim() });
       showToast(t("kb.urlImported"), "success");
       importUrl = "";
       addOpen = false;
-      await loadData();
+      await loadData({ reloadTopics: false });
     } catch (e) {
       showToast(t("kb.importError", { msg: e.message }), "error");
+    } finally {
+      busyAction = "";
     }
   }
 
   async function reingest() {
+    if (busyAction) return;
+    busyAction = "reingest";
     try {
       await api.post("admin/knowledge/reingest", {});
       showToast(t("kb.reingestStarted"), "success");
     } catch (e) {
       showToast(t("common.error", { msg: e.message }), "error");
+    } finally {
+      busyAction = "";
     }
   }
 
@@ -196,9 +227,9 @@
     <p>{t("kb.entries", { n: items.length })}</p>
   </div>
   <div class="header-actions">
-    <Button onclick={reingest} variant="ghost" size="sm">{t("kb.reingest")}</Button>
-    <Button onclick={() => (uploadOpen = true)} variant="secondary" size="sm">{t("kb.uploadFile")}</Button>
-    <Button onclick={openAddModal} variant="primary" size="sm">{t("kb.addEntry")}</Button>
+    <Button onclick={reingest} variant="ghost" size="sm" disabled={Boolean(busyAction)}>{t("kb.reingest")}</Button>
+    <Button onclick={() => (uploadOpen = true)} variant="secondary" size="sm" disabled={Boolean(busyAction)}>{t("kb.uploadFile")}</Button>
+    <Button onclick={openAddModal} variant="primary" size="sm" disabled={Boolean(busyAction)}>{t("kb.addEntry")}</Button>
   </div>
 </div>
 
@@ -362,8 +393,10 @@
   </div>
 
   <div class="modal-actions">
-    <Button onclick={() => (addOpen = false)} variant="secondary">{t("common.cancel")}</Button>
-    <Button onclick={addEntry} variant="primary">{t("common.save")}</Button>
+    <Button onclick={() => (addOpen = false)} variant="secondary" disabled={Boolean(busyAction)}>{t("common.cancel")}</Button>
+    <Button onclick={addEntry} variant="primary" disabled={Boolean(busyAction)}>
+      {busyAction === "add" || busyAction === "import-url" ? t("common.saving") : t("common.save")}
+    </Button>
   </div>
 </Modal>
 
@@ -413,8 +446,10 @@
   </div>
 
   <div class="modal-actions">
-    <Button onclick={() => (editOpen = false)} variant="secondary">{t("common.cancel")}</Button>
-    <Button onclick={updateEntry} variant="primary">{t("common.save")}</Button>
+    <Button onclick={() => (editOpen = false)} variant="secondary" disabled={Boolean(busyAction)}>{t("common.cancel")}</Button>
+    <Button onclick={updateEntry} variant="primary" disabled={Boolean(busyAction)}>
+      {busyAction === "update" ? t("common.saving") : t("common.save")}
+    </Button>
   </div>
 </Modal>
 
