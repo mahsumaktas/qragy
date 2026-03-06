@@ -56,8 +56,24 @@
     login_failed: "login.errorGeneric",
   };
 
+  const SSO_SKIP_KEY = "qragy-admin-sso-skip";
+
+  function isCorpCxAdminPath() {
+    return typeof window !== "undefined" && window.location.pathname.startsWith("/corpcx/admin");
+  }
+
+  function hasSsoSkip() {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem(SSO_SKIP_KEY) === "1";
+  }
+
+  function clearSsoSkip() {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.removeItem(SSO_SKIP_KEY);
+  }
+
   function currentRedirectPath() {
-    if (typeof window === "undefined") return "/admin-v2";
+    if (typeof window === "undefined") return "/corpcx/admin/";
     return `${window.location.pathname}${window.location.search}${window.location.hash}`;
   }
 
@@ -80,6 +96,9 @@
         errorCode,
         bootError: "",
       };
+      if (session?.authenticated) {
+        clearSsoSkip();
+      }
     } catch (error) {
       authState = {
         checking: false,
@@ -93,6 +112,7 @@
   }
 
   function startSsoLogin() {
+    clearSsoSkip();
     const redirect = encodeURIComponent(currentRedirectPath());
     window.location.href = `../api/admin/sso/login?redirect=${redirect}`;
   }
@@ -110,6 +130,13 @@
   onMount(() => {
     cleanupRouter = initRouter();
     bootstrapAuth();
+  });
+
+  $effect(() => {
+    if (authState.checking || authState.authenticated || getToken()) return;
+    if (!authState.ssoAvailable || authState.errorCode || authState.bootError) return;
+    if (!isCorpCxAdminPath() || hasSsoSkip()) return;
+    startSsoLogin();
   });
 
   onDestroy(() => {

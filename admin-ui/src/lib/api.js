@@ -1,6 +1,8 @@
 import { getToken, clearToken } from "./auth.svelte.js";
 import { getLocale } from "./i18n.svelte.js";
 
+const SSO_SKIP_KEY = "qragy-admin-sso-skip";
+
 const LOCALIZED_BACKEND_ERRORS = {
   "surface is required.": {
     tr: "İşlem yüzeyi seçilmelidir.",
@@ -124,6 +126,20 @@ function getSessionExpiredMessage() {
   return getLocale() === "tr" ? "Oturum süresi doldu." : "Session expired.";
 }
 
+function isCorpCxAdminPath() {
+  return typeof window !== "undefined" && window.location.pathname.startsWith("/corpcx/admin");
+}
+
+function hasSsoSkip() {
+  return typeof window !== "undefined" && window.sessionStorage.getItem(SSO_SKIP_KEY) === "1";
+}
+
+function getSsoLoginUrl() {
+  if (typeof window === "undefined") return "../api/admin/sso/login?redirect=%2Fcorpcx%2Fadmin%2F";
+  const redirect = encodeURIComponent(`${window.location.pathname}${window.location.search}${window.location.hash}` || "/corpcx/admin/");
+  return `../api/admin/sso/login?redirect=${redirect}`;
+}
+
 function localizeBackendError(payload, status) {
   const locale = getLocale();
   const raw = String(payload?.error || "").trim();
@@ -149,6 +165,9 @@ async function fetchJson(url, options = {}) {
 
   if (response.status === 401) {
     clearToken();
+    if (!token && isCorpCxAdminPath() && !hasSsoSkip()) {
+      window.location.href = getSsoLoginUrl();
+    }
     window.location.hash = "#login";
     throw new Error(getSessionExpiredMessage());
   }
@@ -161,7 +180,7 @@ async function fetchJson(url, options = {}) {
 }
 
 function apiUrl(path) {
-  // admin-v2 /admin-v2/ altinda, ../api/ ile bir ust dizine cikar
+  // Canonical admin UI /corpcx/admin/ altinda, ../api/ ile /corpcx/api/ hedefine gider.
   return "../api/" + path;
 }
 

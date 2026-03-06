@@ -16,9 +16,17 @@
   let title = $derived(panelMeta ? t(panelMeta.item.labelKey) : t("dashboard.title"));
   let sectionLabel = $derived(panelMeta ? t(panelMeta.group.labelKey) : t("shell.productTagline"));
   let sectionDesc = $derived(panelMeta ? t(panelMeta.group.descriptionKey) : t("shell.productTagline"));
+  const SSO_SKIP_KEY = "qragy-admin-sso-skip";
 
   function toggleLang() {
     setLocale(locale === "en" ? "tr" : "en");
+  }
+
+  function markSsoSkip() {
+    if (typeof window === "undefined") return;
+    if (window.location.pathname.startsWith("/corpcx/admin")) {
+      window.sessionStorage.setItem(SSO_SKIP_KEY, "1");
+    }
   }
 </script>
 
@@ -57,6 +65,7 @@
       class="logout-btn"
       title={t("header.logout")}
       onclick={async () => {
+        markSsoSkip();
         try {
           await api.post("admin/logout", {});
         } catch (_error) {
