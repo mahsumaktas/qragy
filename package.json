@@ -39,7 +39,7 @@
     "@lancedb/lancedb": "^0.26.2",
     "@mozilla/readability": "^0.6.0",
     "better-sqlite3": "^12.6.2",
-    "dotenv": "^16.4.5",
+    "dotenv": "^17.3.1",
     "express": "^4.21.2",
     "jsdom": "^28.1.0",
     "mammoth": "^1.11.0",
